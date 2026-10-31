@@ -2,10 +2,10 @@
 
 ## Milestone 1 — Project Foundation
 
-**Status:** Not Started
+**Status:** In Progress
 
 ### Tasks
-- [ ] Define the initial database schema
+- [x] Define the initial database schema
 - [ ] Set up the monorepo structure
 - [ ] Configure PostgreSQL using Docker Compose
 - [ ] Configure Drizzle ORM
