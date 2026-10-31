@@ -7,7 +7,7 @@
 ### Tasks
 - [x] Define the initial database schema
 - [x] Set up the monorepo structure
-- [ ] Configure PostgreSQL using Docker Compose
+- [x] Configure PostgreSQL using Docker Compose
 - [ ] Configure Drizzle ORM
 - [ ] Create and run the first database migration
 - [ ] Set up the Fastify backend

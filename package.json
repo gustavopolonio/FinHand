@@ -11,6 +11,9 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs --follow postgres",
+    "db:up": "docker compose up --detach --wait postgres",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
