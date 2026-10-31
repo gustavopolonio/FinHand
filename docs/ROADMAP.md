@@ -6,7 +6,7 @@
 
 ### Tasks
 - [x] Define the initial database schema
-- [ ] Set up the monorepo structure
+- [x] Set up the monorepo structure
 - [ ] Configure PostgreSQL using Docker Compose
 - [ ] Configure Drizzle ORM
 - [ ] Create and run the first database migration
