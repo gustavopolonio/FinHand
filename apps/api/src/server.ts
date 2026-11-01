@@ -1,9 +1,21 @@
 import { buildApplication } from "./app.js";
-import { environment } from "./config/environment.js";
+import { createAuthentication } from "./auth/authentication.js";
+import {
+  environment,
+  getAuthenticationEnvironment,
+} from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
 
 const databaseConnection = createDatabase(environment.databaseUrl);
+const authenticationEnvironment = getAuthenticationEnvironment();
+const authentication = createAuthentication(
+  databaseConnection.database,
+  authenticationEnvironment,
+);
 const application = buildApplication({
+  authentication,
+  authenticationBaseUrl: authenticationEnvironment.baseUrl,
+  corsOrigin: authenticationEnvironment.webUrl,
   databaseConnection,
   logger: { level: environment.logLevel },
 });

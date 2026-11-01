@@ -11,6 +11,9 @@ The first database migration will contain the financial core:
 - `categories`
 - `transactions`
 
+Milestone 2 adds Google authentication through Better Auth using the existing
+`users` table plus `auth_accounts`, `auth_sessions`, and `auth_verifications`.
+
 Tables for uploads, AI extraction, audio transcription, and RAG are described as planned extensions but will be introduced only in their corresponding milestones.
 
 ## Design principles
@@ -31,9 +34,11 @@ Tables for uploads, AI extraction, audio transcription, and RAG are described as
 users
  ├── 1:N accounts
  ├── 1:N categories
- └── 1:N transactions
-          ├── N:1 account
-          └── N:0..1 category
+ ├── 1:N transactions
+ │        ├── N:1 account
+ │        └── N:0..1 category
+ ├── 1:N auth_accounts
+ └── 1:N auth_sessions
 ```
 
 All accounts, categories, and transactions are private to their owning user.
@@ -42,15 +47,17 @@ All accounts, categories, and transactions are private to their owning user.
 
 ### `users`
 
-Represents a FinHand user and is the ownership boundary for financial data. Authentication-specific tables and credentials will be defined when the authentication solution is selected in Milestone 2.
+Represents a FinHand user and is the ownership boundary for financial data. Better Auth reuses this table for the Google-authenticated identity so financial records can reference the authenticated user directly.
 
 | Column | Type | Null | Description |
 | --- | --- | --- | --- |
 | `id` | `uuid` | No | Primary key; defaults to `gen_random_uuid()` |
 | `email` | `text` | No | Normalized email address |
 | `display_name` | `text` | Yes | User-facing name |
-| `default_currency` | `varchar(3)` | No | ISO 4217 currency code, for example `BRL` |
-| `time_zone` | `text` | No | IANA time-zone identifier, for example `America/Sao_Paulo` |
+| `email_verified` | `boolean` | No | Whether the identity provider verified the email address |
+| `image_url` | `text` | Yes | Optional Google profile image URL |
+| `default_currency` | `varchar(3)` | No | ISO 4217 currency code; defaults to `BRL` |
+| `time_zone` | `text` | No | IANA time-zone identifier reported by the browser during registration; defaults to `UTC` when unavailable or invalid |
 | `created_at` | `timestamptz` | No | Creation time |
 | `updated_at` | `timestamptz` | No | Last modification time |
 
@@ -61,6 +68,41 @@ Constraints and indexes:
 - Currency code must contain three uppercase ASCII letters.
 
 Email normalization and time-zone validation are application responsibilities before persistence.
+
+The backend defines `BRL` as every new user's initial currency. The web client
+sends the browser's IANA time zone as untrusted OAuth state; the backend validates
+it before user creation and falls back to `UTC`. Users may change both preferences
+after registration when profile settings are implemented.
+
+### `auth_accounts`
+
+Links a FinHand user to the stable identity assigned by Google. The `auth_`
+prefix distinguishes identity-provider accounts from the financial `accounts`
+table.
+
+Important fields include the provider and provider account identifiers, the
+owning `user_id`, Better Auth's optional OAuth token fields, granted scope, and
+audit timestamps. `(provider_id, provider_account_id)` is unique, and `user_id`
+references `users.id`. The TypeScript property remains `accountId` because that
+is Better Auth's canonical field name, but it maps to the clearer PostgreSQL
+column `provider_account_id`. FinHand currently uses Google only for identity,
+so provider tokens are discarded before persistence. Email-and-password
+authentication is disabled, so no credential account is created by the
+application.
+
+### `auth_sessions`
+
+Stores Better Auth's server-side sessions. Each session has a unique opaque
+token, expiration time, owning user, optional IP address and user-agent metadata,
+and audit timestamps. The browser receives only the session cookie; protected
+API routes resolve that cookie to a session and derive the authorized user ID.
+
+### `auth_verifications`
+
+Stores short-lived verification state required by Better Auth. Records contain
+an identifier, value, expiration time, and audit timestamps. This table remains
+part of the core authentication schema even though email/password and email
+verification flows are not enabled.
 
 ### `accounts`
 
@@ -88,7 +130,7 @@ Constraints and indexes:
 
 There is no stored `current_balance`. The balance is calculated from `opening_balance_minor` plus income minus expenses. A credit account can therefore have a negative net balance when money is owed.
 
-An account referenced by transactions cannot be deleted; it must be archived. A default account may be created during onboarding so users can begin recording transactions without first configuring accounts.
+An account referenced by transactions cannot be deleted; it must be archived.
 
 ### `categories`
 

@@ -11,13 +11,23 @@ config({
 });
 
 function required(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name]?.trim();
 
   if (!value) {
     throw new Error(`${name} is required.`);
   }
 
   return value;
+}
+
+function url(name: string): string {
+  const value = required(name);
+
+  try {
+    return new URL(value).toString().replace(/\/$/, "");
+  } catch {
+    throw new Error(`${name} must be a valid absolute URL.`);
+  }
 }
 
 function port(name: string, fallback: number): number {
@@ -77,3 +87,19 @@ export const environment = Object.freeze({
     "development",
   ),
 });
+
+export function getAuthenticationEnvironment() {
+  const betterAuthSecret = required("BETTER_AUTH_SECRET");
+
+  if (betterAuthSecret.length < 32) {
+    throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters.");
+  }
+
+  return Object.freeze({
+    baseUrl: url("BETTER_AUTH_URL"),
+    betterAuthSecret,
+    googleClientId: required("GOOGLE_CLIENT_ID"),
+    googleClientSecret: required("GOOGLE_CLIENT_SECRET"),
+    webUrl: url("WEB_URL"),
+  });
+}

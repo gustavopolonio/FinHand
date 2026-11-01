@@ -8,6 +8,13 @@
       "when": 1793538245907,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793542101243,
+      "tag": "0001_broken_spyke",
+      "breakpoints": true
     }
   ]
 }

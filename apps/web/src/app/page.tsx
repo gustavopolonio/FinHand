@@ -1,3 +1,5 @@
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
+
 export default function HomePage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
@@ -9,16 +11,10 @@ export default function HomePage() {
           Your financial life, easier to understand.
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-          Project foundation is ready. Accounts, transactions, document
-          processing, and AI guidance will arrive in the next milestones.
+          Sign in securely with Google to start organizing your accounts,
+          transactions, and financial plans.
         </p>
-        <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
-          <span
-            aria-hidden="true"
-            className="size-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.12)]"
-          />
-          Frontend running successfully
-        </div>
+        <GoogleSignInButton />
       </section>
     </main>
   );

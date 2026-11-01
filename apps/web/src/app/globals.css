@@ -16,3 +16,45 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.money-loader__coin {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 2px solid #a16207;
+  border-radius: 9999px;
+  background: linear-gradient(145deg, #fde68a, #f59e0b);
+  box-shadow:
+    inset 0 0 0 3px rgb(255 255 255 / 35%),
+    0 6px 14px rgb(161 98 7 / 20%);
+  color: #713f12;
+  font-size: 0.7rem;
+  font-weight: 800;
+  animation: money-loader-bounce 900ms ease-in-out infinite;
+}
+
+.money-loader__coin:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.money-loader__coin:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes money-loader-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotateY(0deg);
+  }
+
+  50% {
+    transform: translateY(-0.75rem) rotateY(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-loader__coin {
+    animation: none;
+  }
+}

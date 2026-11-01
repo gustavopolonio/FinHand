@@ -22,10 +22,10 @@
 
 ## Milestone 2 — Financial Core
 
-**Status:** Not Started
+**Status:** In Progress
 
 ### Tasks
-- [ ] Implement user authentication
+- [x] Implement user authentication
 - [ ] Implement accounts and categories
 - [ ] Implement transaction CRUD
 - [ ] Implement financial summary calculations

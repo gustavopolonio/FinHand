@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApplication } from "../app.js";
+import type { Authentication } from "../auth/authentication.js";
 import { createDatabase } from "../db/index.js";
 
 const applications: ReturnType<typeof buildApplication>[] = [];
+
+const authentication = {
+  handler: async () => new Response(null, { status: 404 }),
+  api: {
+    getSession: async () => null,
+  },
+} as unknown as Authentication;
 
 afterEach(async () => {
   await Promise.all(applications.splice(0).map((application) => application.close()));
@@ -14,7 +22,12 @@ describe("GET /health", () => {
     const databaseConnection = createDatabase(
       "postgresql://unused:unused@127.0.0.1:1/unused",
     );
-    const application = buildApplication({ databaseConnection });
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+    });
     applications.push(application);
 
     const response = await application.inject({
