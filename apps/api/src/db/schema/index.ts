@@ -1,2 +1,4 @@
-// Table definitions will be added with the initial database migration.
-export {};
+export * from "./accounts.js";
+export * from "./categories.js";
+export * from "./transactions.js";
+export * from "./users.js";

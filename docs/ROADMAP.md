@@ -9,7 +9,7 @@
 - [x] Set up the monorepo structure
 - [x] Configure PostgreSQL using Docker Compose
 - [x] Configure Drizzle ORM
-- [ ] Create and run the first database migration
+- [x] Create and run the first database migration
 - [ ] Set up the Fastify backend
 - [ ] Set up the Next.js frontend
 
