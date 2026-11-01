@@ -19,13 +19,15 @@
     "db:up": "docker compose up --detach --wait postgres",
     "db:verify": "npm run db:verify --workspace @finhand/api",
     "dev:api": "npm run dev --workspace @finhand/api",
+    "dev:web": "npm run dev --workspace @finhand/web",
     "lint": "npm run lint --workspaces --if-present",
     "start:api": "npm run start --workspace @finhand/api",
+    "start:web": "npm run start --workspace @finhand/web",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.5"
   }
 }

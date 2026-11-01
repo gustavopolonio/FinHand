@@ -2,7 +2,7 @@
 
 ## Milestone 1 — Project Foundation
 
-**Status:** In Progress
+**Status:** Completed
 
 ### Tasks
 - [x] Define the initial database schema
@@ -11,7 +11,7 @@
 - [x] Configure Drizzle ORM
 - [x] Create and run the first database migration
 - [x] Set up the Fastify backend
-- [ ] Set up the Next.js frontend
+- [x] Set up the Next.js frontend
 
 ### Acceptance Criteria
 - PostgreSQL runs locally.
