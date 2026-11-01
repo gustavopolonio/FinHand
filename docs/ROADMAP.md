@@ -10,7 +10,7 @@
 - [x] Configure PostgreSQL using Docker Compose
 - [x] Configure Drizzle ORM
 - [x] Create and run the first database migration
-- [ ] Set up the Fastify backend
+- [x] Set up the Fastify backend
 - [ ] Set up the Next.js frontend
 
 ### Acceptance Criteria

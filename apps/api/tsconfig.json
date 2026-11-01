@@ -8,5 +8,10 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["drizzle.config.ts", "scripts/**/*.ts", "src/**/*.ts"]
+  "include": [
+    "drizzle.config.ts",
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "vitest.config.ts"
+  ]
 }
