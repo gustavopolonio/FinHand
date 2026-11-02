@@ -10,23 +10,20 @@ import {
 } from "../services/accounts.js";
 
 export async function accountRoutes(application: FastifyInstance) {
-  application.get(
-    "/api/accounts",
-    { preHandler: application.requireAuthentication },
-    async (request) => {
-      const userAccounts = await listAccountsForUser(
-        application.database,
-        request.authenticatedUserId,
-      );
+  application.addHook("preHandler", application.requireAuthentication);
 
-      return { accounts: userAccounts };
-    },
-  );
+  application.get("/api/accounts", async (request) => {
+    const userAccounts = await listAccountsForUser(
+      application.database,
+      request.authenticatedUserId,
+    );
+
+    return { accounts: userAccounts };
+  });
 
   application.post<{ Body: CreateAccountInput }>(
     "/api/accounts",
     {
-      preHandler: application.requireAuthentication,
       schema: {
         body: {
           type: "object",
