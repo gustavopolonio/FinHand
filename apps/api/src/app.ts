@@ -3,6 +3,7 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 
 import type { Authentication } from "./auth/authentication.js";
 import type { Database, DatabaseConnection } from "./db/index.js";
+import { accountRoutes } from "./routes/accounts.js";
 import { authenticationRoutes } from "./routes/authentication.js";
 import { healthRoutes } from "./routes/health.js";
 import { userRoutes } from "./routes/users.js";
@@ -44,6 +45,7 @@ export function buildApplication({
   });
 
   application.register(healthRoutes);
+  application.register(accountRoutes, { authentication });
   application.register(authenticationRoutes, {
     authentication,
     baseUrl: authenticationBaseUrl,
