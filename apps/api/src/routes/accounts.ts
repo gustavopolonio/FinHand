@@ -8,6 +8,7 @@ import {
   archiveAccountForUser,
   createAccountForUser,
   listAccountsForUser,
+  restoreAccountForUser,
   type CreateAccountInput,
   type UpdateAccountInput,
   updateAccountForUser,
@@ -140,6 +141,39 @@ export async function accountRoutes(application: FastifyInstance) {
     async (request, reply) => {
       try {
         const account = await archiveAccountForUser(
+          application.database,
+          request.authenticatedUserId,
+          request.params.id,
+        );
+
+        return { account };
+      } catch (error) {
+        if (error instanceof AccountNotFoundError) {
+          return reply.status(404).send({ error: "Account not found" });
+        }
+
+        throw error;
+      }
+    },
+  );
+
+  application.post<{ Params: AccountParams }>(
+    "/api/accounts/:id/restore",
+    {
+      schema: {
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const account = await restoreAccountForUser(
           application.database,
           request.authenticatedUserId,
           request.params.id,

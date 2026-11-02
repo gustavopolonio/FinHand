@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import type { Database } from "../db/index.js";
 import {
@@ -284,6 +284,59 @@ export async function archiveAccountForUser(
 
   if (archivedAccount) {
     return serializeAccount(archivedAccount);
+  }
+
+  const existingAccount = await database.query.accounts.findFirst({
+    columns: {
+      id: true,
+      name: true,
+      type: true,
+      currencyCode: true,
+      openingBalanceMinor: true,
+      archivedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    where: (account, { and, eq }) =>
+      and(eq(account.id, accountId), eq(account.userId, userId)),
+  });
+
+  if (!existingAccount) {
+    throw new AccountNotFoundError("Account not found.");
+  }
+
+  return serializeAccount(existingAccount);
+}
+
+export async function restoreAccountForUser(
+  database: Database,
+  userId: string,
+  accountId: string,
+): Promise<AccountListItem> {
+  const restoredAt = new Date();
+  const [restoredAccount] = await database
+    .update(accounts)
+    .set({ archivedAt: null, updatedAt: restoredAt })
+    .where(
+      and(
+        eq(accounts.id, accountId),
+        eq(accounts.userId, userId),
+        isNotNull(accounts.archivedAt),
+      ),
+    )
+    .returning({
+      id: accounts.id,
+      name: accounts.name,
+      type: accounts.type,
+      currencyCode: accounts.currencyCode,
+      openingBalanceMinor: accounts.openingBalanceMinor,
+      archivedAt: accounts.archivedAt,
+      createdAt: accounts.createdAt,
+      updatedAt: accounts.updatedAt,
+    });
+
+  if (restoredAccount) {
+    return serializeAccount(restoredAccount);
   }
 
   const existingAccount = await database.query.accounts.findFirst({

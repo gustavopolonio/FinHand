@@ -580,3 +580,137 @@ describe("POST /api/accounts/:id/archive", () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/accounts/:id/restore", () => {
+  const accountId = "44444444-4444-4444-8444-444444444444";
+  const userId = "33333333-3333-4333-8333-333333333333";
+
+  it("rejects requests without an authenticated user", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId: null, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/accounts/${accountId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("restores an archived account owned by the authenticated user", async () => {
+    const restoredAt = new Date("2026-11-02T20:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: accountId,
+        name: "Wallet",
+        type: "cash",
+        currencyCode: "BRL",
+        openingBalanceMinor: 1000n,
+        archivedAt: null,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: restoredAt,
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/accounts/${accountId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      account: {
+        id: accountId,
+        name: "Wallet",
+        type: "cash",
+        currencyCode: "BRL",
+        openingBalanceMinor: "1000",
+        archivedAt: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-02T20:00:00.000Z",
+      },
+    });
+    expect(update).toHaveBeenCalledWith(accounts);
+    const restoreValues = set.mock.calls[0]?.[0] as {
+      archivedAt: null;
+      updatedAt: Date;
+    };
+    expect(restoreValues.archivedAt).toBeNull();
+    expect(restoreValues.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it("returns an already-active account without changing its timestamp", async () => {
+    const updatedAt = new Date("2026-10-15T10:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      name: "Wallet",
+      type: "cash",
+      currencyCode: "BRL",
+      openingBalanceMinor: 0n,
+      archivedAt: null,
+      createdAt: new Date("2026-10-01T10:00:00.000Z"),
+      updatedAt,
+    });
+    const application = createApplication({
+      userId,
+      findAccount,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/accounts/${accountId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().account).toMatchObject({
+      archivedAt: null,
+      updatedAt: "2026-10-15T10:00:00.000Z",
+    });
+    expect(findAccount).toHaveBeenCalledOnce();
+  });
+
+  it("returns 404 for a missing or foreign account", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findAccount = vi.fn().mockResolvedValue(null);
+    const application = createApplication({
+      userId,
+      findAccount,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/accounts/${accountId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Account not found" });
+  });
+
+  it("rejects an invalid account ID before updating the database", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/accounts/not-a-uuid/restore",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+});
