@@ -5,6 +5,7 @@ import {
   AccountInputError,
   AccountNotFoundError,
   AccountOwnerNotFoundError,
+  archiveAccountForUser,
   createAccountForUser,
   listAccountsForUser,
   type CreateAccountInput,
@@ -113,6 +114,39 @@ export async function accountRoutes(application: FastifyInstance) {
           return reply.status(400).send({ error: error.message });
         }
 
+        if (error instanceof AccountNotFoundError) {
+          return reply.status(404).send({ error: "Account not found" });
+        }
+
+        throw error;
+      }
+    },
+  );
+
+  application.post<{ Params: AccountParams }>(
+    "/api/accounts/:id/archive",
+    {
+      schema: {
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const account = await archiveAccountForUser(
+          application.database,
+          request.authenticatedUserId,
+          request.params.id,
+        );
+
+        return { account };
+      } catch (error) {
         if (error instanceof AccountNotFoundError) {
           return reply.status(404).send({ error: "Account not found" });
         }
