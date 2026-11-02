@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../auth/authentication.js";
+import { registerAuthenticationGuard } from "../auth/require-authentication.js";
 import type { Database } from "../db/index.js";
 import { accounts } from "../db/schema/index.js";
 import { accountRoutes } from "./accounts.js";
@@ -43,9 +44,11 @@ function createApplication(options: {
   } as unknown as Database;
 
   application.decorate("database", database);
-  application.register(accountRoutes, {
-    authentication: createAuthentication(options.userId),
-  });
+  registerAuthenticationGuard(
+    application,
+    createAuthentication(options.userId),
+  );
+  application.register(accountRoutes);
   applications.push(application);
 
   return application;

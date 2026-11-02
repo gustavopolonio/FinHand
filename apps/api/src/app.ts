@@ -2,6 +2,7 @@ import fastifyCors from "@fastify/cors";
 import Fastify, { type FastifyServerOptions } from "fastify";
 
 import type { Authentication } from "./auth/authentication.js";
+import { registerAuthenticationGuard } from "./auth/require-authentication.js";
 import type { Database, DatabaseConnection } from "./db/index.js";
 import { accountRoutes } from "./routes/accounts.js";
 import { authenticationRoutes } from "./routes/authentication.js";
@@ -32,6 +33,7 @@ export function buildApplication({
   const application = Fastify({ logger });
 
   application.decorate("database", databaseConnection.database);
+  registerAuthenticationGuard(application, authentication);
   application.addHook("onClose", async () => {
     await databaseConnection.pool.end();
   });
@@ -45,12 +47,12 @@ export function buildApplication({
   });
 
   application.register(healthRoutes);
-  application.register(accountRoutes, { authentication });
+  application.register(accountRoutes);
   application.register(authenticationRoutes, {
     authentication,
     baseUrl: authenticationBaseUrl,
   });
-  application.register(userRoutes, { authentication });
+  application.register(userRoutes);
 
   return application;
 }
