@@ -87,7 +87,7 @@ describe("authentication routes", () => {
       url: "/api/me",
       headers: {
         origin: "http://localhost:3000",
-        "access-control-request-method": "GET",
+        "access-control-request-method": "PATCH",
       },
     });
 
@@ -96,5 +96,6 @@ describe("authentication routes", () => {
       "http://localhost:3000",
     );
     expect(response.headers["access-control-allow-credentials"]).toBe("true");
+    expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
   });
 });

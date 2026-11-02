@@ -41,7 +41,7 @@ export function buildApplication({
   application.register(fastifyCors, {
     origin: corsOrigin,
     credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86_400,
   });

@@ -1,3 +1,5 @@
+import { and, eq } from "drizzle-orm";
+
 import type { Database } from "../db/index.js";
 import {
   accounts,
@@ -28,9 +30,17 @@ export interface CreateAccountInput {
   openingBalanceMinor?: string;
 }
 
+export interface UpdateAccountInput {
+  name?: string;
+  type?: string;
+  openingBalanceMinor?: string;
+}
+
 export class AccountInputError extends Error {}
 
 export class AccountOwnerNotFoundError extends Error {}
+
+export class AccountNotFoundError extends Error {}
 
 export interface AccountListItem {
   id: string;
@@ -186,4 +196,61 @@ export async function createAccountForUser(
   }
 
   return serializeAccount(createdAccount);
+}
+
+export async function updateAccountForUser(
+  database: Database,
+  userId: string,
+  accountId: string,
+  input: UpdateAccountInput,
+): Promise<AccountListItem> {
+  const updates: {
+    name?: string;
+    type?: AccountType;
+    openingBalanceMinor?: bigint;
+    updatedAt: Date;
+  } = { updatedAt: new Date() };
+
+  if (input.name !== undefined) {
+    updates.name = normalizeAccountName(input.name);
+  }
+
+  if (input.type !== undefined) {
+    updates.type = normalizeAccountType(input.type);
+  }
+
+  if (input.openingBalanceMinor !== undefined) {
+    updates.openingBalanceMinor = parseOpeningBalanceMinor(
+      input.openingBalanceMinor,
+    );
+  }
+
+  if (
+    updates.name === undefined &&
+    updates.type === undefined &&
+    updates.openingBalanceMinor === undefined
+  ) {
+    throw new AccountInputError("At least one account field is required.");
+  }
+
+  const [updatedAccount] = await database
+    .update(accounts)
+    .set(updates)
+    .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+    .returning({
+      id: accounts.id,
+      name: accounts.name,
+      type: accounts.type,
+      currencyCode: accounts.currencyCode,
+      openingBalanceMinor: accounts.openingBalanceMinor,
+      archivedAt: accounts.archivedAt,
+      createdAt: accounts.createdAt,
+      updatedAt: accounts.updatedAt,
+    });
+
+  if (!updatedAccount) {
+    throw new AccountNotFoundError("Account not found.");
+  }
+
+  return serializeAccount(updatedAccount);
 }

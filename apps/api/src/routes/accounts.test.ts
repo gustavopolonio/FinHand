@@ -35,6 +35,7 @@ function createApplication(options: {
   findMany?: ReturnType<typeof vi.fn>;
   findUser?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
+  update?: ReturnType<typeof vi.fn>;
 }) {
   const application = Fastify();
   const database = {
@@ -47,6 +48,7 @@ function createApplication(options: {
       },
     },
     insert: options.insert ?? vi.fn(),
+    update: options.update ?? vi.fn(),
   } as unknown as Database;
 
   application.decorate("database", database);
@@ -312,5 +314,134 @@ describe("POST /api/accounts", () => {
     expect(response.statusCode).toBe(400);
     expect(findUser).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /api/accounts/:id", () => {
+  const accountId = "44444444-4444-4444-8444-444444444444";
+  const userId = "33333333-3333-4333-8333-333333333333";
+
+  it("rejects requests without an authenticated user", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId: null, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/accounts/${accountId}`,
+      payload: { name: "Emergency fund" },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("updates only an account owned by the authenticated user", async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: accountId,
+        name: "Emergency fund",
+        type: "savings",
+        currencyCode: "BRL",
+        openingBalanceMinor: -2500n,
+        archivedAt: null,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: new Date("2026-11-02T18:00:00.000Z"),
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/accounts/${accountId}`,
+      payload: {
+        name: "  Emergency fund  ",
+        type: "savings",
+        openingBalanceMinor: "-2500",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      account: {
+        id: accountId,
+        name: "Emergency fund",
+        type: "savings",
+        currencyCode: "BRL",
+        openingBalanceMinor: "-2500",
+        archivedAt: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-02T18:00:00.000Z",
+      },
+    });
+    expect(update).toHaveBeenCalledWith(accounts);
+    expect(set).toHaveBeenCalledWith({
+      name: "Emergency fund",
+      type: "savings",
+      openingBalanceMinor: -2500n,
+      updatedAt: expect.any(Date),
+    });
+    expect(where).toHaveBeenCalledOnce();
+  });
+
+  it("returns 404 when the account does not belong to the user", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/accounts/${accountId}`,
+      payload: { name: "Not mine" },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Account not found" });
+  });
+
+  it.each([
+    {
+      name: "an empty update",
+      payload: {},
+    },
+    {
+      name: "an unsupported type",
+      payload: { type: "crypto" },
+    },
+    {
+      name: "numeric money input",
+      payload: { openingBalanceMinor: 10.5 },
+    },
+  ])("rejects $name before updating the database", async ({ payload }) => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/accounts/${accountId}`,
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid account ID before updating the database", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: "/api/accounts/not-a-uuid",
+      payload: { name: "Wallet" },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
   });
 });
