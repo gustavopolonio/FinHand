@@ -39,6 +39,7 @@ function createAuthentication(authenticatedUserId: string | null) {
 function createApplication(options: {
   userId: string | null;
   findMany?: ReturnType<typeof vi.fn>;
+  findCategory?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
   update?: ReturnType<typeof vi.fn>;
 }) {
@@ -47,6 +48,7 @@ function createApplication(options: {
     query: {
       categories: {
         findMany: options.findMany ?? vi.fn(),
+        findFirst: options.findCategory ?? vi.fn(),
       },
     },
     insert: options.insert ?? vi.fn(),
@@ -605,5 +607,181 @@ describe("PATCH /api/categories/:id", () => {
     expect(response.statusCode).toBe(500);
     expect(response.json()).toEqual({ error: "Internal server error" });
     expect(response.body).not.toContain("Sensitive database failure");
+  });
+});
+
+describe("POST /api/categories/:id/archive", () => {
+  const categoryId = "44444444-4444-4444-8444-444444444444";
+
+  it("rejects requests without an authenticated user", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId: null, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("archives an active category owned by the authenticated user", async () => {
+    const archivedAt = new Date("2026-11-03T15:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: categoryId,
+        name: "Grocery",
+        type: "expense",
+        archivedAt,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: archivedAt,
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn();
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      category: {
+        id: categoryId,
+        name: "Grocery",
+        type: "expense",
+        archivedAt: "2026-11-03T15:00:00.000Z",
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-03T15:00:00.000Z",
+      },
+    });
+    expect(update).toHaveBeenCalledWith(categories);
+    const archiveValues = set.mock.calls[0]?.[0] as {
+      archivedAt: Date;
+      updatedAt: Date;
+    };
+    expect(archiveValues.archivedAt).toBeInstanceOf(Date);
+    expect(archiveValues.updatedAt).toBe(archiveValues.archivedAt);
+    expect(findCategory).not.toHaveBeenCalled();
+  });
+
+  it("returns an already-archived category without changing its timestamp", async () => {
+    const archivedAt = new Date("2026-10-15T10:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      name: "Old grocery",
+      type: "expense",
+      archivedAt,
+      createdAt: new Date("2026-10-01T10:00:00.000Z"),
+      updatedAt: archivedAt,
+    });
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().category).toMatchObject({
+      archivedAt: "2026-10-15T10:00:00.000Z",
+      updatedAt: "2026-10-15T10:00:00.000Z",
+    });
+    expect(findCategory).toHaveBeenCalledOnce();
+  });
+
+  it("returns 404 for a missing or foreign category", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn().mockResolvedValue(null);
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Category not found" });
+  });
+
+  it("rejects an invalid category ID before updating the database", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories/not-a-uuid/archive",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe 500 response when the update fails", async () => {
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive update failure"));
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive update failure");
+  });
+
+  it("returns a safe 500 response when the idempotency lookup fails", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive lookup failure"));
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/archive`,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive lookup failure");
   });
 });

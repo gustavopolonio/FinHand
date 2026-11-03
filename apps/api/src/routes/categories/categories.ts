@@ -2,6 +2,7 @@ import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
 import {
+  archiveCategoryForUser,
   createCategoryForUser,
   listCategoriesForUser,
   renameCategoryForUser,
@@ -58,6 +59,24 @@ export async function categoryRoutes(application: FastifyInstance) {
         request.authenticatedUserId,
         request.params.id,
         request.body,
+      );
+
+      return { category };
+    },
+  );
+
+  categoriesApplication.post(
+    "/api/categories/:id/archive",
+    {
+      schema: {
+        params: categoryParamsSchema,
+      },
+    },
+    async (request) => {
+      const category = await archiveCategoryForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
       );
 
       return { category };

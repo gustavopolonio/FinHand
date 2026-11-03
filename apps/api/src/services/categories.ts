@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import type { Database } from "../db/index.js";
 import {
@@ -183,6 +183,55 @@ export async function renameCategoryForUser(
 
     throw error;
   }
+}
+
+export async function archiveCategoryForUser(
+  database: Database,
+  userId: string,
+  categoryId: string,
+): Promise<CategoryListItem> {
+  const archivedAt = new Date();
+  const [archivedCategory] = await database
+    .update(categories)
+    .set({ archivedAt, updatedAt: archivedAt })
+    .where(
+      and(
+        eq(categories.id, categoryId),
+        eq(categories.userId, userId),
+        isNull(categories.archivedAt),
+      ),
+    )
+    .returning({
+      id: categories.id,
+      name: categories.name,
+      type: categories.type,
+      archivedAt: categories.archivedAt,
+      createdAt: categories.createdAt,
+      updatedAt: categories.updatedAt,
+    });
+
+  if (archivedCategory) {
+    return serializeCategory(archivedCategory);
+  }
+
+  const existingCategory = await database.query.categories.findFirst({
+    columns: {
+      id: true,
+      name: true,
+      type: true,
+      archivedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    where: (category, { and, eq }) =>
+      and(eq(category.id, categoryId), eq(category.userId, userId)),
+  });
+
+  if (!existingCategory) {
+    throw new NotFoundError("Category not found");
+  }
+
+  return serializeCategory(existingCategory);
 }
 
 export async function createDefaultCategoriesForUser(
