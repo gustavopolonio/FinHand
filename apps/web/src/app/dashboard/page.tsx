@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AccountsPanel } from "@/components/accounts-panel";
 import { CategoriesPanel } from "@/components/categories-panel";
 import { MoneyLoader } from "@/components/money-loader";
-import { TransactionsPanel } from "@/components/transactions-panel";
+import { TransactionsPanel } from "@/components/transactions/transactions-panel";
 import { ApiError, type CurrentUser, getCurrentUser } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
