@@ -4,8 +4,13 @@ import type { FastifyInstance } from "fastify";
 import {
   createCategoryForUser,
   listCategoriesForUser,
+  renameCategoryForUser,
 } from "../../services/categories.js";
-import { createCategoryBodySchema } from "../../validation/category-schemas.js";
+import {
+  categoryParamsSchema,
+  createCategoryBodySchema,
+  renameCategoryBodySchema,
+} from "../../validation/category-schemas.js";
 
 export async function categoryRoutes(application: FastifyInstance) {
   application.addHook("preHandler", application.requireAuthentication);
@@ -36,6 +41,26 @@ export async function categoryRoutes(application: FastifyInstance) {
       );
 
       return reply.status(201).send({ category });
+    },
+  );
+
+  categoriesApplication.patch(
+    "/api/categories/:id",
+    {
+      schema: {
+        params: categoryParamsSchema,
+        body: renameCategoryBodySchema,
+      },
+    },
+    async (request) => {
+      const category = await renameCategoryForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+        request.body,
+      );
+
+      return { category };
     },
   );
 }

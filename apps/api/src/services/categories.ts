@@ -1,12 +1,21 @@
+import { and, eq } from "drizzle-orm";
+
 import type { Database } from "../db/index.js";
 import {
   activeCategoryNameUniqueIndexName,
   categories,
   type CategoryType,
 } from "../db/schema/index.js";
-import { ConflictError, InputError } from "../errors/application-errors.js";
+import {
+  ConflictError,
+  InputError,
+  NotFoundError,
+} from "../errors/application-errors.js";
 import { isPostgresUniqueConstraintError } from "../errors/postgres-errors.js";
-import type { CreateCategoryInput } from "../validation/category-schemas.js";
+import type {
+  CreateCategoryInput,
+  RenameCategoryInput,
+} from "../validation/category-schemas.js";
 
 const maximumCategoryNameLength = 100;
 const defaultCategories = [
@@ -112,6 +121,54 @@ export async function createCategoryForUser(
     }
 
     return serializeCategory(createdCategory);
+  } catch (error) {
+    if (
+      isPostgresUniqueConstraintError(
+        error,
+        activeCategoryNameUniqueIndexName,
+      )
+    ) {
+      throw new ConflictError(
+        "An active category with this name and type already exists.",
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function renameCategoryForUser(
+  database: Database,
+  userId: string,
+  categoryId: string,
+  input: RenameCategoryInput,
+): Promise<CategoryListItem> {
+  const name = normalizeCategoryName(input.name);
+
+  try {
+    const [renamedCategory] = await database
+      .update(categories)
+      .set({ name, updatedAt: new Date() })
+      .where(
+        and(
+          eq(categories.id, categoryId),
+          eq(categories.userId, userId),
+        ),
+      )
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        type: categories.type,
+        archivedAt: categories.archivedAt,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    if (!renamedCategory) {
+      throw new NotFoundError("Category not found");
+    }
+
+    return serializeCategory(renamedCategory);
   } catch (error) {
     if (
       isPostgresUniqueConstraintError(

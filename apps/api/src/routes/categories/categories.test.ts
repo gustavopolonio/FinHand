@@ -40,6 +40,7 @@ function createApplication(options: {
   userId: string | null;
   findMany?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
+  update?: ReturnType<typeof vi.fn>;
 }) {
   const application = Fastify();
   const database = {
@@ -49,6 +50,7 @@ function createApplication(options: {
       },
     },
     insert: options.insert ?? vi.fn(),
+    update: options.update ?? vi.fn(),
   } as unknown as Database;
 
   registerSchemaCompilers(application);
@@ -393,6 +395,211 @@ describe("POST /api/categories", () => {
       method: "POST",
       url: "/api/categories",
       payload: { name: "Transport", type: "expense" },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive database failure");
+  });
+});
+
+describe("PATCH /api/categories/:id", () => {
+  const categoryId = "44444444-4444-4444-8444-444444444444";
+
+  it("rejects requests without an authenticated user", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId: null, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "Food" },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("renames a category owned by the authenticated user", async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: categoryId,
+        name: "Food",
+        type: "expense",
+        archivedAt: null,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: new Date("2026-11-03T14:00:00.000Z"),
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "  Food  " },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      category: {
+        id: categoryId,
+        name: "Food",
+        type: "expense",
+        archivedAt: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-03T14:00:00.000Z",
+      },
+    });
+    expect(update).toHaveBeenCalledWith(categories);
+    expect(set).toHaveBeenCalledWith({
+      name: "Food",
+      updatedAt: expect.any(Date),
+    });
+    expect(where).toHaveBeenCalledOnce();
+  });
+
+  it("allows an archived category to be renamed", async () => {
+    const archivedAt = new Date("2026-11-02T13:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: categoryId,
+        name: "Previous grocery",
+        type: "expense",
+        archivedAt,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: new Date("2026-11-03T14:00:00.000Z"),
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "Previous grocery" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().category).toMatchObject({
+      name: "Previous grocery",
+      archivedAt: "2026-11-02T13:00:00.000Z",
+    });
+  });
+
+  it("returns 404 for a missing or foreign category", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "Food" },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Category not found" });
+  });
+
+  it.each([
+    {
+      name: "a blank name",
+      payload: { name: "   " },
+    },
+    {
+      name: "a missing name",
+      payload: {},
+    },
+    {
+      name: "a non-string name",
+      payload: { name: 123 },
+    },
+    {
+      name: "a name longer than 100 characters",
+      payload: { name: "a".repeat(101) },
+    },
+    {
+      name: "an unknown field",
+      payload: { name: "Food", color: "green" },
+    },
+    {
+      name: "an attempt to change the immutable type",
+      payload: { name: "Food", type: "income" },
+    },
+  ])("rejects $name", async ({ payload }) => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid category ID before updating the database", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: "/api/categories/not-a-uuid",
+      payload: { name: "Food" },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the new active name already exists", async () => {
+    const postgresError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint: activeCategoryNameUniqueIndexName,
+    });
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("query failed", { cause: postgresError }));
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "grocery" },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "An active category with this name and type already exists.",
+    });
+  });
+
+  it("returns a safe 500 response for unrelated database failures", async () => {
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive database failure"));
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "PATCH",
+      url: `/api/categories/${categoryId}`,
+      payload: { name: "Food" },
     });
 
     expect(response.statusCode).toBe(500);

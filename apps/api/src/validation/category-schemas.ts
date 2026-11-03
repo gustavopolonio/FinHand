@@ -7,4 +7,13 @@ export const createCategoryBodySchema = z.strictObject({
   type: z.enum(categoryTypes),
 });
 
+export const categoryParamsSchema = z.strictObject({
+  id: z.uuid(),
+});
+
+export const renameCategoryBodySchema = z.strictObject({
+  name: z.string().min(1).max(100),
+});
+
 export type CreateCategoryInput = z.infer<typeof createCategoryBodySchema>;
+export type RenameCategoryInput = z.infer<typeof renameCategoryBodySchema>;
