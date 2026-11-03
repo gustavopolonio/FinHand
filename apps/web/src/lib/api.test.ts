@@ -2,10 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   type Account,
+  type Category,
   archiveAccount,
+  archiveCategory,
   createAccount,
+  createCategory,
   getAccounts,
+  getCategories,
+  renameCategory,
   restoreAccount,
+  restoreCategory,
   updateAccount,
 } from "./api";
 
@@ -15,6 +21,15 @@ const account: Account = {
   type: "checking",
   currencyCode: "BRL",
   openingBalanceMinor: "12345",
+  archivedAt: null,
+  createdAt: "2026-11-01T12:00:00.000Z",
+  updatedAt: "2026-11-02T12:00:00.000Z",
+};
+
+const category: Category = {
+  id: "55555555-5555-4555-8555-555555555555",
+  name: "Grocery",
+  type: "expense",
   archivedAt: null,
   createdAt: "2026-11-01T12:00:00.000Z",
   updatedAt: "2026-11-02T12:00:00.000Z",
@@ -117,6 +132,85 @@ describe("accounts API", () => {
     await expect(restoreAccount(account.id)).resolves.toEqual(account);
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/accounts/${account.id}/restore`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+});
+
+describe("categories API", () => {
+  it("lists categories with credentials", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ categories: [category] }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getCategories()).resolves.toEqual([category]);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/categories",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("creates a category", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ category }));
+    vi.stubGlobal("fetch", fetch);
+    const input = { name: "Grocery", type: "expense" as const };
+
+    await expect(createCategory(input)).resolves.toEqual(category);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/categories",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("renames a category", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ category }));
+    vi.stubGlobal("fetch", fetch);
+    const input = { name: "Food" };
+
+    await expect(renameCategory(category.id, input)).resolves.toEqual(category);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/categories/${category.id}`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("archives a category without declaring an empty JSON body", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ category }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(archiveCategory(category.id)).resolves.toEqual(category);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/categories/${category.id}/archive`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+
+  it("restores a category without declaring an empty JSON body", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ category }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(restoreCategory(category.id)).resolves.toEqual(category);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/categories/${category.id}/restore`,
       expect.objectContaining({ method: "POST" }),
     );
     const request = fetch.mock.calls[0]?.[1] as RequestInit;

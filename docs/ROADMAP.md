@@ -27,7 +27,7 @@
 ### Tasks
 - [x] Implement user authentication
 - [x] Implement accounts
-- [ ] Implement categories
+- [x] Implement categories
 - [ ] Implement transaction CRUD
 - [ ] Implement financial summary calculations
 - [ ] Build the financial dashboard

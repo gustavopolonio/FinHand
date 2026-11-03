@@ -43,6 +43,28 @@ export interface UpdateAccountInput {
   openingBalanceMinor: string;
 }
 
+export const categoryTypes = ["income", "expense"] as const;
+
+export type CategoryType = (typeof categoryTypes)[number];
+
+export interface Category {
+  id: string;
+  name: string;
+  type: CategoryType;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryInput {
+  name: string;
+  type: CategoryType;
+}
+
+export interface RenameCategoryInput {
+  name: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
@@ -129,4 +151,54 @@ export async function restoreAccount(accountId: string) {
   );
 
   return response.account;
+}
+
+export async function getCategories() {
+  const response = await request<{ categories: Category[] }>(
+    "/api/categories",
+  );
+
+  return response.categories;
+}
+
+export async function createCategory(input: CreateCategoryInput) {
+  const response = await request<{ category: Category }>("/api/categories", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return response.category;
+}
+
+export async function renameCategory(
+  categoryId: string,
+  input: RenameCategoryInput,
+) {
+  const response = await request<{ category: Category }>(
+    `/api/categories/${categoryId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+
+  return response.category;
+}
+
+export async function archiveCategory(categoryId: string) {
+  const response = await request<{ category: Category }>(
+    `/api/categories/${categoryId}/archive`,
+    { method: "POST" },
+  );
+
+  return response.category;
+}
+
+export async function restoreCategory(categoryId: string) {
+  const response = await request<{ category: Category }>(
+    `/api/categories/${categoryId}/restore`,
+    { method: "POST" },
+  );
+
+  return response.category;
 }

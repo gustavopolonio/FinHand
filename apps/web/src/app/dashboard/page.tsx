@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccountsPanel } from "@/components/accounts-panel";
+import { CategoriesPanel } from "@/components/categories-panel";
 import { MoneyLoader } from "@/components/money-loader";
 import { ApiError, type CurrentUser, getCurrentUser } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -64,10 +65,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-10 rounded-2xl bg-emerald-50 p-6 text-emerald-950">
-          Add your financial accounts to start organizing your money.
+          Add your financial accounts and categories to start organizing your
+          money.
         </div>
 
         <AccountsPanel defaultCurrency={user.defaultCurrency} />
+        <CategoriesPanel />
       </section>
     </main>
   );
