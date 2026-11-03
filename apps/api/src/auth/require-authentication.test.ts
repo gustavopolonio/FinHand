@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { Authentication } from "./authentication.js";
+import { registerApplicationErrorHandler } from "../errors/error-handler.js";
 import { registerAuthenticationGuard } from "./require-authentication.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
@@ -27,6 +28,7 @@ function createApplication(userId: string | null) {
   } as unknown as Authentication;
   const application = Fastify();
 
+  registerApplicationErrorHandler(application);
   registerAuthenticationGuard(application, authentication);
   application.get(
     "/protected",

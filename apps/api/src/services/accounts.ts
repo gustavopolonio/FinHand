@@ -6,6 +6,11 @@ import {
   accountTypes,
   type AccountType,
 } from "../db/schema/index.js";
+import {
+  InputError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../errors/application-errors.js";
 
 const maximumAccountNameLength = 100;
 const minimumPostgresBigInt = -9_223_372_036_854_775_808n;
@@ -36,12 +41,6 @@ export interface UpdateAccountInput {
   openingBalanceMinor?: string;
 }
 
-export class AccountInputError extends Error {}
-
-export class AccountOwnerNotFoundError extends Error {}
-
-export class AccountNotFoundError extends Error {}
-
 export interface AccountListItem {
   id: string;
   name: string;
@@ -70,11 +69,11 @@ function normalizeAccountName(name: string): string {
   const normalizedName = name.trim();
 
   if (!normalizedName) {
-    throw new AccountInputError("Account name is required.");
+    throw new InputError("Account name is required.");
   }
 
   if (normalizedName.length > maximumAccountNameLength) {
-    throw new AccountInputError(
+    throw new InputError(
       `Account name must contain at most ${maximumAccountNameLength} characters.`,
     );
   }
@@ -84,7 +83,7 @@ function normalizeAccountName(name: string): string {
 
 function normalizeAccountType(type: string): AccountType {
   if (!accountTypes.includes(type as AccountType)) {
-    throw new AccountInputError("Account type is invalid.");
+    throw new InputError("Account type is invalid.");
   }
 
   return type as AccountType;
@@ -94,7 +93,7 @@ function normalizeCurrencyCode(currencyCode: string): string {
   const normalizedCurrencyCode = currencyCode.trim().toUpperCase();
 
   if (!supportedCurrencies.has(normalizedCurrencyCode)) {
-    throw new AccountInputError(
+    throw new InputError(
       "Currency code must be a supported three-letter ISO 4217 code.",
     );
   }
@@ -106,7 +105,7 @@ function parseOpeningBalanceMinor(value: string | undefined): bigint {
   const normalizedValue = value?.trim() || "0";
 
   if (!/^-?\d+$/.test(normalizedValue)) {
-    throw new AccountInputError(
+    throw new InputError(
       "Opening balance must be a signed integer string in minor units.",
     );
   }
@@ -117,7 +116,7 @@ function parseOpeningBalanceMinor(value: string | undefined): bigint {
     openingBalanceMinor < minimumPostgresBigInt ||
     openingBalanceMinor > maximumPostgresBigInt
   ) {
-    throw new AccountInputError(
+    throw new InputError(
       "Opening balance is outside PostgreSQL BIGINT range.",
     );
   }
@@ -166,7 +165,7 @@ export async function createAccountForUser(
   });
 
   if (!owner) {
-    throw new AccountOwnerNotFoundError("Authenticated user no longer exists.");
+    throw new UnauthorizedError();
   }
 
   const currencyCode =
@@ -230,7 +229,7 @@ export async function updateAccountForUser(
     updates.type === undefined &&
     updates.openingBalanceMinor === undefined
   ) {
-    throw new AccountInputError("At least one account field is required.");
+    throw new InputError("At least one account field is required.");
   }
 
   const [updatedAccount] = await database
@@ -249,7 +248,7 @@ export async function updateAccountForUser(
     });
 
   if (!updatedAccount) {
-    throw new AccountNotFoundError("Account not found.");
+    throw new NotFoundError("Account not found");
   }
 
   return serializeAccount(updatedAccount);
@@ -302,7 +301,7 @@ export async function archiveAccountForUser(
   });
 
   if (!existingAccount) {
-    throw new AccountNotFoundError("Account not found.");
+    throw new NotFoundError("Account not found");
   }
 
   return serializeAccount(existingAccount);
@@ -355,7 +354,7 @@ export async function restoreAccountForUser(
   });
 
   if (!existingAccount) {
-    throw new AccountNotFoundError("Account not found.");
+    throw new NotFoundError("Account not found");
   }
 
   return serializeAccount(existingAccount);

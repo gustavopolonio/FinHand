@@ -5,6 +5,7 @@ import type {
 } from "fastify";
 
 import type { Authentication } from "./authentication.js";
+import { UnauthorizedError } from "../errors/application-errors.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -23,13 +24,13 @@ export function registerAuthenticationGuard(
   application.decorateRequest("authenticatedUserId", "");
   application.decorate(
     "requireAuthentication",
-    async function requireAuthentication(request, reply) {
+    async function requireAuthentication(request) {
       const session = await authentication.api.getSession({
         headers: fromNodeHeaders(request.headers),
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized" });
+        throw new UnauthorizedError();
       }
 
       request.authenticatedUserId = session.user.id;

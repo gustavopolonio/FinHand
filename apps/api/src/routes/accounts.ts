@@ -2,9 +2,6 @@ import type { FastifyInstance } from "fastify";
 
 import { accountTypes } from "../db/schema/index.js";
 import {
-  AccountInputError,
-  AccountNotFoundError,
-  AccountOwnerNotFoundError,
   archiveAccountForUser,
   createAccountForUser,
   listAccountsForUser,
@@ -51,25 +48,13 @@ export async function accountRoutes(application: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const account = await createAccountForUser(
-          application.database,
-          request.authenticatedUserId,
-          request.body,
-        );
+      const account = await createAccountForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.body,
+      );
 
-        return reply.status(201).send({ account });
-      } catch (error) {
-        if (error instanceof AccountInputError) {
-          return reply.status(400).send({ error: error.message });
-        }
-
-        if (error instanceof AccountOwnerNotFoundError) {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-
-        throw error;
-      }
+      return reply.status(201).send({ account });
     },
   );
 
@@ -100,27 +85,15 @@ export async function accountRoutes(application: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const account = await updateAccountForUser(
-          application.database,
-          request.authenticatedUserId,
-          request.params.id,
-          request.body,
-        );
+    async (request) => {
+      const account = await updateAccountForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+        request.body,
+      );
 
-        return { account };
-      } catch (error) {
-        if (error instanceof AccountInputError) {
-          return reply.status(400).send({ error: error.message });
-        }
-
-        if (error instanceof AccountNotFoundError) {
-          return reply.status(404).send({ error: "Account not found" });
-        }
-
-        throw error;
-      }
+      return { account };
     },
   );
 
@@ -138,22 +111,14 @@ export async function accountRoutes(application: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const account = await archiveAccountForUser(
-          application.database,
-          request.authenticatedUserId,
-          request.params.id,
-        );
+    async (request) => {
+      const account = await archiveAccountForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
 
-        return { account };
-      } catch (error) {
-        if (error instanceof AccountNotFoundError) {
-          return reply.status(404).send({ error: "Account not found" });
-        }
-
-        throw error;
-      }
+      return { account };
     },
   );
 
@@ -171,22 +136,14 @@ export async function accountRoutes(application: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const account = await restoreAccountForUser(
-          application.database,
-          request.authenticatedUserId,
-          request.params.id,
-        );
+    async (request) => {
+      const account = await restoreAccountForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
 
-        return { account };
-      } catch (error) {
-        if (error instanceof AccountNotFoundError) {
-          return reply.status(404).send({ error: "Account not found" });
-        }
-
-        throw error;
-      }
+      return { account };
     },
   );
 }

@@ -4,6 +4,7 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import type { Authentication } from "./auth/authentication.js";
 import { registerAuthenticationGuard } from "./auth/require-authentication.js";
 import type { Database, DatabaseConnection } from "./db/index.js";
+import { registerApplicationErrorHandler } from "./errors/error-handler.js";
 import { accountRoutes } from "./routes/accounts.js";
 import { authenticationRoutes } from "./routes/authentication.js";
 import { healthRoutes } from "./routes/health.js";
@@ -32,6 +33,7 @@ export function buildApplication({
 }: BuildApplicationOptions) {
   const application = Fastify({ logger });
 
+  registerApplicationErrorHandler(application);
   application.decorate("database", databaseConnection.database);
   registerAuthenticationGuard(application, authentication);
   application.addHook("onClose", async () => {

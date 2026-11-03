@@ -59,6 +59,46 @@ describe("authentication routes", () => {
     });
   });
 
+  it("forwards authentication error responses", async () => {
+    const authentication = {
+      handler: async () =>
+        new Response(JSON.stringify({ error: "Invalid authentication" }), {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        }),
+      api: { getSession: async () => null },
+    } as unknown as Authentication;
+    const application = createApplication(authentication);
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/auth/sign-in/social",
+      payload: { provider: "google" },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: "Invalid authentication" });
+  });
+
+  it("hides unexpected authentication handler errors", async () => {
+    const authentication = {
+      handler: async () => {
+        throw new Error("Sensitive OAuth failure");
+      },
+      api: { getSession: async () => null },
+    } as unknown as Authentication;
+    const application = createApplication(authentication);
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/auth/get-session",
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive OAuth failure");
+  });
+
   it("rejects protected requests without a valid session", async () => {
     const authentication = {
       handler: async () => new Response(null, { status: 404 }),

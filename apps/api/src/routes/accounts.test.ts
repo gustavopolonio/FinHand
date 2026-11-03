@@ -5,6 +5,7 @@ import type { Authentication } from "../auth/authentication.js";
 import { registerAuthenticationGuard } from "../auth/require-authentication.js";
 import type { Database } from "../db/index.js";
 import { accounts, users } from "../db/schema/index.js";
+import { registerApplicationErrorHandler } from "../errors/error-handler.js";
 import { accountRoutes } from "./accounts.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
@@ -53,6 +54,7 @@ function createApplication(options: {
     update: options.update ?? vi.fn(),
   } as unknown as Database;
 
+  registerApplicationErrorHandler(application);
   application.decorate("database", database);
   registerAuthenticationGuard(
     application,
@@ -251,6 +253,48 @@ describe("POST /api/accounts", () => {
 
     expect(ownerQuery.where(users, { eq })).toBe(ownerFilter);
     expect(eq).toHaveBeenCalledWith(users.id, userId);
+  });
+
+  it("returns 401 when the authenticated owner no longer exists", async () => {
+    const findUser = vi.fn().mockResolvedValue(null);
+    const insert = vi.fn();
+    const application = createApplication({
+      userId: "33333333-3333-4333-8333-333333333333",
+      findUser,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/accounts",
+      payload: { name: "Wallet", type: "cash" },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("hides unexpected account creation errors", async () => {
+    const findUser = vi.fn().mockResolvedValue({ defaultCurrency: "BRL" });
+    const returning = vi.fn().mockResolvedValue([]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({
+      userId: "33333333-3333-4333-8333-333333333333",
+      findUser,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/accounts",
+      payload: { name: "Wallet", type: "cash" },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("did not return a record");
   });
 
   it.each([
