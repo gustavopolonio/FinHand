@@ -9,6 +9,7 @@ import { accountRoutes } from "./routes/accounts/accounts.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
 import { healthRoutes } from "./routes/health/health.js";
+import { transactionRoutes } from "./routes/transactions/transactions.js";
 import { userRoutes } from "./routes/users/users.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
@@ -54,6 +55,7 @@ export function buildApplication({
   application.register(healthRoutes);
   application.register(accountRoutes);
   application.register(categoryRoutes);
+  application.register(transactionRoutes);
   application.register(authenticationRoutes, {
     authentication,
     baseUrl: authenticationBaseUrl,
