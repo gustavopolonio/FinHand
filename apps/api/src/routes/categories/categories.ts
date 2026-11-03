@@ -6,6 +6,7 @@ import {
   createCategoryForUser,
   listCategoriesForUser,
   renameCategoryForUser,
+  restoreCategoryForUser,
 } from "../../services/categories.js";
 import {
   categoryParamsSchema,
@@ -74,6 +75,24 @@ export async function categoryRoutes(application: FastifyInstance) {
     },
     async (request) => {
       const category = await archiveCategoryForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
+
+      return { category };
+    },
+  );
+
+  categoriesApplication.post(
+    "/api/categories/:id/restore",
+    {
+      schema: {
+        params: categoryParamsSchema,
+      },
+    },
+    async (request) => {
+      const category = await restoreCategoryForUser(
         application.database,
         request.authenticatedUserId,
         request.params.id,

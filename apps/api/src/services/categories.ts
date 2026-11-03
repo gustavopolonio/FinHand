@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import type { Database } from "../db/index.js";
 import {
@@ -68,6 +68,21 @@ function normalizeCategoryName(name: string): string {
   return normalizedName;
 }
 
+function rethrowCategoryWriteError(error: unknown): never {
+  if (
+    isPostgresUniqueConstraintError(
+      error,
+      activeCategoryNameUniqueIndexName,
+    )
+  ) {
+    throw new ConflictError(
+      "An active category with this name and type already exists.",
+    );
+  }
+
+  throw error;
+}
+
 export async function listCategoriesForUser(
   database: Database,
   userId: string,
@@ -122,18 +137,7 @@ export async function createCategoryForUser(
 
     return serializeCategory(createdCategory);
   } catch (error) {
-    if (
-      isPostgresUniqueConstraintError(
-        error,
-        activeCategoryNameUniqueIndexName,
-      )
-    ) {
-      throw new ConflictError(
-        "An active category with this name and type already exists.",
-      );
-    }
-
-    throw error;
+    rethrowCategoryWriteError(error);
   }
 }
 
@@ -170,18 +174,7 @@ export async function renameCategoryForUser(
 
     return serializeCategory(renamedCategory);
   } catch (error) {
-    if (
-      isPostgresUniqueConstraintError(
-        error,
-        activeCategoryNameUniqueIndexName,
-      )
-    ) {
-      throw new ConflictError(
-        "An active category with this name and type already exists.",
-      );
-    }
-
-    throw error;
+    rethrowCategoryWriteError(error);
   }
 }
 
@@ -212,6 +205,60 @@ export async function archiveCategoryForUser(
 
   if (archivedCategory) {
     return serializeCategory(archivedCategory);
+  }
+
+  const existingCategory = await database.query.categories.findFirst({
+    columns: {
+      id: true,
+      name: true,
+      type: true,
+      archivedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    where: (category, { and, eq }) =>
+      and(eq(category.id, categoryId), eq(category.userId, userId)),
+  });
+
+  if (!existingCategory) {
+    throw new NotFoundError("Category not found");
+  }
+
+  return serializeCategory(existingCategory);
+}
+
+export async function restoreCategoryForUser(
+  database: Database,
+  userId: string,
+  categoryId: string,
+): Promise<CategoryListItem> {
+  const restoredAt = new Date();
+
+  try {
+    const [restoredCategory] = await database
+      .update(categories)
+      .set({ archivedAt: null, updatedAt: restoredAt })
+      .where(
+        and(
+          eq(categories.id, categoryId),
+          eq(categories.userId, userId),
+          isNotNull(categories.archivedAt),
+        ),
+      )
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        type: categories.type,
+        archivedAt: categories.archivedAt,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    if (restoredCategory) {
+      return serializeCategory(restoredCategory);
+    }
+  } catch (error) {
+    rethrowCategoryWriteError(error);
   }
 
   const existingCategory = await database.query.categories.findFirst({

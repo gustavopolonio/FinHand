@@ -785,3 +785,203 @@ describe("POST /api/categories/:id/archive", () => {
     expect(response.body).not.toContain("Sensitive lookup failure");
   });
 });
+
+describe("POST /api/categories/:id/restore", () => {
+  const categoryId = "44444444-4444-4444-8444-444444444444";
+
+  it("rejects requests without an authenticated user", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId: null, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("restores an archived category owned by the authenticated user", async () => {
+    const restoredAt = new Date("2026-11-03T16:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: categoryId,
+        name: "Grocery",
+        type: "expense",
+        archivedAt: null,
+        createdAt: new Date("2026-11-01T12:00:00.000Z"),
+        updatedAt: restoredAt,
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn();
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      category: {
+        id: categoryId,
+        name: "Grocery",
+        type: "expense",
+        archivedAt: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-03T16:00:00.000Z",
+      },
+    });
+    expect(update).toHaveBeenCalledWith(categories);
+    const restoreValues = set.mock.calls[0]?.[0] as {
+      archivedAt: null;
+      updatedAt: Date;
+    };
+    expect(restoreValues.archivedAt).toBeNull();
+    expect(restoreValues.updatedAt).toBeInstanceOf(Date);
+    expect(findCategory).not.toHaveBeenCalled();
+  });
+
+  it("returns an already-active category without changing its timestamp", async () => {
+    const updatedAt = new Date("2026-10-15T10:00:00.000Z");
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      name: "Grocery",
+      type: "expense",
+      archivedAt: null,
+      createdAt: new Date("2026-10-01T10:00:00.000Z"),
+      updatedAt,
+    });
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().category).toMatchObject({
+      archivedAt: null,
+      updatedAt: "2026-10-15T10:00:00.000Z",
+    });
+    expect(findCategory).toHaveBeenCalledOnce();
+  });
+
+  it("returns 404 for a missing or foreign category", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi.fn().mockResolvedValue(null);
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Category not found" });
+  });
+
+  it("rejects an invalid category ID before updating the database", async () => {
+    const update = vi.fn();
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories/not-a-uuid/restore",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when an active category has the same name and type", async () => {
+    const postgresError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint: activeCategoryNameUniqueIndexName,
+    });
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("query failed", { cause: postgresError }));
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "An active category with this name and type already exists.",
+    });
+  });
+
+  it("returns a safe 500 response when the update fails", async () => {
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive update failure"));
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const application = createApplication({ userId, update });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive update failure");
+  });
+
+  it("returns a safe 500 response when the idempotency lookup fails", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const findCategory = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive lookup failure"));
+    const application = createApplication({
+      userId,
+      findCategory,
+      update,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/categories/${categoryId}/restore`,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive lookup failure");
+  });
+});
