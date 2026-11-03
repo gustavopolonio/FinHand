@@ -13,6 +13,26 @@ export const createTransactionBodySchema = z.strictObject({
   notes: z.string().max(2_000).nullable().optional(),
 });
 
+export const transactionParamsSchema = z.strictObject({
+  id: z.uuid(),
+});
+
+export const updateTransactionBodySchema = z
+  .strictObject({
+    accountId: z.uuid().optional(),
+    categoryId: z.uuid().nullable().optional(),
+    type: z.enum(transactionTypes).optional(),
+    amountMinor: z.string().regex(/^\d+$/).max(19).optional(),
+    occurredOn: z.iso.date().optional(),
+    description: z.string().min(1).max(200).optional(),
+    counterparty: z.string().max(200).nullable().optional(),
+    notes: z.string().max(2_000).nullable().optional(),
+  })
+  .refine(
+    (body) => Object.values(body).some((value) => value !== undefined),
+    { message: "At least one transaction field is required." },
+  );
+
 export const listTransactionsQuerySchema = z
   .strictObject({
     type: z.enum(transactionTypes).optional(),
@@ -41,4 +61,7 @@ export type ListTransactionsQuery = z.infer<
 >;
 export type CreateTransactionInput = z.infer<
   typeof createTransactionBodySchema
+>;
+export type UpdateTransactionInput = z.infer<
+  typeof updateTransactionBodySchema
 >;

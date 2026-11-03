@@ -1,3 +1,5 @@
+import { and, eq } from "drizzle-orm";
+
 import type { Database } from "../db/index.js";
 import {
   transactions,
@@ -12,6 +14,7 @@ import {
 import type {
   CreateTransactionInput,
   ListTransactionsQuery,
+  UpdateTransactionInput,
 } from "../validation/transaction-schemas.js";
 
 const maximumPostgresBigInt = 9_223_372_036_854_775_807n;
@@ -325,4 +328,189 @@ export async function createTransactionForUser(
   }
 
   return serializeTransaction(createdTransaction);
+}
+
+export async function updateTransactionForUser(
+  database: Database,
+  userId: string,
+  transactionId: string,
+  input: UpdateTransactionInput,
+): Promise<TransactionListItem> {
+  const existingTransaction =
+    await database.query.transactions.findFirst({
+      columns: {
+        id: true,
+        accountId: true,
+        categoryId: true,
+        type: true,
+      },
+      where: (candidateTransaction, { and, eq }) =>
+        and(
+          eq(candidateTransaction.id, transactionId),
+          eq(candidateTransaction.userId, userId),
+        ),
+    });
+
+  if (!existingTransaction) {
+    throw new NotFoundError("Transaction not found");
+  }
+
+  const updates: {
+    accountId?: string;
+    categoryId?: string | null;
+    type?: TransactionType;
+    amountMinor?: bigint;
+    currencyCode?: string;
+    occurredOn?: string;
+    description?: string;
+    counterparty?: string | null;
+    notes?: string | null;
+    updatedAt: Date;
+  } = { updatedAt: new Date() };
+
+  const requestedAccountId = input.accountId;
+
+  if (
+    requestedAccountId !== undefined &&
+    requestedAccountId !== existingTransaction.accountId
+  ) {
+    const account = await database.query.accounts.findFirst({
+      columns: {
+        id: true,
+        currencyCode: true,
+        archivedAt: true,
+      },
+      where: (candidateAccount, { and, eq }) =>
+        and(
+          eq(candidateAccount.id, requestedAccountId),
+          eq(candidateAccount.userId, userId),
+        ),
+    });
+
+    if (!account) {
+      throw new NotFoundError("Account not found");
+    }
+
+    if (account.archivedAt) {
+      throw new ConflictError(
+        "Archived accounts cannot receive new transactions.",
+      );
+    }
+
+    updates.accountId = account.id;
+    updates.currencyCode = account.currencyCode;
+  }
+
+  const nextType = input.type ?? existingTransaction.type;
+  const nextCategoryId =
+    input.categoryId === undefined
+      ? existingTransaction.categoryId
+      : input.categoryId;
+  const categoryChanged =
+    input.categoryId !== undefined &&
+    input.categoryId !== existingTransaction.categoryId;
+  const typeChanged =
+    input.type !== undefined && input.type !== existingTransaction.type;
+
+  if (nextCategoryId !== null && (categoryChanged || typeChanged)) {
+    const category = await database.query.categories.findFirst({
+      columns: {
+        id: true,
+        type: true,
+        archivedAt: true,
+      },
+      where: (candidateCategory, { and, eq }) =>
+        and(
+          eq(candidateCategory.id, nextCategoryId),
+          eq(candidateCategory.userId, userId),
+        ),
+    });
+
+    if (!category) {
+      throw new NotFoundError("Category not found");
+    }
+
+    if (categoryChanged && category.archivedAt) {
+      throw new ConflictError(
+        "Archived categories cannot receive new transactions.",
+      );
+    }
+
+    if (category.type !== nextType) {
+      throw new InputError(
+        "Transaction type must match the selected category type.",
+      );
+    }
+  }
+
+  if (input.categoryId !== undefined) {
+    updates.categoryId = input.categoryId;
+  }
+
+  if (input.type !== undefined) {
+    updates.type = input.type;
+  }
+
+  if (input.amountMinor !== undefined) {
+    updates.amountMinor = parseAmountMinor(input.amountMinor);
+  }
+
+  if (input.occurredOn !== undefined) {
+    updates.occurredOn = input.occurredOn;
+  }
+
+  if (input.description !== undefined) {
+    updates.description = normalizeRequiredText(
+      input.description,
+      "Transaction description",
+      maximumDescriptionLength,
+    );
+  }
+
+  if (input.counterparty !== undefined) {
+    updates.counterparty = normalizeOptionalText(
+      input.counterparty,
+      "Transaction counterparty",
+      maximumCounterpartyLength,
+    );
+  }
+
+  if (input.notes !== undefined) {
+    updates.notes = normalizeOptionalText(
+      input.notes,
+      "Transaction notes",
+      maximumNotesLength,
+    );
+  }
+
+  const [updatedTransaction] = await database
+    .update(transactions)
+    .set(updates)
+    .where(
+      and(
+        eq(transactions.id, transactionId),
+        eq(transactions.userId, userId),
+      ),
+    )
+    .returning({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      categoryId: transactions.categoryId,
+      type: transactions.type,
+      amountMinor: transactions.amountMinor,
+      currencyCode: transactions.currencyCode,
+      occurredOn: transactions.occurredOn,
+      description: transactions.description,
+      counterparty: transactions.counterparty,
+      notes: transactions.notes,
+      origin: transactions.origin,
+      createdAt: transactions.createdAt,
+      updatedAt: transactions.updatedAt,
+    });
+
+  if (!updatedTransaction) {
+    throw new NotFoundError("Transaction not found");
+  }
+
+  return serializeTransaction(updatedTransaction);
 }

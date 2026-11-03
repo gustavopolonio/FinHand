@@ -4,10 +4,13 @@ import type { FastifyInstance } from "fastify";
 import {
   createTransactionForUser,
   listTransactionsForUser,
+  updateTransactionForUser,
 } from "../../services/transactions.js";
 import {
   createTransactionBodySchema,
   listTransactionsQuerySchema,
+  transactionParamsSchema,
+  updateTransactionBodySchema,
 } from "../../validation/transaction-schemas.js";
 
 export async function transactionRoutes(application: FastifyInstance) {
@@ -45,6 +48,26 @@ export async function transactionRoutes(application: FastifyInstance) {
       );
 
       return reply.status(201).send({ transaction });
+    },
+  );
+
+  transactionsApplication.patch(
+    "/api/transactions/:id",
+    {
+      schema: {
+        params: transactionParamsSchema,
+        body: updateTransactionBodySchema,
+      },
+    },
+    async (request) => {
+      const transaction = await updateTransactionForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+        request.body,
+      );
+
+      return { transaction };
     },
   );
 }
