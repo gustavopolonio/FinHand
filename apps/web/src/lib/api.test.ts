@@ -66,6 +66,10 @@ describe("accounts API", () => {
         body: JSON.stringify(input),
       }),
     );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
   });
 
   it("updates an account", async () => {
@@ -100,6 +104,8 @@ describe("accounts API", () => {
       `http://localhost:3001/api/accounts/${account.id}/archive`,
       expect.objectContaining({ method: "POST" }),
     );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
   });
 
   it("restores an account", async () => {
@@ -113,5 +119,7 @@ describe("accounts API", () => {
       `http://localhost:3001/api/accounts/${account.id}/restore`,
       expect.objectContaining({ method: "POST" }),
     );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
   });
 });

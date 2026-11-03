@@ -44,13 +44,20 @@ export interface UpdateAccountInput {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+
+  if (
+    init?.body !== undefined &&
+    init.body !== null &&
+    !headers.has("Content-Type")
+  ) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
