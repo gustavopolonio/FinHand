@@ -1,8 +1,14 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
-import { listTransactionsForUser } from "../../services/transactions.js";
-import { listTransactionsQuerySchema } from "../../validation/transaction-schemas.js";
+import {
+  createTransactionForUser,
+  listTransactionsForUser,
+} from "../../services/transactions.js";
+import {
+  createTransactionBodySchema,
+  listTransactionsQuerySchema,
+} from "../../validation/transaction-schemas.js";
 
 export async function transactionRoutes(application: FastifyInstance) {
   application.addHook("preHandler", application.requireAuthentication);
@@ -22,5 +28,23 @@ export async function transactionRoutes(application: FastifyInstance) {
         request.authenticatedUserId,
         request.query,
       ),
+  );
+
+  transactionsApplication.post(
+    "/api/transactions",
+    {
+      schema: {
+        body: createTransactionBodySchema,
+      },
+    },
+    async (request, reply) => {
+      const transaction = await createTransactionForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.body,
+      );
+
+      return reply.status(201).send({ transaction });
+    },
   );
 }

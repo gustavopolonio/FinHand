@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Authentication } from "../../auth/authentication.js";
 import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
 import type { Database } from "../../db/index.js";
-import { transactions } from "../../db/schema/index.js";
+import {
+  accounts,
+  categories,
+  transactions,
+} from "../../db/schema/index.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { transactionRoutes } from "./transactions.js";
@@ -38,6 +42,9 @@ function createAuthentication(authenticatedUserId: string | null) {
 function createApplication(options: {
   userId: string | null;
   findMany?: ReturnType<typeof vi.fn>;
+  findAccount?: ReturnType<typeof vi.fn>;
+  findCategory?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
 }) {
   const application = Fastify();
   const database = {
@@ -45,7 +52,14 @@ function createApplication(options: {
       transactions: {
         findMany: options.findMany ?? vi.fn(),
       },
+      accounts: {
+        findFirst: options.findAccount ?? vi.fn(),
+      },
+      categories: {
+        findFirst: options.findCategory ?? vi.fn(),
+      },
     },
+    insert: options.insert ?? vi.fn(),
   } as unknown as Database;
 
   registerSchemaCompilers(application);
@@ -269,6 +283,439 @@ describe("GET /api/transactions", () => {
     const response = await application.inject({
       method: "GET",
       url: "/api/transactions",
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive database failure");
+  });
+});
+
+describe("POST /api/transactions", () => {
+  const validPayload = {
+    accountId,
+    categoryId,
+    type: "expense",
+    amountMinor: "2590",
+    occurredOn: "2026-11-03",
+    description: "Weekly groceries",
+    counterparty: "Supermarket",
+    notes: "Household food",
+  };
+
+  function createSuccessfulInsert() {
+    const createdTransaction = {
+      ...createTransactionRecord("66666666-6666-4666-8666-666666666666"),
+      notes: "Household food",
+    };
+    const returning = vi.fn().mockResolvedValue([createdTransaction]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+
+    return { createdTransaction, insert, returning, values };
+  }
+
+  it("rejects requests without an authenticated user", async () => {
+    const findAccount = vi.fn();
+    const insert = vi.fn();
+    const application = createApplication({
+      userId: null,
+      findAccount,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(findAccount).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("creates a normalized manual transaction using its account currency", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      type: "expense",
+      archivedAt: null,
+    });
+    const { createdTransaction, insert, values } = createSuccessfulInsert();
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: {
+        ...validPayload,
+        description: "  Weekly groceries  ",
+        counterparty: "  Supermarket  ",
+        notes: "  Household food  ",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({
+      transaction: {
+        id: createdTransaction.id,
+        accountId,
+        categoryId,
+        type: "expense",
+        amountMinor: "2590",
+        currencyCode: "BRL",
+        occurredOn: "2026-11-03",
+        description: "Weekly groceries",
+        counterparty: "Supermarket",
+        notes: "Household food",
+        origin: "manual",
+        createdAt: "2026-11-03T15:00:00.000Z",
+        updatedAt: "2026-11-03T15:00:00.000Z",
+      },
+    });
+    expect(insert).toHaveBeenCalledWith(transactions);
+    expect(values).toHaveBeenCalledWith({
+      userId,
+      accountId,
+      categoryId,
+      type: "expense",
+      amountMinor: 2_590n,
+      currencyCode: "BRL",
+      occurredOn: "2026-11-03",
+      description: "Weekly groceries",
+      counterparty: "Supermarket",
+      notes: "Household food",
+      origin: "manual",
+    });
+
+    const accountQuery = findAccount.mock.calls[0]?.[0] as {
+      where: (
+        account: typeof accounts,
+        operators: {
+          and: (...conditions: unknown[]) => unknown;
+          eq: (left: unknown, right: unknown) => unknown;
+        },
+      ) => unknown;
+    };
+    const accountConditions = [Symbol("account id"), Symbol("account owner")];
+    const accountFilter = Symbol("account filter");
+    const accountEq = vi
+      .fn()
+      .mockReturnValueOnce(accountConditions[0])
+      .mockReturnValueOnce(accountConditions[1]);
+    const accountAnd = vi.fn().mockReturnValue(accountFilter);
+
+    expect(
+      accountQuery.where(accounts, { and: accountAnd, eq: accountEq }),
+    ).toBe(accountFilter);
+    expect(accountEq.mock.calls).toEqual([
+      [accounts.id, accountId],
+      [accounts.userId, userId],
+    ]);
+
+    const categoryQuery = findCategory.mock.calls[0]?.[0] as {
+      where: (
+        category: typeof categories,
+        operators: {
+          and: (...conditions: unknown[]) => unknown;
+          eq: (left: unknown, right: unknown) => unknown;
+        },
+      ) => unknown;
+    };
+    const categoryConditions = [
+      Symbol("category id"),
+      Symbol("category owner"),
+    ];
+    const categoryFilter = Symbol("category filter");
+    const categoryEq = vi
+      .fn()
+      .mockReturnValueOnce(categoryConditions[0])
+      .mockReturnValueOnce(categoryConditions[1]);
+    const categoryAnd = vi.fn().mockReturnValue(categoryFilter);
+
+    expect(
+      categoryQuery.where(categories, {
+        and: categoryAnd,
+        eq: categoryEq,
+      }),
+    ).toBe(categoryFilter);
+    expect(categoryEq.mock.calls).toEqual([
+      [categories.id, categoryId],
+      [categories.userId, userId],
+    ]);
+  });
+
+  it("creates an uncategorized transaction with empty optional text normalized to null", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn();
+    const { insert, values } = createSuccessfulInsert();
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: {
+        accountId,
+        categoryId: null,
+        type: "expense",
+        amountMinor: "2590",
+        occurredOn: "2026-11-03",
+        description: "Groceries",
+        counterparty: "   ",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(findCategory).not.toHaveBeenCalled();
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categoryId: null,
+        counterparty: null,
+        notes: null,
+      }),
+    );
+  });
+
+  it.each([
+    ["invalid account ID", { ...validPayload, accountId: "not-a-uuid" }],
+    ["invalid category ID", { ...validPayload, categoryId: "not-a-uuid" }],
+    ["invalid type", { ...validPayload, type: "transfer" }],
+    ["decimal amount", { ...validPayload, amountMinor: "25.90" }],
+    ["negative amount", { ...validPayload, amountMinor: "-2590" }],
+    ["invalid date", { ...validPayload, occurredOn: "2026-02-30" }],
+    ["empty description", { ...validPayload, description: "" }],
+    ["client-controlled origin", { ...validPayload, origin: "document" }],
+    ["client-controlled currency", { ...validPayload, currencyCode: "USD" }],
+  ])("rejects %s", async (_scenario, payload) => {
+    const findAccount = vi.fn();
+    const insert = vi.fn();
+    const application = createApplication({ userId, findAccount, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(findAccount).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["0", "Transaction amount must be greater than zero."],
+    [
+      "9223372036854775808",
+      "Transaction amount is outside PostgreSQL BIGINT range.",
+    ],
+  ])("rejects the out-of-range amount %s", async (amountMinor, error) => {
+    const findAccount = vi.fn();
+    const insert = vi.fn();
+    const application = createApplication({ userId, findAccount, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: { ...validPayload, amountMinor },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error });
+    expect(findAccount).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a whitespace-only description", async () => {
+    const findAccount = vi.fn();
+    const application = createApplication({ userId, findAccount });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: { ...validPayload, description: "   " },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: "Transaction description is required.",
+    });
+    expect(findAccount).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the account is missing or belongs to another user", async () => {
+    const findAccount = vi.fn().mockResolvedValue(undefined);
+    const insert = vi.fn();
+    const application = createApplication({ userId, findAccount, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Account not found" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an archived account", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: new Date("2026-11-02T12:00:00.000Z"),
+    });
+    const insert = vi.fn();
+    const application = createApplication({ userId, findAccount, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "Archived accounts cannot receive new transactions.",
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the category is missing or belongs to another user", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn().mockResolvedValue(undefined);
+    const insert = vi.fn();
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Category not found" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an archived category", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      type: "expense",
+      archivedAt: new Date("2026-11-02T12:00:00.000Z"),
+    });
+    const insert = vi.fn();
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "Archived categories cannot receive new transactions.",
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a category whose type does not match the transaction", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      type: "income",
+      archivedAt: null,
+    });
+    const insert = vi.fn();
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: "Transaction type must match the selected category type.",
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe 500 response when transaction creation fails", async () => {
+    const findAccount = vi.fn().mockResolvedValue({
+      id: accountId,
+      currencyCode: "BRL",
+      archivedAt: null,
+    });
+    const findCategory = vi.fn().mockResolvedValue({
+      id: categoryId,
+      type: "expense",
+      archivedAt: null,
+    });
+    const values = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive database failure"));
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({
+      userId,
+      findAccount,
+      findCategory,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transactions",
+      payload: validPayload,
     });
 
     expect(response.statusCode).toBe(500);
