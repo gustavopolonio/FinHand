@@ -9,6 +9,7 @@ import {
   authVerifications,
   users,
 } from "../db/schema/index.js";
+import { createDefaultCategoriesForUser } from "../services/categories.js";
 import { normalizeBrowserTimeZone } from "./time-zone.js";
 
 export interface AuthenticationConfiguration {
@@ -83,6 +84,9 @@ export function createAuthentication(
                 timeZone: normalizeBrowserTimeZone(oauthState?.timeZone),
               },
             };
+          },
+          async after(user) {
+            await createDefaultCategoriesForUser(database, user.id);
           },
         },
       },

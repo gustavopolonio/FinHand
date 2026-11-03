@@ -154,7 +154,9 @@ Constraints and indexes:
 - Unique constraint on `(user_id, id, type)` to support tenant- and type-safe transaction references.
 - Index on `user_id`.
 
-FinHand may seed a starter set by copying category templates into each new user's private collection. Users can then rename, archive, or extend those categories without affecting anyone else.
+FinHand seeds `Salary` as an income category and `Grocery` as an expense
+category in each new user's private collection. Users can then rename, archive,
+or extend those categories without affecting anyone else.
 
 A category referenced by transactions cannot be deleted; it must be archived. Category hierarchy is deferred until there is a product requirement for it.
 
