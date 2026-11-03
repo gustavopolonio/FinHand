@@ -127,7 +127,7 @@ describe("authentication routes", () => {
       url: "/api/me",
       headers: {
         origin: "http://localhost:3000",
-        "access-control-request-method": "PATCH",
+        "access-control-request-method": "DELETE",
       },
     });
 
@@ -136,6 +136,8 @@ describe("authentication routes", () => {
       "http://localhost:3000",
     );
     expect(response.headers["access-control-allow-credentials"]).toBe("true");
-    expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
+    expect(response.headers["access-control-allow-methods"]).toContain(
+      "DELETE",
+    );
   });
 });

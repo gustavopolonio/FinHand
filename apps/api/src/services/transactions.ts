@@ -514,3 +514,23 @@ export async function updateTransactionForUser(
 
   return serializeTransaction(updatedTransaction);
 }
+
+export async function deleteTransactionForUser(
+  database: Database,
+  userId: string,
+  transactionId: string,
+): Promise<void> {
+  const [deletedTransaction] = await database
+    .delete(transactions)
+    .where(
+      and(
+        eq(transactions.id, transactionId),
+        eq(transactions.userId, userId),
+      ),
+    )
+    .returning({ id: transactions.id });
+
+  if (!deletedTransaction) {
+    throw new NotFoundError("Transaction not found");
+  }
+}

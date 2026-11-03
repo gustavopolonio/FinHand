@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 
 import {
   createTransactionForUser,
+  deleteTransactionForUser,
   listTransactionsForUser,
   updateTransactionForUser,
 } from "../../services/transactions.js";
@@ -68,6 +69,24 @@ export async function transactionRoutes(application: FastifyInstance) {
       );
 
       return { transaction };
+    },
+  );
+
+  transactionsApplication.delete(
+    "/api/transactions/:id",
+    {
+      schema: {
+        params: transactionParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      await deleteTransactionForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
+
+      return reply.status(204).send();
     },
   );
 }
