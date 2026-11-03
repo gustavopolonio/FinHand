@@ -7,12 +7,12 @@ import {
   listAccountsForUser,
   restoreAccountForUser,
   updateAccountForUser,
-} from "../services/accounts.js";
+} from "../../services/accounts.js";
 import {
   accountParamsSchema,
   createAccountBodySchema,
   updateAccountBodySchema,
-} from "../validation/account-schemas.js";
+} from "../../validation/account-schemas.js";
 
 export async function accountRoutes(application: FastifyInstance) {
   application.addHook("preHandler", application.requireAuthentication);

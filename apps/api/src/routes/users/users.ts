@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 
-import { users } from "../db/schema/index.js";
-import { UnauthorizedError } from "../errors/application-errors.js";
+import { users } from "../../db/schema/index.js";
+import { UnauthorizedError } from "../../errors/application-errors.js";
 
 export async function userRoutes(application: FastifyInstance) {
   application.get(

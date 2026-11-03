@@ -1,10 +1,10 @@
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Authentication } from "../auth/authentication.js";
-import { registerAuthenticationGuard } from "../auth/require-authentication.js";
-import type { Database } from "../db/index.js";
-import { registerApplicationErrorHandler } from "../errors/error-handler.js";
+import type { Authentication } from "../../auth/authentication.js";
+import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
+import type { Database } from "../../db/index.js";
+import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
 import { userRoutes } from "./users.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];

@@ -1,12 +1,12 @@
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Authentication } from "../auth/authentication.js";
-import { registerAuthenticationGuard } from "../auth/require-authentication.js";
-import type { Database } from "../db/index.js";
-import { accounts, users } from "../db/schema/index.js";
-import { registerApplicationErrorHandler } from "../errors/error-handler.js";
-import { registerSchemaCompilers } from "../validation/schema-compilers.js";
+import type { Authentication } from "../../auth/authentication.js";
+import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
+import type { Database } from "../../db/index.js";
+import { accounts, users } from "../../db/schema/index.js";
+import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
+import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { accountRoutes } from "./accounts.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];

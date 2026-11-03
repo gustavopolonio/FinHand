@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildApplication } from "../app.js";
-import type { Authentication } from "../auth/authentication.js";
-import { createDatabase } from "../db/index.js";
+import { buildApplication } from "../../app.js";
+import type { Authentication } from "../../auth/authentication.js";
+import { createDatabase } from "../../db/index.js";
 
 const applications: ReturnType<typeof buildApplication>[] = [];
 

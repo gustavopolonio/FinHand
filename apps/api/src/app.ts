@@ -5,10 +5,10 @@ import type { Authentication } from "./auth/authentication.js";
 import { registerAuthenticationGuard } from "./auth/require-authentication.js";
 import type { Database, DatabaseConnection } from "./db/index.js";
 import { registerApplicationErrorHandler } from "./errors/error-handler.js";
-import { accountRoutes } from "./routes/accounts.js";
-import { authenticationRoutes } from "./routes/authentication.js";
-import { healthRoutes } from "./routes/health.js";
-import { userRoutes } from "./routes/users.js";
+import { accountRoutes } from "./routes/accounts/accounts.js";
+import { authenticationRoutes } from "./routes/authentication/authentication.js";
+import { healthRoutes } from "./routes/health/health.js";
+import { userRoutes } from "./routes/users/users.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
 declare module "fastify" {

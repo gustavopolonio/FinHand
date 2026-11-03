@@ -1,7 +1,7 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 
-import type { Authentication } from "../auth/authentication.js";
+import type { Authentication } from "../../auth/authentication.js";
 
 interface AuthenticationRoutesOptions {
   authentication: Authentication;
