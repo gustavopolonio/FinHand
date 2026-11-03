@@ -1,9 +1,14 @@
 import type { Database } from "../db/index.js";
 import {
+  activeCategoryNameUniqueIndexName,
   categories,
   type CategoryType,
 } from "../db/schema/index.js";
+import { ConflictError, InputError } from "../errors/application-errors.js";
+import { isPostgresUniqueConstraintError } from "../errors/postgres-errors.js";
+import type { CreateCategoryInput } from "../validation/category-schemas.js";
 
+const maximumCategoryNameLength = 100;
 const defaultCategories = [
   { name: "Salary", type: "income" },
   { name: "Grocery", type: "expense" },
@@ -38,6 +43,22 @@ function serializeCategory(category: CategoryRecord): CategoryListItem {
   };
 }
 
+function normalizeCategoryName(name: string): string {
+  const normalizedName = name.trim();
+
+  if (!normalizedName) {
+    throw new InputError("Category name is required.");
+  }
+
+  if (normalizedName.length > maximumCategoryNameLength) {
+    throw new InputError(
+      `Category name must contain at most ${maximumCategoryNameLength} characters.`,
+    );
+  }
+
+  return normalizedName;
+}
+
 export async function listCategoriesForUser(
   database: Database,
   userId: string,
@@ -60,6 +81,51 @@ export async function listCategoriesForUser(
   });
 
   return userCategories.map(serializeCategory);
+}
+
+export async function createCategoryForUser(
+  database: Database,
+  userId: string,
+  input: CreateCategoryInput,
+): Promise<CategoryListItem> {
+  const name = normalizeCategoryName(input.name);
+
+  try {
+    const [createdCategory] = await database
+      .insert(categories)
+      .values({
+        userId,
+        name,
+        type: input.type,
+      })
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        type: categories.type,
+        archivedAt: categories.archivedAt,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    if (!createdCategory) {
+      throw new Error("Category creation did not return a record.");
+    }
+
+    return serializeCategory(createdCategory);
+  } catch (error) {
+    if (
+      isPostgresUniqueConstraintError(
+        error,
+        activeCategoryNameUniqueIndexName,
+      )
+    ) {
+      throw new ConflictError(
+        "An active category with this name and type already exists.",
+      );
+    }
+
+    throw error;
+  }
 }
 
 export async function createDefaultCategoriesForUser(

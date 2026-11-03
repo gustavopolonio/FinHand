@@ -4,8 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Authentication } from "../../auth/authentication.js";
 import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
 import type { Database } from "../../db/index.js";
-import { categories } from "../../db/schema/index.js";
+import {
+  activeCategoryNameUniqueIndexName,
+  categories,
+} from "../../db/schema/index.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
+import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { categoryRoutes } from "./categories.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
@@ -35,6 +39,7 @@ function createAuthentication(authenticatedUserId: string | null) {
 function createApplication(options: {
   userId: string | null;
   findMany?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
 }) {
   const application = Fastify();
   const database = {
@@ -43,8 +48,10 @@ function createApplication(options: {
         findMany: options.findMany ?? vi.fn(),
       },
     },
+    insert: options.insert ?? vi.fn(),
   } as unknown as Database;
 
+  registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", database);
   registerAuthenticationGuard(
@@ -184,6 +191,208 @@ describe("GET /api/categories", () => {
     const response = await application.inject({
       method: "GET",
       url: "/api/categories",
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("Sensitive database failure");
+  });
+});
+
+describe("POST /api/categories", () => {
+  it("rejects requests without an authenticated user", async () => {
+    const insert = vi.fn();
+    const application = createApplication({ userId: null, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "Transport", type: "expense" },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "Unauthorized" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("creates a category owned by the authenticated user", async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Transport",
+        type: "expense",
+        archivedAt: null,
+        createdAt: new Date("2026-11-03T12:00:00.000Z"),
+        updatedAt: new Date("2026-11-03T12:00:00.000Z"),
+      },
+    ]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({ userId, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "  Transport  ", type: "expense" },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({
+      category: {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Transport",
+        type: "expense",
+        archivedAt: null,
+        createdAt: "2026-11-03T12:00:00.000Z",
+        updatedAt: "2026-11-03T12:00:00.000Z",
+      },
+    });
+    expect(insert).toHaveBeenCalledWith(categories);
+    expect(values).toHaveBeenCalledWith({
+      userId,
+      name: "Transport",
+      type: "expense",
+    });
+  });
+
+  it("allows the same name for different category types", async () => {
+    const returning = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          id: "44444444-4444-4444-8444-444444444444",
+          name: "Other",
+          type: "income",
+          archivedAt: null,
+          createdAt: new Date("2026-11-03T12:00:00.000Z"),
+          updatedAt: new Date("2026-11-03T12:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          name: "Other",
+          type: "expense",
+          archivedAt: null,
+          createdAt: new Date("2026-11-03T12:01:00.000Z"),
+          updatedAt: new Date("2026-11-03T12:01:00.000Z"),
+        },
+      ]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({ userId, insert });
+
+    const incomeResponse = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "Other", type: "income" },
+    });
+    const expenseResponse = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "Other", type: "expense" },
+    });
+
+    expect(incomeResponse.statusCode).toBe(201);
+    expect(expenseResponse.statusCode).toBe(201);
+    expect(values.mock.calls).toEqual([
+      [{ userId, name: "Other", type: "income" }],
+      [{ userId, name: "Other", type: "expense" }],
+    ]);
+  });
+
+  it.each([
+    {
+      name: "a blank name",
+      payload: { name: "   ", type: "expense" },
+    },
+    {
+      name: "a missing name",
+      payload: { type: "expense" },
+    },
+    {
+      name: "a missing type",
+      payload: { name: "Transport" },
+    },
+    {
+      name: "an unsupported type",
+      payload: { name: "Transport", type: "transfer" },
+    },
+    {
+      name: "a name longer than 100 characters",
+      payload: { name: "a".repeat(101), type: "expense" },
+    },
+    {
+      name: "an unknown field",
+      payload: { name: "Transport", type: "expense", color: "green" },
+    },
+  ])("rejects $name", async ({ payload }) => {
+    const insert = vi.fn();
+    const application = createApplication({ userId, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 for a duplicate active name within the same type", async () => {
+    const postgresError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint: activeCategoryNameUniqueIndexName,
+    });
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("query failed", { cause: postgresError }));
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({ userId, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "grocery", type: "expense" },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "An active category with this name and type already exists.",
+    });
+  });
+
+  it("returns a safe 500 response when creation returns no category", async () => {
+    const returning = vi.fn().mockResolvedValue([]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({ userId, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "Transport", type: "expense" },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("did not return a record");
+  });
+
+  it("returns a safe 500 response for unrelated database failures", async () => {
+    const returning = vi
+      .fn()
+      .mockRejectedValue(new Error("Sensitive database failure"));
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({ userId, insert });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/categories",
+      payload: { name: "Transport", type: "expense" },
     });
 
     expect(response.statusCode).toBe(500);

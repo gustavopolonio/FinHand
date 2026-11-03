@@ -13,6 +13,8 @@ import {
 import { users } from "./users.js";
 
 export const categoryTypes = ["income", "expense"] as const;
+export const activeCategoryNameUniqueIndexName =
+  "categories_user_id_type_name_active_unique";
 
 export type CategoryType = (typeof categoryTypes)[number];
 
@@ -38,7 +40,7 @@ export const categories = pgTable(
       "categories_type_check",
       sql`${table.type} in ('income', 'expense')`,
     ),
-    uniqueIndex("categories_user_id_type_name_active_unique")
+    uniqueIndex(activeCategoryNameUniqueIndexName)
       .using(
         "btree",
         table.userId,

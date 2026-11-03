@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  ConflictError,
   InputError,
   NotFoundError,
   UnauthorizedError,
@@ -36,6 +37,18 @@ describe("application error handler", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: "Invalid account name" });
+  });
+
+  it("returns resource conflicts as 409", async () => {
+    const application = createApplication();
+    application.get("/failure", async () => {
+      throw new ConflictError("Category already exists");
+    });
+
+    const response = await application.inject("/failure");
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: "Category already exists" });
   });
 
   it("returns authentication errors as 401", async () => {

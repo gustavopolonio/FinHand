@@ -3,6 +3,7 @@ import { STATUS_CODES } from "node:http";
 import type { FastifyInstance } from "fastify";
 
 import {
+  ConflictError,
   InputError,
   NotFoundError,
   UnauthorizedError,
@@ -29,6 +30,10 @@ export function registerApplicationErrorHandler(
   application.setErrorHandler((error, request, reply) => {
     if (error instanceof InputError) {
       return reply.status(400).send({ error: error.message });
+    }
+
+    if (error instanceof ConflictError) {
+      return reply.status(409).send({ error: error.message });
     }
 
     if (error instanceof UnauthorizedError) {
