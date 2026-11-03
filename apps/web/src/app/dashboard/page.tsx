@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AccountsPanel } from "@/components/accounts-panel";
 import { MoneyLoader } from "@/components/money-loader";
 import { ApiError, type CurrentUser, getCurrentUser } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -63,9 +64,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-10 rounded-2xl bg-emerald-50 p-6 text-emerald-950">
-          Authentication is ready. Accounts and transactions are the next
-          financial-core tasks.
+          Add your financial accounts to start organizing your money.
         </div>
+
+        <AccountsPanel defaultCurrency={user.defaultCurrency} />
       </section>
     </main>
   );
