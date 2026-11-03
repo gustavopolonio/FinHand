@@ -11,6 +11,10 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from "../errors/application-errors.js";
+import type {
+  CreateAccountInput,
+  UpdateAccountInput,
+} from "../validation/account-schemas.js";
 
 const maximumAccountNameLength = 100;
 const minimumPostgresBigInt = -9_223_372_036_854_775_808n;
@@ -26,19 +30,6 @@ interface AccountRecord {
   archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface CreateAccountInput {
-  name: string;
-  type: string;
-  currencyCode?: string;
-  openingBalanceMinor?: string;
-}
-
-export interface UpdateAccountInput {
-  name?: string;
-  type?: string;
-  openingBalanceMinor?: string;
 }
 
 export interface AccountListItem {

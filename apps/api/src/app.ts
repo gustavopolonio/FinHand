@@ -9,6 +9,7 @@ import { accountRoutes } from "./routes/accounts.js";
 import { authenticationRoutes } from "./routes/authentication.js";
 import { healthRoutes } from "./routes/health.js";
 import { userRoutes } from "./routes/users.js";
+import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -33,6 +34,7 @@ export function buildApplication({
 }: BuildApplicationOptions) {
   const application = Fastify({ logger });
 
+  registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", databaseConnection.database);
   registerAuthenticationGuard(application, authentication);

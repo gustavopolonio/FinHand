@@ -1,24 +1,25 @@
+import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
-import { accountTypes } from "../db/schema/index.js";
 import {
   archiveAccountForUser,
   createAccountForUser,
   listAccountsForUser,
   restoreAccountForUser,
-  type CreateAccountInput,
-  type UpdateAccountInput,
   updateAccountForUser,
 } from "../services/accounts.js";
-
-interface AccountParams {
-  id: string;
-}
+import {
+  accountParamsSchema,
+  createAccountBodySchema,
+  updateAccountBodySchema,
+} from "../validation/account-schemas.js";
 
 export async function accountRoutes(application: FastifyInstance) {
   application.addHook("preHandler", application.requireAuthentication);
+  const accountsApplication =
+    application.withTypeProvider<ZodTypeProvider>();
 
-  application.get("/api/accounts", async (request) => {
+  accountsApplication.get("/api/accounts", async (request) => {
     const userAccounts = await listAccountsForUser(
       application.database,
       request.authenticatedUserId,
@@ -27,24 +28,11 @@ export async function accountRoutes(application: FastifyInstance) {
     return { accounts: userAccounts };
   });
 
-  application.post<{ Body: CreateAccountInput }>(
+  accountsApplication.post(
     "/api/accounts",
     {
       schema: {
-        body: {
-          type: "object",
-          additionalProperties: false,
-          required: ["name", "type"],
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 100 },
-            type: { type: "string", enum: [...accountTypes] },
-            currencyCode: { type: "string", minLength: 3, maxLength: 3 },
-            openingBalanceMinor: {
-              type: "string",
-              pattern: "^-?\\d+$",
-            },
-          },
-        },
+        body: createAccountBodySchema,
       },
     },
     async (request, reply) => {
@@ -58,31 +46,12 @@ export async function accountRoutes(application: FastifyInstance) {
     },
   );
 
-  application.patch<{ Body: UpdateAccountInput; Params: AccountParams }>(
+  accountsApplication.patch(
     "/api/accounts/:id",
     {
       schema: {
-        params: {
-          type: "object",
-          additionalProperties: false,
-          required: ["id"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          additionalProperties: false,
-          minProperties: 1,
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 100 },
-            type: { type: "string", enum: [...accountTypes] },
-            openingBalanceMinor: {
-              type: "string",
-              pattern: "^-?\\d+$",
-            },
-          },
-        },
+        params: accountParamsSchema,
+        body: updateAccountBodySchema,
       },
     },
     async (request) => {
@@ -97,18 +66,11 @@ export async function accountRoutes(application: FastifyInstance) {
     },
   );
 
-  application.post<{ Params: AccountParams }>(
+  accountsApplication.post(
     "/api/accounts/:id/archive",
     {
       schema: {
-        params: {
-          type: "object",
-          additionalProperties: false,
-          required: ["id"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: accountParamsSchema,
       },
     },
     async (request) => {
@@ -122,18 +84,11 @@ export async function accountRoutes(application: FastifyInstance) {
     },
   );
 
-  application.post<{ Params: AccountParams }>(
+  accountsApplication.post(
     "/api/accounts/:id/restore",
     {
       schema: {
-        params: {
-          type: "object",
-          additionalProperties: false,
-          required: ["id"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: accountParamsSchema,
       },
     },
     async (request) => {

@@ -6,6 +6,7 @@ import { registerAuthenticationGuard } from "../auth/require-authentication.js";
 import type { Database } from "../db/index.js";
 import { accounts, users } from "../db/schema/index.js";
 import { registerApplicationErrorHandler } from "../errors/error-handler.js";
+import { registerSchemaCompilers } from "../validation/schema-compilers.js";
 import { accountRoutes } from "./accounts.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
@@ -54,6 +55,7 @@ function createApplication(options: {
     update: options.update ?? vi.fn(),
   } as unknown as Database;
 
+  registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", database);
   registerAuthenticationGuard(
@@ -358,6 +360,31 @@ describe("POST /api/accounts", () => {
     });
 
     expect(response.statusCode).toBe(400);
+    expect(findUser).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects unknown fields instead of silently removing them", async () => {
+    const findUser = vi.fn();
+    const insert = vi.fn();
+    const application = createApplication({
+      userId: "33333333-3333-4333-8333-333333333333",
+      findUser,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/accounts",
+      payload: {
+        name: "Wallet",
+        type: "cash",
+        openingBalance: "100.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe("FST_ERR_VALIDATION");
     expect(findUser).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
