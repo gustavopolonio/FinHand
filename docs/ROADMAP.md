@@ -28,7 +28,7 @@
 - [x] Implement user authentication
 - [x] Implement accounts
 - [x] Implement categories
-- [ ] Implement transaction CRUD
+- [x] Implement transaction CRUD
 - [ ] Implement financial summary calculations
 - [ ] Build the financial dashboard
 - [ ] Add automated tests

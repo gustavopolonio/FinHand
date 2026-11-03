@@ -3,16 +3,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type Account,
   type Category,
+  type Transaction,
   archiveAccount,
   archiveCategory,
   createAccount,
   createCategory,
+  createTransaction,
+  deleteTransaction,
   getAccounts,
   getCategories,
+  getTransactions,
   renameCategory,
   restoreAccount,
   restoreCategory,
   updateAccount,
+  updateTransaction,
 } from "./api";
 
 const account: Account = {
@@ -33,6 +38,22 @@ const category: Category = {
   archivedAt: null,
   createdAt: "2026-11-01T12:00:00.000Z",
   updatedAt: "2026-11-02T12:00:00.000Z",
+};
+
+const transaction: Transaction = {
+  id: "66666666-6666-4666-8666-666666666666",
+  accountId: account.id,
+  categoryId: category.id,
+  type: "expense",
+  amountMinor: "2590",
+  currencyCode: "BRL",
+  occurredOn: "2026-11-03",
+  description: "Weekly groceries",
+  counterparty: "Supermarket",
+  notes: null,
+  origin: "manual",
+  createdAt: "2026-11-03T15:00:00.000Z",
+  updatedAt: "2026-11-03T15:00:00.000Z",
 };
 
 function successfulResponse(body: unknown) {
@@ -212,6 +233,93 @@ describe("categories API", () => {
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/categories/${category.id}/restore`,
       expect.objectContaining({ method: "POST" }),
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+});
+
+describe("transactions API", () => {
+  it("lists a filtered transaction page", async () => {
+    const page = {
+      transactions: [transaction],
+      pagination: { limit: 10, offset: 20, hasMore: true },
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(page));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getTransactions({
+        type: "expense",
+        accountId: account.id,
+        categoryId: category.id,
+        from: "2026-11-01",
+        to: "2026-11-30",
+        limit: 10,
+        offset: 20,
+      }),
+    ).resolves.toEqual(page);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/transactions" +
+        `?type=expense&accountId=${account.id}&categoryId=${category.id}` +
+        "&from=2026-11-01&to=2026-11-30&limit=10&offset=20",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("creates a transaction", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ transaction }));
+    vi.stubGlobal("fetch", fetch);
+    const input = {
+      accountId: account.id,
+      categoryId: category.id,
+      type: "expense" as const,
+      amountMinor: "2590",
+      occurredOn: "2026-11-03",
+      description: "Weekly groceries",
+      counterparty: "Supermarket",
+      notes: null,
+    };
+
+    await expect(createTransaction(input)).resolves.toEqual(transaction);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/transactions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("updates a transaction", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ transaction }));
+    vi.stubGlobal("fetch", fetch);
+    const input = { description: "Updated groceries", categoryId: null };
+
+    await expect(updateTransaction(transaction.id, input)).resolves.toEqual(
+      transaction,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transactions/${transaction.id}`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("deletes a transaction without parsing a 204 response body", async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(deleteTransaction(transaction.id)).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transactions/${transaction.id}`,
+      expect.objectContaining({ method: "DELETE" }),
     );
     const request = fetch.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(request.headers).has("Content-Type")).toBe(false);

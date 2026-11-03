@@ -65,6 +65,59 @@ export interface RenameCategoryInput {
   name: string;
 }
 
+export const transactionTypes = ["income", "expense"] as const;
+
+export type TransactionType = (typeof transactionTypes)[number];
+export type TransactionOrigin = "manual" | "document" | "voice";
+
+export interface Transaction {
+  id: string;
+  accountId: string;
+  categoryId: string | null;
+  type: TransactionType;
+  amountMinor: string;
+  currencyCode: string;
+  occurredOn: string;
+  description: string;
+  counterparty: string | null;
+  notes: string | null;
+  origin: TransactionOrigin;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionFilters {
+  type?: TransactionType;
+  accountId?: string;
+  categoryId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TransactionPage {
+  transactions: Transaction[];
+  pagination: {
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+export interface CreateTransactionInput {
+  accountId: string;
+  categoryId?: string | null;
+  type: TransactionType;
+  amountMinor: string;
+  occurredOn: string;
+  description: string;
+  counterparty?: string | null;
+  notes?: string | null;
+}
+
+export type UpdateTransactionInput = Partial<CreateTransactionInput>;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
@@ -87,6 +140,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       error?: string;
     } | null;
     throw new ApiError(response.status, body?.error ?? "Request failed.");
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return (await response.json()) as T;
@@ -201,4 +258,59 @@ export async function restoreCategory(categoryId: string) {
   );
 
   return response.category;
+}
+
+export function getTransactions(
+  filters: TransactionFilters = {},
+): Promise<TransactionPage> {
+  const query = new URLSearchParams();
+
+  if (filters.type) query.set("type", filters.type);
+  if (filters.accountId) query.set("accountId", filters.accountId);
+  if (filters.categoryId) query.set("categoryId", filters.categoryId);
+  if (filters.from) query.set("from", filters.from);
+  if (filters.to) query.set("to", filters.to);
+  if (filters.limit !== undefined) query.set("limit", String(filters.limit));
+  if (filters.offset !== undefined) {
+    query.set("offset", String(filters.offset));
+  }
+
+  const queryString = query.toString();
+
+  return request<TransactionPage>(
+    `/api/transactions${queryString ? `?${queryString}` : ""}`,
+  );
+}
+
+export async function createTransaction(input: CreateTransactionInput) {
+  const response = await request<{ transaction: Transaction }>(
+    "/api/transactions",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+
+  return response.transaction;
+}
+
+export async function updateTransaction(
+  transactionId: string,
+  input: UpdateTransactionInput,
+) {
+  const response = await request<{ transaction: Transaction }>(
+    `/api/transactions/${transactionId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+
+  return response.transaction;
+}
+
+export function deleteTransaction(transactionId: string): Promise<void> {
+  return request<void>(`/api/transactions/${transactionId}`, {
+    method: "DELETE",
+  });
 }
