@@ -690,7 +690,7 @@ describe("POST /api/transactions", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("returns a safe 500 response when transaction creation fails", async () => {
+  it("returns a safe 500 response when creation returns no transaction", async () => {
     const findAccount = vi.fn().mockResolvedValue({
       id: accountId,
       currencyCode: "BRL",
@@ -701,9 +701,8 @@ describe("POST /api/transactions", () => {
       type: "expense",
       archivedAt: null,
     });
-    const values = vi
-      .fn()
-      .mockRejectedValue(new Error("Sensitive database failure"));
+    const returning = vi.fn().mockResolvedValue([]);
+    const values = vi.fn().mockReturnValue({ returning });
     const insert = vi.fn().mockReturnValue({ values });
     const application = createApplication({
       userId,
@@ -720,6 +719,6 @@ describe("POST /api/transactions", () => {
 
     expect(response.statusCode).toBe(500);
     expect(response.json()).toEqual({ error: "Internal server error" });
-    expect(response.body).not.toContain("Sensitive database failure");
+    expect(response.body).not.toContain("did not return a record");
   });
 });

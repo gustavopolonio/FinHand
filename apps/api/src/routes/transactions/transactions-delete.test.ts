@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -12,6 +14,11 @@ import { transactionRoutes } from "./transactions.js";
 const applications: ReturnType<typeof Fastify>[] = [];
 const userId = "33333333-3333-4333-8333-333333333333";
 const transactionId = "66666666-6666-4666-8666-666666666666";
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -111,6 +118,10 @@ describe("DELETE /api/transactions/:id", () => {
     expect(deleteTransaction).toHaveBeenCalledOnce();
     expect(deleteTransaction).toHaveBeenCalledWith(transactions);
     expect(where).toHaveBeenCalledOnce();
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      transactionId,
+      userId,
+    ]);
     expect(returning).toHaveBeenCalledWith({ id: transactions.id });
   });
 

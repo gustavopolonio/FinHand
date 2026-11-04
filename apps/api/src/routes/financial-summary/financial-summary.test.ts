@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -17,6 +19,16 @@ interface SelectChain {
   where: ReturnType<typeof vi.fn>;
   groupBy: ReturnType<typeof vi.fn>;
   orderBy: ReturnType<typeof vi.fn>;
+}
+
+type TestApplication = ReturnType<typeof Fastify> & {
+  summaryTransaction: ReturnType<typeof vi.fn>;
+};
+
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
 }
 
 afterEach(async () => {
@@ -99,7 +111,10 @@ function createApplication(options: {
   application.register(financialSummaryRoutes);
   applications.push(application);
 
-  return application;
+  const testApplication = application as TestApplication;
+
+  testApplication.summaryTransaction = transaction;
+  return testApplication;
 }
 
 describe("GET /api/financial-summary", () => {
@@ -150,6 +165,19 @@ describe("GET /api/financial-summary", () => {
     });
     expect(findUser).toHaveBeenCalledOnce();
     expect(select).toHaveBeenCalledTimes(3);
+    expect(application.summaryTransaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: "repeatable read",
+        accessMode: "read only",
+      },
+    );
+    expect(
+      getSqlParameters(select.chains[1]?.where.mock.calls[0]?.[0]),
+    ).toEqual([userId, "2026-11-04"]);
+    expect(
+      getSqlParameters(select.chains[2]?.where.mock.calls[0]?.[0]),
+    ).toEqual([userId, "2026-11-04"]);
 
     const ownerQuery = findUser.mock.calls[0]?.[0] as {
       where: (
@@ -166,6 +194,8 @@ describe("GET /api/financial-summary", () => {
   });
 
   it("calculates balances and period totals without mixing currencies", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-04T15:00:00.000Z"));
     const archivedAt = new Date("2026-10-01T12:00:00.000Z");
     const select = createSelectMock([
       [
@@ -326,6 +356,65 @@ describe("GET /api/financial-summary", () => {
       ],
     });
     expect(select).toHaveBeenCalledTimes(3);
+
+    const accountJoinCondition = select.chains[0]?.leftJoin.mock.calls[0]?.[1];
+    const accountOwnerCondition = select.chains[0]?.where.mock.calls[0]?.[0];
+    const periodCondition = select.chains[1]?.where.mock.calls[0]?.[0];
+    const categoryCondition = select.chains[2]?.where.mock.calls[0]?.[0];
+
+    expect(getSqlParameters(accountJoinCondition)).toEqual([
+      userId,
+      "2026-11-04",
+    ]);
+    expect(getSqlParameters(accountOwnerCondition)).toEqual([userId]);
+    expect(getSqlParameters(periodCondition)).toEqual([
+      userId,
+      "2026-11-30",
+      "2026-11-01",
+    ]);
+    expect(getSqlParameters(categoryCondition)).toEqual([
+      userId,
+      "2026-11-30",
+      "2026-11-01",
+    ]);
+
+    const accountSelection = select.mock.calls[0]?.[0] as {
+      balanceMinor: SQL;
+    };
+    const periodSelection = select.mock.calls[1]?.[0] as {
+      incomeMinor: SQL;
+      expenseMinor: SQL;
+      netFlowMinor: SQL;
+    };
+    const categorySelection = select.mock.calls[2]?.[0] as {
+      totalMinor: SQL;
+      transactionCount: SQL;
+    };
+    const accountBalanceSql = postgresDialect.sqlToQuery(
+      accountSelection.balanceMinor,
+    ).sql;
+    const incomeSql = postgresDialect.sqlToQuery(
+      periodSelection.incomeMinor,
+    ).sql;
+    const expenseSql = postgresDialect.sqlToQuery(
+      periodSelection.expenseMinor,
+    ).sql;
+    const netFlowSql = postgresDialect.sqlToQuery(
+      periodSelection.netFlowMinor,
+    ).sql;
+
+    expect(accountBalanceSql).toContain("opening_balance_minor");
+    expect(accountBalanceSql).toContain("then");
+    expect(accountBalanceSql).toContain("else -");
+    expect(incomeSql).toContain("= 'income'");
+    expect(expenseSql).toContain("= 'expense'");
+    expect(netFlowSql).toContain("else -");
+    expect(
+      postgresDialect.sqlToQuery(categorySelection.totalMinor).sql,
+    ).toContain("sum(");
+    expect(
+      postgresDialect.sqlToQuery(categorySelection.transactionCount).sql,
+    ).toContain("count(*)");
   });
 
   it.each([

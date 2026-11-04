@@ -140,4 +140,31 @@ describe("authentication routes", () => {
       "DELETE",
     );
   });
+
+  it("does not echo an unconfigured origin in CORS headers", async () => {
+    const authentication = {
+      handler: async () => new Response(null, { status: 404 }),
+      api: { getSession: async () => null },
+    } as unknown as Authentication;
+    const application = createApplication(authentication);
+
+    const response = await application.inject({
+      method: "OPTIONS",
+      url: "/api/me",
+      headers: {
+        origin: "https://untrusted.example",
+        "access-control-request-method": "GET",
+      },
+    });
+
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:3000",
+    );
+    expect(response.headers["access-control-allow-origin"]).not.toBe(
+      "https://untrusted.example",
+    );
+    expect(response.headers["access-control-allow-credentials"]).toBe(
+      "true",
+    );
+  });
 });

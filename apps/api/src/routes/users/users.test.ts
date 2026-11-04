@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -62,7 +64,8 @@ describe("GET /api/me", () => {
       defaultCurrency: "BRL",
       timeZone: "America/Sao_Paulo",
     };
-    const application = createApplication(vi.fn().mockResolvedValue(user));
+    const findUser = vi.fn().mockResolvedValue(user);
+    const application = createApplication(findUser);
 
     const response = await application.inject({
       method: "GET",
@@ -71,5 +74,9 @@ describe("GET /api/me", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(user);
+    const query = findUser.mock.calls[0]?.[0] as { where: SQL };
+    const compiledWhere = new PgDialect().sqlToQuery(query.where);
+
+    expect(compiledWhere.params).toEqual([userId]);
   });
 });

@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -14,6 +16,11 @@ import { categoryRoutes } from "./categories.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
 const userId = "33333333-3333-4333-8333-333333333333";
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -462,6 +469,10 @@ describe("PATCH /api/categories/:id", () => {
       updatedAt: expect.any(Date),
     });
     expect(where).toHaveBeenCalledOnce();
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      categoryId,
+      userId,
+    ]);
   });
 
   it("allows an archived category to be renamed", async () => {
@@ -673,6 +684,10 @@ describe("POST /api/categories/:id/archive", () => {
     expect(archiveValues.archivedAt).toBeInstanceOf(Date);
     expect(archiveValues.updatedAt).toBe(archiveValues.archivedAt);
     expect(findCategory).not.toHaveBeenCalled();
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      categoryId,
+      userId,
+    ]);
   });
 
   it("returns an already-archived category without changing its timestamp", async () => {
@@ -849,6 +864,10 @@ describe("POST /api/categories/:id/restore", () => {
     expect(restoreValues.archivedAt).toBeNull();
     expect(restoreValues.updatedAt).toBeInstanceOf(Date);
     expect(findCategory).not.toHaveBeenCalled();
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      categoryId,
+      userId,
+    ]);
   });
 
   it("returns an already-active category without changing its timestamp", async () => {

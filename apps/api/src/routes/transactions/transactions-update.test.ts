@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -20,6 +22,11 @@ const accountId = "11111111-1111-4111-8111-111111111111";
 const categoryId = "22222222-2222-4222-8222-222222222222";
 const newAccountId = "77777777-7777-4777-8777-777777777777";
 const newCategoryId = "88888888-8888-4888-8888-888888888888";
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -160,7 +167,7 @@ describe("PATCH /api/transactions/:id", () => {
       counterparty: "Store",
       notes: "Returned item",
     });
-    const { set, update } = createSuccessfulUpdate(updatedRecord);
+    const { set, update, where } = createSuccessfulUpdate(updatedRecord);
     const application = createApplication({
       userId,
       findTransaction,
@@ -284,6 +291,10 @@ describe("PATCH /api/transactions/:id", () => {
     expect(categoryEq.mock.calls).toEqual([
       [categories.id, newCategoryId],
       [categories.userId, userId],
+    ]);
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      transactionId,
+      userId,
     ]);
   });
 

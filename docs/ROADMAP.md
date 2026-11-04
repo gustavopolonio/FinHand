@@ -22,7 +22,7 @@
 
 ## Milestone 2 — Financial Core
 
-**Status:** In Progress
+**Status:** Completed
 
 ### Tasks
 - [x] Implement user authentication
@@ -31,7 +31,7 @@
 - [x] Implement transaction CRUD
 - [x] Implement financial summary calculations
 - [x] Build the financial dashboard
-- [ ] Add automated tests
+- [x] Add automated tests
 
 ## Milestone 3 — AI Document Processing
 

@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "../../auth/authentication.js";
@@ -10,6 +12,11 @@ import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { accountRoutes } from "./accounts.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -257,6 +264,49 @@ describe("POST /api/accounts", () => {
     expect(eq).toHaveBeenCalledWith(users.id, userId);
   });
 
+  it("normalizes a requested currency and defaults the opening balance to zero", async () => {
+    const userId = "33333333-3333-4333-8333-333333333333";
+    const findUser = vi.fn().mockResolvedValue({ defaultCurrency: "USD" });
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Wallet",
+        type: "cash",
+        currencyCode: "BRL",
+        openingBalanceMinor: 0n,
+        archivedAt: null,
+        createdAt: new Date("2026-11-02T14:00:00.000Z"),
+        updatedAt: new Date("2026-11-02T14:00:00.000Z"),
+      },
+    ]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const insert = vi.fn().mockReturnValue({ values });
+    const application = createApplication({
+      userId,
+      findUser,
+      insert,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/accounts",
+      payload: {
+        name: "Wallet",
+        type: "cash",
+        currencyCode: "brl",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(values).toHaveBeenCalledWith({
+      userId,
+      name: "Wallet",
+      type: "cash",
+      currencyCode: "BRL",
+      openingBalanceMinor: 0n,
+    });
+  });
+
   it("returns 401 when the authenticated owner no longer exists", async () => {
     const findUser = vi.fn().mockResolvedValue(null);
     const insert = vi.fn();
@@ -316,6 +366,15 @@ describe("POST /api/accounts", () => {
         name: "Wallet",
         type: "cash",
         openingBalanceMinor: "9223372036854775808",
+      },
+      error: "Opening balance is outside PostgreSQL BIGINT range.",
+    },
+    {
+      name: "balance below BIGINT range",
+      payload: {
+        name: "Wallet",
+        type: "cash",
+        openingBalanceMinor: "-9223372036854775809",
       },
       error: "Opening balance is outside PostgreSQL BIGINT range.",
     },
@@ -458,6 +517,10 @@ describe("PATCH /api/accounts/:id", () => {
       updatedAt: expect.any(Date),
     });
     expect(where).toHaveBeenCalledOnce();
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      accountId,
+      userId,
+    ]);
   });
 
   it("returns 404 when the account does not belong to the user", async () => {
@@ -581,6 +644,10 @@ describe("POST /api/accounts/:id/archive", () => {
     };
     expect(archiveValues.archivedAt).toBeInstanceOf(Date);
     expect(archiveValues.updatedAt).toBe(archiveValues.archivedAt);
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      accountId,
+      userId,
+    ]);
   });
 
   it("returns an already-archived account without changing its timestamp", async () => {
@@ -714,6 +781,10 @@ describe("POST /api/accounts/:id/restore", () => {
     };
     expect(restoreValues.archivedAt).toBeNull();
     expect(restoreValues.updatedAt).toBeInstanceOf(Date);
+    expect(getSqlParameters(where.mock.calls[0]?.[0])).toEqual([
+      accountId,
+      userId,
+    ]);
   });
 
   it("returns an already-active account without changing its timestamp", async () => {
