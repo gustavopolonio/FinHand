@@ -55,7 +55,7 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/accounts",
     icon: WalletCards,
     label: "Accounts",
-    available: false,
+    available: true,
   },
   {
     href: "/dashboard/categories",
