@@ -29,7 +29,7 @@
 - [x] Implement accounts
 - [x] Implement categories
 - [x] Implement transaction CRUD
-- [ ] Implement financial summary calculations
+- [x] Implement financial summary calculations
 - [ ] Build the financial dashboard
 - [ ] Add automated tests
 
