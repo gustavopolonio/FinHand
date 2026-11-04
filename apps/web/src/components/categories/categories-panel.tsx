@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { useDashboardUser } from "@/components/dashboard-shell";
+import { currencyOptions } from "@/components/financial-select-options";
 import {
   ApiError,
   type Category,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Select } from "../ui/select";
 import {
   categoriesWithTotals,
   sortCategoriesByVolume,
@@ -344,17 +346,15 @@ export function CategoriesPanel() {
         <div className="flex justify-end">
           <label className="text-xs font-semibold text-finhand-muted">
             Currency
-            <select
-              className="ml-2 h-10 rounded-lg border border-finhand-border bg-white px-3 text-sm font-semibold text-finhand-ink outline-none focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
-              onChange={(event) => setSelectedCurrency(event.target.value)}
+            <Select
+              ariaLabel="Categories currency"
+              className="mt-1 w-28"
+              menuLabel="Currencies"
+              onValueChange={setSelectedCurrency}
+              options={currencyOptions(availableCurrencies)}
               value={currencyCode}
-            >
-              {availableCurrencies.map((currency) => (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              ))}
-            </select>
+              variant="compact"
+            />
           </label>
         </div>
       ) : null}

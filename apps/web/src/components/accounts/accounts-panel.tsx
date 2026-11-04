@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useDashboardUser } from "@/components/dashboard-shell";
+import { currencyOptions } from "@/components/financial-select-options";
 import {
   ApiError,
   type Account,
@@ -19,6 +20,7 @@ import {
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Select } from "../ui/select";
 import { AccountCard, ArchivedAccounts } from "./account-card";
 import {
   accountsWithBalances,
@@ -230,17 +232,15 @@ export function AccountsPanel() {
           {availableCurrencies.length > 1 ? (
             <label className="mr-1 text-xs font-semibold text-finhand-muted">
               Currency
-              <select
-                className="mt-1 block h-10 rounded-lg border border-finhand-border bg-white px-3 text-sm font-semibold text-finhand-ink outline-none focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
-                onChange={(event) => setSelectedCurrency(event.target.value)}
+              <Select
+                ariaLabel="Accounts currency"
+                className="mt-1 w-28"
+                menuLabel="Currencies"
+                onValueChange={setSelectedCurrency}
+                options={currencyOptions(availableCurrencies)}
                 value={currencyCode}
-              >
-                {availableCurrencies.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
+                variant="compact"
+              />
             </label>
           ) : null}
           <Button

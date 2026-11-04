@@ -4,12 +4,12 @@ import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import type { Account, AccountType } from "@/lib/api";
-import { accountTypes } from "@/lib/api";
+import { accountTypeOptions } from "@/components/financial-select-options";
 
 import { Button } from "../ui/button";
+import { Select } from "../ui/select";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import {
-  accountTypeLabels,
   emptyAccountForm,
   formValuesFromAccount,
   type AccountFormValues,
@@ -85,22 +85,20 @@ export function AccountDrawer({
 
           <label className="block text-xs font-medium text-finhand-muted">
             Account type
-            <select
-              className={controlClassName}
-              onChange={(event) =>
+            <Select
+              ariaLabel="Account type"
+              className="mt-1.5"
+              menuLabel="Account types"
+              onValueChange={(type) =>
                 setValues((current) => ({
                   ...current,
-                  type: event.target.value as AccountType,
+                  type: type as AccountType,
                 }))
               }
+              options={accountTypeOptions()}
               value={values.type}
-            >
-              {accountTypes.map((accountType) => (
-                <option key={accountType} value={accountType}>
-                  {accountTypeLabels[accountType]}
-                </option>
-              ))}
-            </select>
+              variant="soft"
+            />
           </label>
 
           <label className="block text-xs font-medium text-finhand-muted">

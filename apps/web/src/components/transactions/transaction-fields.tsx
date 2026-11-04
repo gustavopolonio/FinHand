@@ -3,7 +3,12 @@ import { ArrowDown, ArrowUpRight } from "lucide-react";
 import type { Account, Category, TransactionType } from "@/lib/api";
 import { transactionTypes } from "@/lib/api";
 import { cn } from "@/lib/class-names";
+import {
+  accountOptions,
+  categoryOptionsWithUncategorized,
+} from "@/components/financial-select-options";
 
+import { Select } from "../ui/select";
 import {
   type TransactionFormValues,
   transactionTypeLabels,
@@ -104,41 +109,34 @@ export function TransactionFields({
       <div className="grid grid-cols-2 gap-4">
         <label className={labelClassName}>
           Account
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onChange({ ...values, accountId: event.target.value })
+          <Select
+            ariaLabel="Account"
+            className="mt-1.5"
+            menuLabel={`Available accounts (${accounts.length})`}
+            onValueChange={(accountId) =>
+              onChange({ ...values, accountId })
             }
-            required
+            options={accountOptions(accounts)}
+            placeholder="Select an account"
             value={values.accountId}
-          >
-            <option value="">Select an account</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} ({account.currencyCode})
-                {account.archivedAt ? " — archived" : ""}
-              </option>
-            ))}
-          </select>
+            variant="soft"
+          />
         </label>
 
         <label className={labelClassName}>
           Category
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onChange({ ...values, categoryId: event.target.value })
+          <Select
+            ariaLabel="Category"
+            className="mt-1.5"
+            menuLabel={`Available categories (${matchingCategories.length})`}
+            onValueChange={(categoryId) =>
+              onChange({ ...values, categoryId })
             }
+            options={categoryOptionsWithUncategorized(matchingCategories)}
+            placeholder="Uncategorized"
             value={values.categoryId}
-          >
-            <option value="">Uncategorized</option>
-            {matchingCategories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-                {category.archivedAt ? " — archived" : ""}
-              </option>
-            ))}
-          </select>
+            variant="soft"
+          />
         </label>
       </div>
 

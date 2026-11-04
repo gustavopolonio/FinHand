@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useDashboardUser } from "@/components/dashboard-shell";
+import { currencyOptions } from "@/components/financial-select-options";
 import {
   ApiError,
   type FinancialSummary,
@@ -16,6 +17,7 @@ import {
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Select } from "../ui/select";
 import { CategoryBreakdown } from "./category-breakdown";
 import {
   firstNameFromUser,
@@ -260,20 +262,17 @@ export function OverviewDashboard() {
           <label className="text-sm font-semibold text-finhand-muted">
             Currency
           </label>
-          <select
-            className="h-10 rounded-lg border border-finhand-border bg-white px-3 text-sm font-semibold text-finhand-ink outline-none focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
-            onChange={(event) => setSelectedCurrency(event.target.value)}
+          <Select
+            ariaLabel="Overview currency"
+            className="w-28"
+            menuLabel="Currencies"
+            onValueChange={setSelectedCurrency}
+            options={currencyOptions(
+              availableCurrencies.map((candidate) => candidate.currencyCode),
+            )}
             value={currency?.currencyCode ?? selectedCurrency}
-          >
-            {availableCurrencies.map((candidate) => (
-              <option
-                key={candidate.currencyCode}
-                value={candidate.currencyCode}
-              >
-                {candidate.currencyCode}
-              </option>
-            ))}
-          </select>
+            variant="compact"
+          />
         </div>
       ) : null}
 

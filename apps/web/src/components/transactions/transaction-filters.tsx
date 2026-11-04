@@ -11,9 +11,14 @@ import type {
 } from "@/lib/api";
 import { transactionTypes } from "@/lib/api";
 import { cn } from "@/lib/class-names";
+import {
+  accountOptions,
+  categoryOptions,
+} from "@/components/financial-select-options";
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Select } from "../ui/select";
 import { transactionTypeLabels } from "./transaction-form";
 
 interface TransactionFiltersProps {
@@ -22,9 +27,6 @@ interface TransactionFiltersProps {
   isLoading: boolean;
   onApply: (filters: TransactionFilterValues) => void;
 }
-
-const controlClassName =
-  "mt-1.5 h-11 w-full rounded-lg border border-finhand-border bg-finhand-canvas-muted px-3 text-sm text-finhand-ink outline-none transition focus:border-finhand-focus focus:bg-white focus:ring-2 focus:ring-finhand-focus/20";
 
 export function TransactionFilters({
   accounts,
@@ -120,34 +122,34 @@ export function TransactionFilters({
         <div className="mt-5 grid grid-cols-[1fr_1fr_1.4fr_auto] items-end gap-3">
           <label className="text-xs font-semibold text-finhand-muted">
             Account
-            <select
-              className={controlClassName}
-              onChange={(event) => setAccountId(event.target.value)}
+            <Select
+              ariaLabel="Filter by account"
+              className="mt-1.5"
+              menuLabel={`Accounts (${accounts.length})`}
+              onValueChange={setAccountId}
+              options={[
+                { label: "All accounts", value: "" },
+                ...accountOptions(accounts, { disableArchived: false }),
+              ]}
               value={accountId}
-            >
-              <option value="">All accounts</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="text-xs font-semibold text-finhand-muted">
             Category
-            <select
-              className={controlClassName}
-              onChange={(event) => setCategoryId(event.target.value)}
+            <Select
+              ariaLabel="Filter by category"
+              className="mt-1.5"
+              menuLabel={`Categories (${matchingCategories.length})`}
+              onValueChange={setCategoryId}
+              options={[
+                { label: "All categories", value: "" },
+                ...categoryOptions(matchingCategories, {
+                  disableArchived: false,
+                }),
+              ]}
               value={categoryId}
-            >
-              <option value="">All categories</option>
-              {matchingCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <fieldset>
