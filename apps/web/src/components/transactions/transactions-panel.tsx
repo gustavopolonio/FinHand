@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -17,7 +18,8 @@ import {
   updateTransaction,
 } from "@/lib/api";
 
-import { NewTransactionForm } from "./new-transaction-form";
+import { Button } from "../ui/button";
+import { TransactionDrawer } from "./transaction-drawer";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionList } from "./transaction-list";
 import { TransactionPagination } from "./transaction-pagination";
@@ -27,6 +29,10 @@ import {
 } from "./transaction-form";
 
 const pageSize = 10;
+
+type TransactionEditor =
+  | { kind: "create" }
+  | { kind: "edit"; transaction: Transaction };
 
 export function TransactionsPanel() {
   const router = useRouter();
@@ -42,6 +48,7 @@ export function TransactionsPanel() {
     limit: pageSize,
     offset: 0,
   });
+  const [editor, setEditor] = useState<TransactionEditor | null>(null);
   const [busyTransactionId, setBusyTransactionId] = useState<string | null>(
     null,
   );
@@ -63,37 +70,79 @@ export function TransactionsPanel() {
     [router],
   );
 
-  const loadReferences = useCallback(
-    () =>
-      Promise.all([getAccounts(), getCategories()])
-        .then(([userAccounts, userCategories]) => {
-          setAccounts(userAccounts);
-          setCategories(userCategories);
-        })
-        .catch(reportError)
-        .finally(() => setIsLoadingReferences(false)),
-    [reportError],
-  );
+  const loadReferences = useCallback(async () => {
+    try {
+      const [userAccounts, userCategories] = await Promise.all([
+        getAccounts(),
+        getCategories(),
+      ]);
+      setAccounts(userAccounts);
+      setCategories(userCategories);
+    } catch (cause) {
+      reportError(cause);
+    } finally {
+      setIsLoadingReferences(false);
+    }
+  }, [reportError]);
 
   const loadTransactions = useCallback(
-    (filters: TransactionFilterValues) =>
-      getTransactions(filters)
-        .then((page) => {
-          setTransactions(page.transactions);
-          setPagination(page.pagination);
-        })
-        .catch(reportError)
-        .finally(() => setIsLoadingTransactions(false)),
+    async (filters: TransactionFilterValues) => {
+      try {
+        const page = await getTransactions(filters);
+        setTransactions(page.transactions);
+        setPagination(page.pagination);
+      } catch (cause) {
+        reportError(cause);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    },
     [reportError],
   );
 
   useEffect(() => {
-    void loadReferences();
-  }, [loadReferences]);
+    let isActive = true;
+
+    void Promise.all([getAccounts(), getCategories()])
+      .then(([userAccounts, userCategories]) => {
+        if (!isActive) return;
+
+        setAccounts(userAccounts);
+        setCategories(userCategories);
+      })
+      .catch((cause: unknown) => {
+        if (isActive) reportError(cause);
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingReferences(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [reportError]);
 
   useEffect(() => {
-    void loadTransactions(query);
-  }, [loadTransactions, query]);
+    let isActive = true;
+
+    void getTransactions(query)
+      .then((page) => {
+        if (!isActive) return;
+
+        setTransactions(page.transactions);
+        setPagination(page.pagination);
+      })
+      .catch((cause: unknown) => {
+        if (isActive) reportError(cause);
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingTransactions(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [query, reportError]);
 
   function applyFilters(filters: TransactionFilterValues) {
     setError(null);
@@ -102,45 +151,35 @@ export function TransactionsPanel() {
   }
 
   async function refreshAfterChange() {
-    setIsLoadingTransactions(true);
-
     if ((query.offset ?? 0) === 0) {
+      setIsLoadingTransactions(true);
       await loadTransactions(query);
     } else {
+      setIsLoadingTransactions(true);
       setQuery((currentQuery) => ({ ...currentQuery, offset: 0 }));
     }
   }
 
-  async function submitNewTransaction(
+  async function submitEditor(
     values: TransactionFormValues,
   ): Promise<boolean> {
-    setBusyTransactionId("new");
-    setError(null);
+    if (!editor) return false;
 
-    try {
-      await createTransaction(transactionInputFromForm(values));
-      await refreshAfterChange();
-      return true;
-    } catch (cause) {
-      reportError(cause);
-      return false;
-    } finally {
-      setBusyTransactionId(null);
-    }
-  }
-
-  async function submitTransactionEdit(
-    transactionId: string,
-    values: TransactionFormValues,
-  ): Promise<boolean> {
+    const transactionId =
+      editor.kind === "edit" ? editor.transaction.id : "new";
     setBusyTransactionId(transactionId);
     setError(null);
 
     try {
-      await updateTransaction(
-        transactionId,
-        transactionInputFromForm(values),
-      );
+      if (editor.kind === "create") {
+        await createTransaction(transactionInputFromForm(values));
+      } else {
+        await updateTransaction(
+          editor.transaction.id,
+          transactionInputFromForm(values),
+        );
+      }
+
       await refreshAfterChange();
       return true;
     } catch (cause) {
@@ -191,46 +230,69 @@ export function TransactionsPanel() {
     }));
   }
 
-  const isBusy = busyTransactionId !== null;
+  const editedTransaction =
+    editor?.kind === "edit" ? editor.transaction : null;
 
   return (
-    <div className="mt-10 border-t border-slate-200 pt-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold text-emerald-950">
-          Transactions
-        </h2>
-        <button
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-          disabled={isLoadingReferences}
-          onClick={() => {
-            setIsLoadingReferences(true);
-            void loadReferences();
-          }}
-          type="button"
-        >
-          {isLoadingReferences ? "Refreshing…" : "Refresh options"}
-        </button>
-      </div>
-
-      <NewTransactionForm
-        accounts={accounts}
-        categories={categories}
-        isBusy={isBusy}
-        isLoading={isLoadingReferences}
-        isSubmitting={busyTransactionId === "new"}
-        onSubmit={submitNewTransaction}
-      />
+    <div className="space-y-6">
+      <header className="flex items-end justify-between gap-8">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-primary">
+            Ledger records
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
+            Transactions
+          </h1>
+          <p className="mt-1.5 text-sm text-finhand-muted">
+            Track and organize income and expenses across your accounts.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            aria-label="Refresh transaction data"
+            disabled={isLoadingReferences || isLoadingTransactions}
+            onClick={() => {
+              setError(null);
+              setIsLoadingReferences(true);
+              setIsLoadingTransactions(true);
+              void Promise.all([loadReferences(), loadTransactions(query)]);
+            }}
+            variant="secondary"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={`size-4 ${
+                isLoadingReferences || isLoadingTransactions
+                  ? "animate-spin"
+                  : ""
+              }`}
+            />
+            Refresh
+          </Button>
+          <Button
+            disabled={isLoadingReferences}
+            onClick={() => setEditor({ kind: "create" })}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Add transaction
+          </Button>
+        </div>
+      </header>
 
       <TransactionFilters
         accounts={accounts}
         categories={categories}
+        isLoading={isLoadingTransactions}
         onApply={applyFilters}
       />
 
       {error ? (
-        <p className="mt-4 text-sm text-red-700" role="alert">
+        <div
+          className="rounded-xl border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
+          role="alert"
+        >
           {error}
-        </p>
+        </div>
       ) : null}
 
       <TransactionList
@@ -239,7 +301,9 @@ export function TransactionsPanel() {
         categories={categories}
         isLoading={isLoadingTransactions}
         onDelete={(transaction) => void removeTransaction(transaction)}
-        onUpdate={submitTransactionEdit}
+        onEdit={(transaction) =>
+          setEditor({ kind: "edit", transaction })
+        }
         transactions={transactions}
       />
 
@@ -247,10 +311,26 @@ export function TransactionsPanel() {
         hasMore={pagination.hasMore}
         isLoading={isLoadingTransactions}
         itemCount={transactions.length}
+        limit={pagination.limit}
         offset={pagination.offset}
         onNext={showNextPage}
         onPrevious={showPreviousPage}
       />
+
+      {editor ? (
+        <TransactionDrawer
+          accounts={accounts}
+          categories={categories}
+          error={error}
+          isSubmitting={busyTransactionId !== null}
+          key={
+            editor.kind === "create" ? "create" : editor.transaction.id
+          }
+          onClose={() => setEditor(null)}
+          onSubmit={submitEditor}
+          transaction={editedTransaction}
+        />
+      ) : null}
     </div>
   );
 }

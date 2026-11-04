@@ -1,16 +1,19 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Pencil,
+  ReceiptText,
+  Trash2,
+} from "lucide-react";
 
 import type { Account, Category, Transaction } from "@/lib/api";
-import { formatMinorUnits } from "@/lib/money";
 
-import { TransactionFields } from "./transaction-fields";
-import {
-  type TransactionFormValues,
-  formValuesFromTransaction,
-  transactionTypeLabels,
-} from "./transaction-form";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { CurrencyAmount } from "../ui/currency-amount";
 
 interface TransactionListProps {
   accounts: Account[];
@@ -18,11 +21,36 @@ interface TransactionListProps {
   categories: Category[];
   isLoading: boolean;
   onDelete: (transaction: Transaction) => void;
-  onUpdate: (
-    transactionId: string,
-    values: TransactionFormValues,
-  ) => Promise<boolean>;
+  onEdit: (transaction: Transaction) => void;
   transactions: Transaction[];
+}
+
+function formatTransactionDate(date: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+}
+
+function signedAmount(transaction: Transaction) {
+  return transaction.type === "expense"
+    ? `-${transaction.amountMinor}`
+    : transaction.amountMinor;
+}
+
+function TransactionTableSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading transactions" className="p-5">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div
+          className="mb-3 h-14 animate-pulse rounded-xl bg-finhand-canvas-muted last:mb-0"
+          key={index}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function TransactionList({
@@ -31,170 +59,167 @@ export function TransactionList({
   categories,
   isLoading,
   onDelete,
-  onUpdate,
+  onEdit,
   transactions,
 }: TransactionListProps) {
-  const [editingTransactionId, setEditingTransactionId] = useState<
-    string | null
-  >(null);
-  const [editValues, setEditValues] =
-    useState<TransactionFormValues | null>(null);
+  const accountNames = new Map(
+    accounts.map((account) => [account.id, account.name]),
+  );
+  const categoryNames = new Map(
+    categories.map((category) => [category.id, category.name]),
+  );
   const isBusy = busyTransactionId !== null;
 
-  function startEditing(transaction: Transaction) {
-    setEditingTransactionId(transaction.id);
-    setEditValues(formValuesFromTransaction(transaction));
-  }
-
-  async function submitEdit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!editingTransactionId || !editValues) {
-      return;
-    }
-
-    if (await onUpdate(editingTransactionId, editValues)) {
-      setEditingTransactionId(null);
-      setEditValues(null);
-    }
-  }
-
-  function cancelEditing() {
-    setEditingTransactionId(null);
-    setEditValues(null);
-  }
-
-  if (isLoading) {
-    return (
-      <p className="mt-6 text-sm text-slate-600">Loading transactions…</p>
-    );
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <p className="mt-6 text-sm text-slate-600">No transactions found.</p>
-    );
-  }
-
   return (
-    <ul className="mt-6 space-y-3">
-      {transactions.map((transaction) => {
-        const account = accounts.find(
-          (candidate) => candidate.id === transaction.accountId,
-        );
-        const category = categories.find(
-          (candidate) => candidate.id === transaction.categoryId,
-        );
-        const editAccounts = accounts.filter(
-          (candidate) =>
-            !candidate.archivedAt || candidate.id === transaction.accountId,
-        );
-        const editCategories = categories.filter(
-          (candidate) =>
-            !candidate.archivedAt || candidate.id === transaction.categoryId,
-        );
-        const isEditing = editingTransactionId === transaction.id && editValues;
+    <Card className="overflow-hidden">
+      {isLoading ? (
+        <TransactionTableSkeleton />
+      ) : transactions.length === 0 ? (
+        <div className="grid min-h-72 place-items-center px-6 text-center">
+          <div>
+            <span className="mx-auto grid size-12 place-items-center rounded-full bg-finhand-mint-soft text-finhand-primary">
+              <ReceiptText aria-hidden="true" className="size-6" />
+            </span>
+            <h2 className="mt-4 text-lg font-bold text-finhand-ink">
+              No transactions found
+            </h2>
+            <p className="mt-1 text-sm text-finhand-muted">
+              Change the filters or add your first transaction.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden">
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-finhand-mint-soft">
+              <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
+                <th className="px-6 py-4">Date</th>
+                <th className="px-4 py-4">Description &amp; counterparty</th>
+                <th className="px-4 py-4">Category</th>
+                <th className="px-4 py-4">Account</th>
+                <th className="px-4 py-4">Type</th>
+                <th className="px-4 py-4 text-right">Amount</th>
+                <th className="px-5 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((transaction) => {
+                const TypeIcon =
+                  transaction.type === "income"
+                    ? ArrowDownLeft
+                    : ArrowUpRight;
+                const isCurrentTransactionBusy =
+                  busyTransactionId === transaction.id;
 
-        return (
-          <li
-            className="rounded-xl border border-slate-200 p-4"
-            key={transaction.id}
-          >
-            {isEditing ? (
-              <form onSubmit={(event) => void submitEdit(event)}>
-                <TransactionFields
-                  accounts={editAccounts}
-                  categories={editCategories}
-                  onChange={setEditValues}
-                  values={editValues}
-                />
-                <div className="mt-4 flex gap-2">
-                  <button
-                    className="rounded-md bg-emerald-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                    disabled={isBusy}
-                    type="submit"
+                return (
+                  <tr
+                    className="border-t border-finhand-divider transition hover:bg-finhand-canvas-muted"
+                    key={transaction.id}
                   >
-                    {busyTransactionId === transaction.id
-                      ? "Saving…"
-                      : "Save"}
-                  </button>
-                  <button
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-                    disabled={isBusy}
-                    onClick={cancelEditing}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">
-                      {transaction.description}
-                    </h3>
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs ${
-                        transaction.type === "income"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {transactionTypeLabels[transaction.type]}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-medium text-slate-900">
-                    {formatMinorUnits(
-                      transaction.amountMinor,
-                      transaction.currencyCode,
-                    )}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {transaction.occurredOn} · {account?.name ?? "Unknown account"}
-                    {category ? ` · ${category.name}` : " · Uncategorized"}
-                  </p>
-                  {transaction.counterparty || transaction.notes ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      {[transaction.counterparty, transaction.notes]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-                    disabled={isBusy}
-                    onClick={() => startEditing(transaction)}
-                    type="button"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700"
-                    disabled={isBusy}
-                    onClick={() => {
-                      if (
-                        window.confirm(`Delete “${transaction.description}”?`)
-                      ) {
-                        onDelete(transaction);
-                      }
-                    }}
-                    type="button"
-                  >
-                    {busyTransactionId === transaction.id
-                      ? "Deleting…"
-                      : "Delete"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-finhand-muted">
+                      {formatTransactionDate(transaction.occurredOn)}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex min-w-48 items-center gap-3">
+                        <span
+                          className={`grid size-9 shrink-0 place-items-center rounded-full ${
+                            transaction.type === "income"
+                              ? "bg-finhand-income-soft text-finhand-income"
+                              : "bg-finhand-expense-soft text-finhand-expense"
+                          }`}
+                        >
+                          <TypeIcon aria-hidden="true" className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-finhand-ink">
+                            {transaction.description}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-finhand-muted">
+                            {transaction.counterparty ?? "No counterparty"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge>
+                        {transaction.categoryId
+                          ? categoryNames.get(transaction.categoryId) ??
+                            "Category"
+                          : "Uncategorized"}
+                      </Badge>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-finhand-muted">
+                      <span className="mr-2 inline-block size-1.5 rounded-full bg-finhand-primary align-middle" />
+                      {accountNames.get(transaction.accountId) ?? "Account"}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge
+                        variant={
+                          transaction.type === "income"
+                            ? "income"
+                            : "expense"
+                        }
+                      >
+                        {transaction.type === "income" ? "Income" : "Expense"}
+                      </Badge>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-right">
+                      <CurrencyAmount
+                        className={`font-bold ${
+                          transaction.type === "income"
+                            ? "text-finhand-income"
+                            : "text-finhand-expense"
+                        }`}
+                        currencyCode={transaction.currencyCode}
+                        value={signedAmount(transaction)}
+                      />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          aria-label={`Edit ${transaction.description}`}
+                          disabled={isBusy}
+                          onClick={() => onEdit(transaction)}
+                          size="sm"
+                          title="Edit transaction"
+                          variant="ghost"
+                        >
+                          <Pencil aria-hidden="true" className="size-4" />
+                        </Button>
+                        <Button
+                          aria-label={`Delete ${transaction.description}`}
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Delete “${transaction.description}”?`,
+                              )
+                            ) {
+                              onDelete(transaction);
+                            }
+                          }}
+                          size="sm"
+                          title="Delete transaction"
+                          variant="ghost"
+                        >
+                          {isCurrentTransactionBusy ? (
+                            <span className="size-4 animate-spin rounded-full border-2 border-finhand-expense/30 border-t-finhand-expense" />
+                          ) : (
+                            <Trash2
+                              aria-hidden="true"
+                              className="size-4 text-finhand-expense"
+                            />
+                          )}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

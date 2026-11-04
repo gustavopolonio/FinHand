@@ -49,7 +49,7 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/transactions",
     icon: ReceiptText,
     label: "Transactions",
-    available: false,
+    available: true,
   },
   {
     href: "/dashboard/accounts",
