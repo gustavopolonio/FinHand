@@ -2,8 +2,8 @@
 
 :root {
   color-scheme: light;
-  --background: #f4f7f5;
-  --foreground: #14221a;
+  --background: #fbfbfa;
+  --foreground: #192823;
 }
 
 * {
@@ -14,7 +14,44 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Manrope Variable", Manrope, Arial, Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+@theme inline {
+  --color-finhand-canvas: #fbfbfa;
+  --color-finhand-canvas-muted: #f8f9f7;
+  --color-finhand-ink: #192823;
+  --color-finhand-muted: #607068;
+  --color-finhand-subtle: #8c9993;
+  --color-finhand-border: #e6e9e4;
+  --color-finhand-divider: #ebefea;
+  --color-finhand-primary: #2d6a4f;
+  --color-finhand-primary-strong: #1b4332;
+  --color-finhand-mint: #d8f3dc;
+  --color-finhand-mint-soft: #e8f5ee;
+  --color-finhand-mint-strong: #95d4b3;
+  --color-finhand-focus: #52b788;
+  --color-finhand-income: #2d8a58;
+  --color-finhand-income-soft: #e2f6ea;
+  --color-finhand-expense: #d95d52;
+  --color-finhand-expense-soft: #fdeceb;
+  --color-finhand-warning: #b07d38;
+  --color-finhand-warning-soft: #fef7ee;
+  --shadow-finhand-card: 0 1px 3px rgb(25 40 35 / 4%),
+    0 1px 2px rgb(25 40 35 / 2%);
 }
 
 .money-loader__coin {
