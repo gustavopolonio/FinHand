@@ -61,7 +61,7 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/categories",
     icon: Tags,
     label: "Categories",
-    available: false,
+    available: true,
   },
 ];
 
