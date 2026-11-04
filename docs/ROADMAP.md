@@ -30,7 +30,7 @@
 - [x] Implement categories
 - [x] Implement transaction CRUD
 - [x] Implement financial summary calculations
-- [ ] Build the financial dashboard
+- [x] Build the financial dashboard
 - [ ] Add automated tests
 
 ## Milestone 3 — AI Document Processing

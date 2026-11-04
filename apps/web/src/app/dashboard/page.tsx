@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AccountsPanel } from "@/components/accounts-panel";
 import { CategoriesPanel } from "@/components/categories-panel";
+import { FinancialSummaryPanel } from "@/components/financial-summary/financial-summary-panel";
 import { MoneyLoader } from "@/components/money-loader";
 import { TransactionsPanel } from "@/components/transactions/transactions-panel";
 import { ApiError, type CurrentUser, getCurrentUser } from "@/lib/api";
@@ -70,6 +71,7 @@ export default function DashboardPage() {
           organizing your money.
         </div>
 
+        <FinancialSummaryPanel />
         <AccountsPanel defaultCurrency={user.defaultCurrency} />
         <CategoriesPanel />
         <TransactionsPanel />

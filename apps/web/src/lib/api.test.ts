@@ -12,6 +12,7 @@ import {
   deleteTransaction,
   getAccounts,
   getCategories,
+  getFinancialSummary,
   getTransactions,
   renameCategory,
   restoreAccount,
@@ -323,5 +324,38 @@ describe("transactions API", () => {
     );
     const request = fetch.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+});
+
+describe("financial summary API", () => {
+  const summary = {
+    period: { from: null, to: "2026-11-04" },
+    currencies: [],
+    accounts: [],
+    categoryTotals: [],
+  };
+
+  it("gets an all-time summary without query parameters", async () => {
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(summary));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getFinancialSummary()).resolves.toEqual(summary);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/financial-summary",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("gets a summary for an explicit period", async () => {
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(summary));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getFinancialSummary({ from: "2026-11-01", to: "2026-11-30" }),
+    ).resolves.toEqual(summary);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/financial-summary?from=2026-11-01&to=2026-11-30",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 });

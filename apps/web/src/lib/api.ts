@@ -118,6 +118,41 @@ export interface CreateTransactionInput {
 
 export type UpdateTransactionInput = Partial<CreateTransactionInput>;
 
+export interface FinancialSummaryFilters {
+  from?: string;
+  to?: string;
+}
+
+export interface FinancialSummary {
+  period: {
+    from: string | null;
+    to: string;
+  };
+  currencies: Array<{
+    currencyCode: string;
+    activeBalanceMinor: string;
+    incomeMinor: string;
+    expenseMinor: string;
+    netFlowMinor: string;
+  }>;
+  accounts: Array<{
+    accountId: string;
+    name: string;
+    type: AccountType;
+    currencyCode: string;
+    archivedAt: string | null;
+    balanceMinor: string;
+  }>;
+  categoryTotals: Array<{
+    categoryId: string | null;
+    name: string;
+    type: TransactionType;
+    currencyCode: string;
+    totalMinor: string;
+    transactionCount: number;
+  }>;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
@@ -313,4 +348,19 @@ export function deleteTransaction(transactionId: string): Promise<void> {
   return request<void>(`/api/transactions/${transactionId}`, {
     method: "DELETE",
   });
+}
+
+export function getFinancialSummary(
+  filters: FinancialSummaryFilters = {},
+): Promise<FinancialSummary> {
+  const query = new URLSearchParams();
+
+  if (filters.from) query.set("from", filters.from);
+  if (filters.to) query.set("to", filters.to);
+
+  const queryString = query.toString();
+
+  return request<FinancialSummary>(
+    `/api/financial-summary${queryString ? `?${queryString}` : ""}`,
+  );
 }
