@@ -1,12 +1,13 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import type { Account, AccountType } from "@/lib/api";
 import { accountTypes } from "@/lib/api";
 
 import { Button } from "../ui/button";
-import { SideDrawer } from "../ui/side-drawer";
+import { WorkspaceModal } from "../ui/workspace-modal";
 import {
   accountTypeLabels,
   emptyAccountForm,
@@ -24,7 +25,7 @@ interface AccountDrawerProps {
 }
 
 const controlClassName =
-  "mt-1.5 min-h-11 w-full rounded-lg border border-finhand-border bg-white px-3 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20";
+  "mt-1.5 min-h-12 w-full rounded-xl border border-transparent bg-finhand-mint-soft px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:bg-white focus:ring-2 focus:ring-finhand-focus/20";
 
 export function AccountDrawer({
   account,
@@ -48,24 +49,23 @@ export function AccountDrawer({
   }
 
   return (
-    <SideDrawer
+    <WorkspaceModal
       description={
         account
           ? "Update the account name, type, or starting balance."
           : "Add an account to start tracking its financial activity."
       }
-      eyebrow={account ? "Update account" : "Portfolio structure"}
       isBusy={isSubmitting}
       onClose={onClose}
-      title={account ? "Edit account" : "Add account"}
-      widthClassName="w-[480px]"
+      title={account ? "Edit Account" : "Add Account"}
+      widthClassName="max-w-[520px]"
     >
       <form
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => void submit(event)}
       >
-        <div className="flex-1 space-y-5 overflow-y-auto px-7 py-6">
-          <label className="block text-sm font-semibold text-finhand-ink">
+        <div className="flex-1 space-y-5 overflow-y-auto p-6">
+          <label className="block text-xs font-medium text-finhand-muted">
             Account name
             <input
               autoFocus
@@ -83,7 +83,7 @@ export function AccountDrawer({
             />
           </label>
 
-          <label className="block text-sm font-semibold text-finhand-ink">
+          <label className="block text-xs font-medium text-finhand-muted">
             Account type
             <select
               className={controlClassName}
@@ -103,7 +103,7 @@ export function AccountDrawer({
             </select>
           </label>
 
-          <label className="block text-sm font-semibold text-finhand-ink">
+          <label className="block text-xs font-medium text-finhand-muted">
             Opening balance ({currencyCode})
             <input
               className={controlClassName}
@@ -135,23 +135,31 @@ export function AccountDrawer({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-border bg-white px-7 py-5">
+        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-mint-soft/40 p-5">
           <Button
+            className="rounded-xl!"
             disabled={isSubmitting}
             onClick={onClose}
-            variant="secondary"
+            variant="ghost"
           >
             Cancel
           </Button>
-          <Button disabled={isSubmitting} type="submit">
+          <Button
+            className="rounded-xl!"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {!isSubmitting ? (
+              <Check aria-hidden="true" className="size-4" />
+            ) : null}
             {isSubmitting
               ? "Saving…"
               : account
-                ? "Save changes"
-                : "Add account"}
+                ? "Save Changes"
+                : "Save Account"}
           </Button>
         </div>
       </form>
-    </SideDrawer>
+    </WorkspaceModal>
   );
 }

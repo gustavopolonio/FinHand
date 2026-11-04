@@ -1,11 +1,12 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import type { Account, Category, Transaction } from "@/lib/api";
 
 import { Button } from "../ui/button";
-import { SideDrawer } from "../ui/side-drawer";
+import { WorkspaceModal } from "../ui/workspace-modal";
 import { TransactionFields } from "./transaction-fields";
 import {
   emptyTransactionForm,
@@ -62,22 +63,21 @@ export function TransactionDrawer({
   }
 
   return (
-    <SideDrawer
+    <WorkspaceModal
       description={
         transaction
           ? "Adjust the details saved for this transaction."
-          : "Record an income or expense in one of your accounts."
+          : "Record a new expense or income to your ledger."
       }
-      eyebrow={transaction ? "Update record" : "New ledger record"}
       isBusy={isSubmitting}
       onClose={onClose}
-      title={transaction ? "Edit transaction" : "Add transaction"}
+      title={transaction ? "Edit Transaction" : "Add Transaction"}
     >
       <form
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => void submit(event)}
       >
-        <div className="flex-1 overflow-y-auto px-7 py-6">
+        <div className="flex-1 overflow-y-auto p-6">
           <TransactionFields
             accounts={availableAccounts}
             categories={availableCategories}
@@ -101,26 +101,31 @@ export function TransactionDrawer({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-border bg-white px-7 py-5">
+        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-mint-soft/40 p-5">
           <Button
+            className="rounded-xl!"
             disabled={isSubmitting}
             onClick={onClose}
-            variant="secondary"
+            variant="ghost"
           >
             Cancel
           </Button>
           <Button
+            className="rounded-xl!"
             disabled={isSubmitting || availableAccounts.length === 0}
             type="submit"
           >
+            {!isSubmitting ? (
+              <Check aria-hidden="true" className="size-4" />
+            ) : null}
             {isSubmitting
               ? "Saving…"
               : transaction
-                ? "Save changes"
-                : "Add transaction"}
+                ? "Save Changes"
+                : "Save Transaction"}
           </Button>
         </div>
       </form>
-    </SideDrawer>
+    </WorkspaceModal>
   );
 }
