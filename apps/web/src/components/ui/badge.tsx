@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/class-names";
 
-type BadgeVariant = "neutral" | "income" | "expense" | "warning";
+type BadgeVariant = "neutral" | "income" | "expense" | "warning" | "inverse";
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
@@ -13,6 +13,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   income: "bg-finhand-income-soft text-finhand-income",
   expense: "bg-finhand-expense-soft text-finhand-expense",
   warning: "bg-finhand-warning-soft text-finhand-warning",
+  inverse: "bg-white/12 text-white",
 };
 
 export function Badge({

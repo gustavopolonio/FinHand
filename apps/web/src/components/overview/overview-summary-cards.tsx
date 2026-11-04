@@ -96,7 +96,10 @@ export function OverviewSummaryCards({
 
   return (
     <div className="grid grid-cols-4 gap-4">
-      <Card className="flex min-h-52 flex-col justify-between border-finhand-mint-strong bg-finhand-primary p-6 text-white">
+      <Card
+        className="flex min-h-52 flex-col justify-between p-6"
+        variant="primary"
+      >
         <div className="flex items-start justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white/75">
             Active balance
@@ -110,7 +113,7 @@ export function OverviewSummaryCards({
           currencyCode={currency.currencyCode}
           value={currency.activeBalanceMinor}
         />
-        <Badge className="mt-5 w-fit bg-white/12 text-white">
+        <Badge className="mt-5 w-fit" variant="inverse">
           {activeAccounts} active {activeAccounts === 1 ? "account" : "accounts"}
         </Badge>
       </Card>
