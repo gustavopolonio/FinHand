@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -73,6 +74,7 @@ export const transactions = pgTable(
       columns: [table.userId, table.categoryId, table.type],
       foreignColumns: [categories.userId, categories.id, categories.type],
     }).onDelete("restrict"),
+    unique("transactions_user_id_id_unique").on(table.userId, table.id),
     index("transactions_user_id_occurred_on_index").on(
       table.userId,
       table.occurredOn.desc(),

@@ -15,6 +15,13 @@
       "when": 1793542101243,
       "tag": "0001_broken_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793899354993,
+      "tag": "0002_harsh_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

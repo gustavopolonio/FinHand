@@ -38,7 +38,7 @@
 **Status:** In Progress
 
 ### Tasks
-- [ ] Design and migrate the data model for uploads, document capture sessions, and transaction candidates
+- [x] Design and migrate the data model for uploads, document capture sessions, and transaction candidates
 - [ ] Implement secure private image and PDF uploads using Amazon S3
 - [ ] Validate supported file types, file sizes, checksums, ownership, and processing state transitions
 - [ ] Build the direct document upload flow for desktop and mobile browsers
