@@ -1,11 +1,16 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "@/lib/class-names";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "destructive";
 type ButtonSize = "sm" | "md";
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ComponentPropsWithRef<"button"> {
   size?: ButtonSize;
   variant?: ButtonVariant;
 }
@@ -19,6 +24,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     "border border-transparent bg-transparent text-finhand-muted hover:bg-finhand-mint-soft hover:text-finhand-ink",
   danger:
     "border border-finhand-expense-soft bg-finhand-expense-soft text-finhand-expense hover:border-finhand-expense/20 hover:bg-finhand-expense/10",
+  destructive:
+    "border border-[#a83931] bg-[#a83931] text-white shadow-sm hover:border-[#88211c] hover:bg-[#88211c]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

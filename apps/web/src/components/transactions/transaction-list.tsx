@@ -189,15 +189,7 @@ export function TransactionList({
                         <Button
                           aria-label={`Delete ${transaction.description}`}
                           disabled={isBusy}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Delete “${transaction.description}”?`,
-                              )
-                            ) {
-                              onDelete(transaction);
-                            }
-                          }}
+                          onClick={() => onDelete(transaction)}
                           size="sm"
                           title="Delete transaction"
                           variant="ghost"

@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { TransactionDeleteModal } from "./transaction-delete-modal";
 import { TransactionDrawer } from "./transaction-drawer";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionList } from "./transaction-list";
@@ -49,6 +50,8 @@ export function TransactionsPanel() {
     offset: 0,
   });
   const [editor, setEditor] = useState<TransactionEditor | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
   const [busyTransactionId, setBusyTransactionId] = useState<string | null>(
     null,
   );
@@ -196,6 +199,7 @@ export function TransactionsPanel() {
 
     try {
       await deleteTransaction(transaction.id);
+      setTransactionToDelete(null);
 
       if (transactions.length === 1 && pagination.offset > 0) {
         setIsLoadingTransactions(true);
@@ -300,7 +304,10 @@ export function TransactionsPanel() {
         busyTransactionId={busyTransactionId}
         categories={categories}
         isLoading={isLoadingTransactions}
-        onDelete={(transaction) => void removeTransaction(transaction)}
+        onDelete={(transaction) => {
+          setError(null);
+          setTransactionToDelete(transaction);
+        }}
         onEdit={(transaction) =>
           setEditor({ kind: "edit", transaction })
         }
@@ -329,6 +336,29 @@ export function TransactionsPanel() {
           onClose={() => setEditor(null)}
           onSubmit={submitEditor}
           transaction={editedTransaction}
+        />
+      ) : null}
+
+      {transactionToDelete ? (
+        <TransactionDeleteModal
+          accountName={
+            accounts.find(
+              (account) => account.id === transactionToDelete.accountId,
+            )?.name ?? "Account"
+          }
+          categoryName={
+            transactionToDelete.categoryId
+              ? categories.find(
+                  (category) =>
+                    category.id === transactionToDelete.categoryId,
+                )?.name ?? "Category"
+              : "Uncategorized"
+          }
+          error={error}
+          isDeleting={busyTransactionId === transactionToDelete.id}
+          onCancel={() => setTransactionToDelete(null)}
+          onConfirm={() => void removeTransaction(transactionToDelete)}
+          transaction={transactionToDelete}
         />
       ) : null}
     </div>
