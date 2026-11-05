@@ -64,7 +64,7 @@ export function CategoryBreakdown({
                 <p className="mt-1 text-2xl font-bold text-finhand-ink">
                   {topCategory?.percentage ?? 0}%
                 </p>
-                <p className="mt-0.5 max-w-24 truncate text-xs font-semibold text-finhand-primary">
+                <p className="mt-0.5 max-w-24 truncate text-xs font-semibold text-finhand-interactive">
                   {topCategory?.name}
                 </p>
               </div>
@@ -96,7 +96,7 @@ export function CategoryBreakdown({
                     {slice.percentage}%
                   </span>
                 </div>
-                <div className="mt-2 ml-5 h-1.5 overflow-hidden rounded-full bg-finhand-mint-soft">
+                <div className="mt-2 ml-5 h-1.5 overflow-hidden rounded-full bg-finhand-accent-soft">
                   <div
                     className="h-full rounded-full"
                     style={{

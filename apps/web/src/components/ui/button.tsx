@@ -19,13 +19,13 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "border border-finhand-primary bg-finhand-primary text-white hover:border-finhand-primary-strong hover:bg-finhand-primary-strong",
   secondary:
-    "border border-finhand-border bg-white text-finhand-ink hover:border-finhand-mint-strong hover:bg-finhand-canvas-muted",
+    "border border-finhand-border bg-white text-finhand-ink hover:border-finhand-accent-border hover:bg-finhand-canvas-muted",
   ghost:
-    "border border-transparent bg-transparent text-finhand-muted hover:bg-finhand-mint-soft hover:text-finhand-ink",
+    "border border-transparent bg-transparent text-finhand-muted hover:bg-finhand-accent-soft hover:text-finhand-ink",
   danger:
     "border border-finhand-expense-soft bg-finhand-expense-soft text-finhand-expense hover:border-finhand-expense/20 hover:bg-finhand-expense/10",
   destructive:
-    "border border-[#a83931] bg-[#a83931] text-white shadow-sm hover:border-[#88211c] hover:bg-[#88211c]",
+    "border border-finhand-expense bg-finhand-expense text-white shadow-sm hover:border-red-700 hover:bg-red-700",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

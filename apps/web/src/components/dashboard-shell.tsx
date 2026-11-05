@@ -196,7 +196,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               const className = cn(
                 "flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition",
                 isActive
-                  ? "bg-finhand-mint-soft text-finhand-primary-strong"
+                  ? "bg-finhand-accent-soft text-finhand-primary-strong"
                   : "text-finhand-muted hover:bg-finhand-canvas-muted hover:text-finhand-ink",
                 !item.available && "cursor-not-allowed opacity-65",
               );
@@ -218,7 +218,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             })}
           </nav>
 
-          <div className="mt-auto rounded-xl bg-finhand-mint-soft p-3">
+          <div className="mt-auto rounded-xl bg-finhand-accent-soft p-3">
             <div className="flex items-center gap-2.5">
               <UserAvatar user={user} />
               <div className="min-w-0 flex-1">

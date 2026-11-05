@@ -77,7 +77,7 @@ export function TransactionList({
       ) : transactions.length === 0 ? (
         <div className="grid min-h-72 place-items-center px-6 text-center">
           <div>
-            <span className="mx-auto grid size-12 place-items-center rounded-full bg-finhand-mint-soft text-finhand-primary">
+            <span className="mx-auto grid size-12 place-items-center rounded-full bg-finhand-accent-soft text-finhand-primary">
               <ReceiptText aria-hidden="true" className="size-6" />
             </span>
             <h2 className="mt-4 text-lg font-bold text-finhand-ink">
@@ -91,7 +91,7 @@ export function TransactionList({
       ) : (
         <div className="overflow-hidden">
           <table className="w-full border-collapse text-left">
-            <thead className="bg-finhand-mint-soft">
+            <thead className="bg-finhand-canvas-muted">
               <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
                 <th className="px-6 py-4">Date</th>
                 <th className="px-4 py-4">Description &amp; counterparty</th>

@@ -241,7 +241,7 @@ export function TransactionsPanel() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
             Ledger records
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">

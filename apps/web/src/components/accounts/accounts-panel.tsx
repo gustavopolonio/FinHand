@@ -40,7 +40,7 @@ type AccountEditor =
 function AccountsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading accounts" className="space-y-6">
-      <div className="h-24 animate-pulse rounded-2xl bg-finhand-mint-soft" />
+      <div className="h-24 animate-pulse rounded-2xl bg-finhand-accent-soft" />
       <div className="grid grid-cols-4 gap-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
@@ -217,7 +217,7 @@ export function AccountsPanel() {
     <div className="space-y-7">
       <header className="flex items-end justify-between gap-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
             Portfolio structure
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
@@ -272,8 +272,8 @@ export function AccountsPanel() {
         </div>
       </header>
 
-      <div className="flex items-center gap-4 rounded-2xl bg-finhand-mint-soft px-5 py-4 text-finhand-primary-strong">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-primary shadow-finhand-card">
+      <div className="flex items-center gap-4 rounded-2xl bg-finhand-accent-soft px-5 py-4 text-finhand-primary-strong">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive shadow-finhand-card">
           <Calculator aria-hidden="true" className="size-5" />
         </span>
         <div>

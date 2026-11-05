@@ -50,7 +50,7 @@ export function AccountSummary({
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Active accounts
           </p>
-          <span className="grid size-10 place-items-center rounded-full bg-finhand-mint-soft text-finhand-primary">
+          <span className="grid size-10 place-items-center rounded-full bg-finhand-accent-soft text-finhand-interactive">
             <Layers3 aria-hidden="true" className="size-5" />
           </span>
         </div>
@@ -67,7 +67,7 @@ export function AccountSummary({
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Opening balances
           </p>
-          <span className="grid size-10 place-items-center rounded-full bg-finhand-mint-soft text-finhand-primary">
+          <span className="grid size-10 place-items-center rounded-full bg-finhand-accent-soft text-finhand-interactive">
             <WalletCards aria-hidden="true" className="size-5" />
           </span>
         </div>
@@ -86,7 +86,7 @@ export function AccountSummary({
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Net movement
           </p>
-          <span className="grid size-10 place-items-center rounded-full bg-finhand-mint-soft text-finhand-primary">
+          <span className="grid size-10 place-items-center rounded-full bg-finhand-accent-soft text-finhand-interactive">
             <ArrowLeftRight aria-hidden="true" className="size-5" />
           </span>
         </div>

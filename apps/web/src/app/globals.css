@@ -2,8 +2,8 @@
 
 :root {
   color-scheme: light;
-  --background: #fbfbfa;
-  --foreground: #192823;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 * {
@@ -26,32 +26,39 @@ textarea {
 }
 
 ::selection {
-  background: #d8f3dc;
-  color: #1b4332;
+  background: #e0e7ff;
+  color: #1e1b4b;
 }
 
 @theme inline {
-  --color-finhand-canvas: #fbfbfa;
-  --color-finhand-canvas-muted: #f8f9f7;
-  --color-finhand-ink: #192823;
-  --color-finhand-muted: #607068;
-  --color-finhand-subtle: #8c9993;
-  --color-finhand-border: #e6e9e4;
-  --color-finhand-divider: #ebefea;
-  --color-finhand-primary: #2d6a4f;
-  --color-finhand-primary-strong: #1b4332;
-  --color-finhand-mint: #d8f3dc;
-  --color-finhand-mint-soft: #e8f5ee;
-  --color-finhand-mint-strong: #95d4b3;
-  --color-finhand-focus: #52b788;
-  --color-finhand-income: #2d8a58;
-  --color-finhand-income-soft: #e2f6ea;
-  --color-finhand-expense: #d95d52;
-  --color-finhand-expense-soft: #fdeceb;
-  --color-finhand-warning: #b07d38;
-  --color-finhand-warning-soft: #fef7ee;
-  --shadow-finhand-card: 0 1px 3px rgb(25 40 35 / 4%),
-    0 1px 2px rgb(25 40 35 / 2%);
+  --color-finhand-canvas: #f8fafc;
+  --color-finhand-canvas-muted: #f1f5f9;
+  --color-finhand-card: #ffffff;
+  --color-finhand-ink: #0f172a;
+  --color-finhand-muted: #64748b;
+  --color-finhand-neutral: #475569;
+  --color-finhand-subtle: #94a3b8;
+  --color-finhand-border: #e2e8f0;
+  --color-finhand-border-strong: #cbd5e1;
+  --color-finhand-divider: #e2e8f0;
+  --color-finhand-primary: #1e1b4b;
+  --color-finhand-primary-strong: #312e81;
+  --color-finhand-interactive: #4f46e5;
+  --color-finhand-interactive-strong: #4338ca;
+  --color-finhand-accent: #e0e7ff;
+  --color-finhand-accent-soft: #eef2ff;
+  --color-finhand-accent-border: #c7d2fe;
+  --color-finhand-focus: #4f46e5;
+  --color-finhand-income: #059669;
+  --color-finhand-income-soft: #ecfdf5;
+  --color-finhand-income-border: #a7f3d0;
+  --color-finhand-expense: #dc2626;
+  --color-finhand-expense-soft: #fef2f2;
+  --color-finhand-expense-border: #fecaca;
+  --color-finhand-warning: #d97706;
+  --color-finhand-warning-soft: #fffbeb;
+  --shadow-finhand-card: 0 1px 3px rgb(15 23 42 / 4%),
+    0 1px 2px rgb(15 23 42 / 2%);
 }
 
 .money-loader__coin {

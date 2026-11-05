@@ -25,7 +25,7 @@ interface AccountDrawerProps {
 }
 
 const controlClassName =
-  "mt-1.5 min-h-12 w-full rounded-xl border border-transparent bg-finhand-mint-soft px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:bg-white focus:ring-2 focus:ring-finhand-focus/20";
+  "mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20";
 
 export function AccountDrawer({
   account,
@@ -117,7 +117,7 @@ export function AccountDrawer({
             />
           </label>
 
-          <p className="rounded-xl bg-finhand-mint-soft p-4 text-sm leading-6 text-finhand-muted">
+          <p className="rounded-xl bg-finhand-accent-soft p-4 text-sm leading-6 text-finhand-muted">
             The current balance is calculated from this opening balance plus
             all transactions registered for the account. New accounts use your
             current default currency.
@@ -133,7 +133,7 @@ export function AccountDrawer({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-mint-soft/40 p-5">
+        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
           <Button
             className="rounded-xl!"
             disabled={isSubmitting}

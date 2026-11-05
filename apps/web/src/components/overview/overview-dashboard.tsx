@@ -49,7 +49,7 @@ async function fetchOverviewData(
 function OverviewSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading overview" className="space-y-6">
-      <div className="h-32 animate-pulse rounded-2xl bg-finhand-mint-soft" />
+      <div className="h-32 animate-pulse rounded-2xl bg-finhand-accent-soft" />
       <div className="grid grid-cols-4 gap-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
@@ -191,7 +191,7 @@ export function OverviewDashboard() {
     <div className="space-y-6">
       <Card className="flex min-h-32 items-center justify-between gap-8 p-7">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
             Financial overview
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">

@@ -64,7 +64,7 @@ export function CategoryModal({
         <div className="flex-1 space-y-5 overflow-y-auto p-6">
           <div>
             <p className="text-xs font-medium text-finhand-muted">Type</p>
-            <div className="mt-1.5 grid grid-cols-2 gap-1 rounded-xl bg-finhand-mint-soft p-1">
+            <div className="mt-1.5 grid grid-cols-2 gap-1 rounded-xl bg-finhand-canvas-muted p-1">
               {categoryTypes.map((type) => {
                 const Icon = type === "expense" ? ArrowUpRight : ArrowDown;
 
@@ -103,7 +103,7 @@ export function CategoryModal({
             Category name
             <input
               autoFocus
-              className="mt-1.5 min-h-12 w-full rounded-xl border border-transparent bg-finhand-mint-soft px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:bg-white focus:ring-2 focus:ring-finhand-focus/20"
+              className="mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
               maxLength={100}
               onChange={(event) =>
                 setValues((current) => ({
@@ -117,7 +117,7 @@ export function CategoryModal({
             />
           </label>
 
-          <p className="rounded-xl bg-finhand-mint-soft p-4 text-sm leading-6 text-finhand-muted">
+          <p className="rounded-xl bg-finhand-accent-soft p-4 text-sm leading-6 text-finhand-muted">
             {values.type === "expense"
               ? "Expense categories organize where your money goes."
               : "Income categories identify where your money comes from."}
@@ -133,7 +133,7 @@ export function CategoryModal({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-mint-soft/40 p-5">
+        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
           <Button
             className="rounded-xl!"
             disabled={isSubmitting}

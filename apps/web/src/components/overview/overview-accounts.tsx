@@ -76,13 +76,14 @@ export function OverviewAccounts({
         <ul className="mt-6 space-y-3">
           {accounts.map((account) => {
             const Icon = accountIcons[account.type];
+            const balance = BigInt(account.balanceMinor);
 
             return (
               <li
-                className="flex items-center gap-3 rounded-xl bg-finhand-mint-soft p-3.5"
+                className="flex items-center gap-3 rounded-xl bg-finhand-canvas-muted p-3.5"
                 key={account.accountId}
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-primary shadow-finhand-card">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive shadow-finhand-card">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -101,7 +102,13 @@ export function OverviewAccounts({
                   </p>
                 </div>
                 <CurrencyAmount
-                  className="font-bold text-finhand-ink"
+                  className={`font-bold ${
+                    balance > 0n
+                      ? "text-finhand-income"
+                      : balance < 0n
+                        ? "text-finhand-expense"
+                        : "text-finhand-ink"
+                  }`}
                   currencyCode={account.currencyCode}
                   value={account.balanceMinor}
                 />

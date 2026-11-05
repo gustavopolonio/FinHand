@@ -81,16 +81,16 @@ export function ConfirmModal({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="w-full max-w-[540px] rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(25,40,35,0.18)]"
+        className="w-full max-w-[540px] rounded-2xl bg-white p-8 shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)]"
         role="alertdialog"
       >
         <header className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-finhand-expense-soft text-[#a83931]">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-finhand-expense-soft text-finhand-expense">
               {icon}
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#88211c]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-finhand-expense">
                 {eyebrow}
               </p>
               <h2

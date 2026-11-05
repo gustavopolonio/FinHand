@@ -101,7 +101,7 @@ export function TransactionDrawer({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-mint-soft/40 p-5">
+        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
           <Button
             className="rounded-xl!"
             disabled={isSubmitting}

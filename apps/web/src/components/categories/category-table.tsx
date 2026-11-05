@@ -50,7 +50,7 @@ export function CategoryTable({
   return (
     <Card className="overflow-hidden">
       <table className="w-full border-collapse text-left">
-        <thead className="bg-finhand-mint-soft">
+        <thead className="bg-finhand-canvas-muted">
           <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             <th className="px-6 py-4">Category name</th>
             <th className="px-4 py-4">Type</th>
@@ -78,7 +78,7 @@ export function CategoryTable({
                       className={`grid size-10 shrink-0 place-items-center rounded-xl ${
                         category.type === "income"
                           ? "bg-finhand-income-soft text-finhand-income"
-                          : "bg-finhand-mint-soft text-finhand-primary"
+                          : "bg-finhand-accent-soft text-finhand-interactive"
                       }`}
                     >
                       <TypeIcon aria-hidden="true" className="size-5" />
@@ -110,7 +110,7 @@ export function CategoryTable({
                     currencyCode={currencyCode}
                     value={category.totalMinor}
                   />
-                  <div className="mt-2 ml-auto h-1.5 max-w-36 overflow-hidden rounded-full bg-finhand-mint-soft">
+                  <div className="mt-2 ml-auto h-1.5 max-w-36 overflow-hidden rounded-full bg-finhand-accent-soft">
                     <div
                       className="h-full rounded-full bg-finhand-primary"
                       style={{ width: `${category.percentage}%` }}

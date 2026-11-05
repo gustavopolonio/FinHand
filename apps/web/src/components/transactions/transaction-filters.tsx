@@ -77,7 +77,7 @@ export function TransactionFilters({
     <Card className="p-5">
       <form onSubmit={apply}>
         <div className="flex items-center justify-between gap-5">
-          <div className="flex rounded-xl bg-finhand-mint-soft p-1">
+          <div className="flex rounded-xl bg-finhand-accent-soft p-1">
             {(["", ...transactionTypes] as const).map((candidate) => (
               <button
                 className={cn(

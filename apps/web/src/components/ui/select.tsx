@@ -48,7 +48,7 @@ interface MenuPosition {
 const variantClasses: Record<SelectVariant, string> = {
   default:
     "min-h-11 border border-finhand-border bg-finhand-canvas-muted px-3",
-  soft: "min-h-12 border border-transparent bg-finhand-mint-soft px-3.5",
+  soft: "min-h-12 border border-finhand-border-strong bg-white px-3.5",
   compact: "min-h-10 border border-finhand-border bg-white px-3",
 };
 
@@ -297,7 +297,7 @@ export function Select({
           "flex w-full items-center justify-between gap-3 rounded-xl text-left text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
           variantClasses[variant],
           isOpen &&
-            "border-2 border-finhand-focus bg-[#ecfdf5] shadow-finhand-card",
+            "border-2 border-finhand-focus bg-finhand-accent-soft shadow-finhand-card",
         )}
         disabled={disabled}
         onClick={() => (isOpen ? closeMenu() : openMenu())}
@@ -308,7 +308,7 @@ export function Select({
       >
         <span className="flex min-w-0 items-center gap-2.5">
           {SelectedIcon ? (
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-finhand-mint-strong bg-white text-finhand-primary">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-finhand-accent-border bg-white text-finhand-interactive">
               <SelectedIcon aria-hidden="true" className="size-4" />
             </span>
           ) : null}
@@ -328,13 +328,13 @@ export function Select({
             ) : null}
           </span>
           {selectedOption?.badge ? (
-            <span className="shrink-0 rounded bg-finhand-mint px-2 py-0.5 text-[10px] font-semibold text-finhand-primary">
+            <span className="shrink-0 rounded bg-finhand-accent px-2 py-0.5 text-[10px] font-semibold text-finhand-interactive">
               {selectedOption.badge}
             </span>
           ) : null}
         </span>
 
-        <span className="grid size-6 shrink-0 place-items-center rounded-md bg-finhand-mint text-finhand-primary">
+        <span className="grid size-6 shrink-0 place-items-center rounded-md bg-finhand-accent text-finhand-interactive">
           <ChevronDown
             aria-hidden="true"
             className={cn(
@@ -348,7 +348,7 @@ export function Select({
       {isOpen && position && typeof document !== "undefined"
         ? createPortal(
             <div
-              className="fixed z-[100] flex flex-col overflow-hidden rounded-xl border border-finhand-border bg-white shadow-[0_16px_40px_rgba(25,40,35,0.16)]"
+              className="fixed z-[100] flex flex-col overflow-hidden rounded-xl border border-finhand-border bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
               ref={menuRef}
               style={menuStyle}
             >
@@ -370,10 +370,10 @@ export function Select({
                       className={cn(
                         "flex w-full items-center justify-between gap-3 border-t border-l-4 border-t-finhand-divider px-3.5 py-2.5 text-left first:border-t-0",
                         isSelected &&
-                          "border-l-finhand-focus bg-[#ecfdf5]",
+                          "border-l-finhand-focus bg-finhand-accent-soft",
                         !isSelected && "border-l-transparent",
                         isHighlighted && !isSelected &&
-                          "border-l-finhand-mint-strong bg-[#f0fbf6]",
+                          "border-l-finhand-accent-border bg-finhand-canvas-muted",
                         option.disabled
                           ? "cursor-not-allowed bg-finhand-canvas-muted opacity-55"
                           : "cursor-pointer hover:bg-finhand-canvas-muted",
@@ -389,17 +389,17 @@ export function Select({
                     >
                       <span className="flex min-w-0 items-center gap-3">
                         {Icon ? (
-                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-finhand-mint-soft text-finhand-primary">
+                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-finhand-accent-soft text-finhand-interactive">
                             <Icon aria-hidden="true" className="size-4" />
                           </span>
                         ) : null}
                         <span className="min-w-0">
                           <span className="flex items-center gap-2">
-                            <span className="truncate text-xs font-bold text-finhand-primary-strong">
+                            <span className="truncate text-xs font-bold text-finhand-ink">
                               {option.label}
                             </span>
                             {option.badge ? (
-                              <span className="shrink-0 rounded bg-finhand-mint px-1.5 py-0.5 text-[9px] font-semibold text-finhand-primary">
+                              <span className="shrink-0 rounded bg-finhand-accent px-1.5 py-0.5 text-[9px] font-semibold text-finhand-interactive">
                                 {option.badge}
                               </span>
                             ) : null}
@@ -414,7 +414,7 @@ export function Select({
                       {isSelected ? (
                         <Check
                           aria-hidden="true"
-                          className="size-4 shrink-0 text-finhand-focus"
+                          className="size-4 shrink-0 text-finhand-interactive"
                         />
                       ) : null}
                     </button>

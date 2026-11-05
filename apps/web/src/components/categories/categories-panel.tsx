@@ -57,7 +57,7 @@ function CategoriesSkeleton() {
         <div className="h-56 animate-pulse rounded-2xl bg-white" />
         <div className="h-56 animate-pulse rounded-2xl bg-white" />
       </div>
-      <div className="h-16 animate-pulse rounded-2xl bg-finhand-mint-soft" />
+      <div className="h-16 animate-pulse rounded-2xl bg-finhand-accent-soft" />
       <div className="h-96 animate-pulse rounded-2xl bg-white" />
     </div>
   );
@@ -286,7 +286,7 @@ export function CategoriesPanel() {
     <div className="space-y-7">
       <header className="flex items-end justify-between gap-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
             Settings &amp; architecture
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
@@ -378,7 +378,7 @@ export function CategoriesPanel() {
       ) : null}
 
       <div className="flex items-center justify-between gap-5">
-        <div className="flex rounded-xl bg-finhand-mint-soft p-1">
+        <div className="flex rounded-xl bg-finhand-accent-soft p-1">
           {tabs.map((candidate) => (
             <button
               className={cn(
@@ -392,7 +392,7 @@ export function CategoriesPanel() {
               type="button"
             >
               {candidate.label}
-              <span className="rounded-full bg-finhand-mint px-2 py-0.5 text-[10px]">
+              <span className="rounded-full bg-finhand-accent px-2 py-0.5 text-[10px]">
                 {tabCounts[candidate.value]}
               </span>
             </button>

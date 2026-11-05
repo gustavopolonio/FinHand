@@ -23,7 +23,7 @@ export function MoneyLoader({
           <span className="money-loader__coin">R$</span>
           <span className="money-loader__coin">R$</span>
         </div>
-        <p className="mt-5 text-sm font-medium text-emerald-950/70">
+        <p className="mt-5 text-sm font-medium text-finhand-muted">
           {label}
         </p>
       </div>

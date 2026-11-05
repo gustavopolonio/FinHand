@@ -10,7 +10,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const variantClasses: Record<CardVariant, string> = {
   default: "border-finhand-border bg-white",
-  primary: "border-finhand-mint-strong bg-finhand-primary text-white",
+  primary: "border-finhand-accent-border bg-finhand-primary text-white",
 };
 
 export function Card({

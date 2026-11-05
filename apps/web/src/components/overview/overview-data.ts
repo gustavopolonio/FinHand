@@ -10,12 +10,12 @@ export interface CategorySlice {
 }
 
 const categoryColors = [
-  "#2d6a4f",
-  "#40916c",
-  "#74c69d",
-  "#b7d8c8",
-  "#c8d0cb",
-  "#d95d52",
+  "#1e1b4b",
+  "#4f46e5",
+  "#64748b",
+  "#93c5fd",
+  "#818cf8",
+  "#cbd5e1",
 ];
 
 export function firstNameFromUser(
@@ -72,7 +72,7 @@ export function createCategorySlices(
 
   return expenses.map((category, index) => ({
     categoryId: category.categoryId,
-    color: categoryColors[index % categoryColors.length] ?? "#2d6a4f",
+    color: categoryColors[index % categoryColors.length] ?? "#1e1b4b",
     name: category.name,
     percentage:
       total === 0n
@@ -84,7 +84,7 @@ export function createCategorySlices(
 }
 
 export function createCategoryGradient(slices: CategorySlice[]) {
-  if (slices.length === 0) return "#e8f5ee";
+  if (slices.length === 0) return "#eef2ff";
 
   let start = 0;
   const segments = slices.map((slice) => {
@@ -95,7 +95,7 @@ export function createCategoryGradient(slices: CategorySlice[]) {
   });
 
   if (start < 100) {
-    segments.push(`#e8f5ee ${start}% 100%`);
+    segments.push(`#eef2ff ${start}% 100%`);
   }
 
   return `conic-gradient(${segments.join(", ")})`;

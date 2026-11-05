@@ -31,7 +31,7 @@ export function GoogleSignInButton() {
   return (
     <div className="mt-10">
       <button
-        className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-900 px-6 py-3 font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
+        className="inline-flex min-h-12 items-center justify-center rounded-xl bg-finhand-primary px-6 py-3 font-semibold text-white transition hover:bg-finhand-primary-strong disabled:cursor-wait disabled:opacity-60"
         disabled={isLoading}
         onClick={() => void signIn()}
         type="button"
@@ -39,7 +39,7 @@ export function GoogleSignInButton() {
         {isLoading ? "Connecting to Google…" : "Continue with Google"}
       </button>
       {error ? (
-        <p className="mt-3 text-sm text-red-700" role="alert">
+        <p className="mt-3 text-sm text-finhand-expense" role="alert">
           {error}
         </p>
       ) : null}

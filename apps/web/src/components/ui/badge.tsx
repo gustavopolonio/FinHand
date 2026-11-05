@@ -9,10 +9,14 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  neutral: "bg-finhand-mint-soft text-finhand-primary-strong",
-  income: "bg-finhand-income-soft text-finhand-income",
-  expense: "bg-finhand-expense-soft text-finhand-expense",
-  warning: "bg-finhand-warning-soft text-finhand-warning",
+  neutral:
+    "border border-finhand-border bg-finhand-canvas-muted text-finhand-neutral",
+  income:
+    "border border-finhand-income-border bg-finhand-income-soft text-finhand-income",
+  expense:
+    "border border-finhand-expense-border bg-finhand-expense-soft text-finhand-expense",
+  warning:
+    "border border-amber-200 bg-finhand-warning-soft text-finhand-warning",
   inverse: "bg-white/12 text-white",
 };
 

@@ -48,7 +48,7 @@ function SummaryCard({
             accent === "expense" &&
               "bg-finhand-expense-soft text-finhand-expense",
             accent === "primary" &&
-              "bg-finhand-mint-soft text-finhand-primary",
+              "bg-finhand-accent-soft text-finhand-interactive",
           )}
         >
           <Icon aria-hidden="true" className="size-5" />
@@ -135,6 +135,13 @@ export function OverviewSummaryCards({
         value={currency.expenseMinor}
       />
       <SummaryCard
+        accent={
+          netFlow > 0n
+            ? "income"
+            : netFlow < 0n
+              ? "expense"
+              : "primary"
+        }
         currencyCode={currency.currencyCode}
         icon={Scale}
         label="Net cash flow"

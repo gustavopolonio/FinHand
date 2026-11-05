@@ -45,7 +45,7 @@ export function TransactionDeleteModal({
     transaction.type === "expense" ? "Debit" : "Credit";
   const amountColor =
     transaction.type === "expense"
-      ? "text-[#88211c]"
+      ? "text-finhand-expense"
       : "text-finhand-income";
 
   return (
@@ -62,10 +62,10 @@ export function TransactionDeleteModal({
       onConfirm={onConfirm}
       title="Delete transaction"
     >
-      <div className="rounded-xl bg-finhand-mint-soft/70 p-6">
+      <div className="rounded-xl border border-finhand-border bg-finhand-canvas-muted p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-[#88211c] shadow-sm">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-finhand-expense-border bg-white text-finhand-expense shadow-sm">
               <ReceiptText aria-hidden="true" className="size-4" />
             </span>
             <div className="min-w-0">

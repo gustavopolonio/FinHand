@@ -22,6 +22,6 @@ describe("surface variants", () => {
 
     expect(markup).toContain("bg-white/12");
     expect(markup).toContain("text-white");
-    expect(markup).not.toContain("bg-finhand-mint-soft");
+    expect(markup).not.toContain("bg-finhand-accent-soft");
   });
 });

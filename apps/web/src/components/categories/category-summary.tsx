@@ -40,7 +40,7 @@ export function CategorySummary({
       <Card className="p-6">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
-            <span className="grid size-11 place-items-center rounded-xl bg-finhand-mint-soft text-finhand-primary">
+            <span className="grid size-11 place-items-center rounded-xl bg-finhand-accent-soft text-finhand-interactive">
               <ChartNoAxesCombined aria-hidden="true" className="size-5" />
             </span>
             <div>
@@ -75,7 +75,7 @@ export function CategorySummary({
           />
         </div>
 
-        <div className="mt-6 flex items-center gap-3 rounded-xl bg-finhand-mint-soft px-4 py-3 text-sm text-finhand-muted">
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-finhand-expense-border bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-muted">
           <CircleAlert
             aria-hidden="true"
             className="size-5 shrink-0 text-finhand-warning"
@@ -122,7 +122,7 @@ export function CategorySummary({
             className="size-full rounded-full"
             role="img"
             style={{
-              background: `conic-gradient(#2d6a4f 0 ${overview.categorizedPercentage}%, #e8f5ee ${overview.categorizedPercentage}% 100%)`,
+              background: `conic-gradient(#1e1b4b 0 ${overview.categorizedPercentage}%, #eef2ff ${overview.categorizedPercentage}% 100%)`,
             }}
           />
           <div className="absolute inset-3 grid place-items-center rounded-full bg-white text-center">

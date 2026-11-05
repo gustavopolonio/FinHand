@@ -22,7 +22,7 @@ interface TransactionFieldsProps {
 }
 
 const controlClassName =
-  "mt-1.5 min-h-12 w-full rounded-xl border border-transparent bg-finhand-mint-soft px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:bg-white focus:ring-2 focus:ring-finhand-focus/20";
+  "mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20";
 const labelClassName = "text-xs font-medium text-finhand-muted";
 
 const currencySymbols: Record<string, string> = {
@@ -60,7 +60,7 @@ export function TransactionFields({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-finhand-mint-soft p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-finhand-canvas-muted p-1">
         {transactionTypes.map((type) => {
           const Icon = type === "expense" ? ArrowUpRight : ArrowDown;
 
@@ -88,7 +88,7 @@ export function TransactionFields({
 
       <label className={`block ${labelClassName}`}>
         Amount
-        <span className="mt-1.5 flex min-h-14 items-center rounded-xl border border-transparent bg-finhand-mint-soft px-4 transition focus-within:border-finhand-focus focus-within:bg-white focus-within:ring-2 focus-within:ring-finhand-focus/20">
+        <span className="mt-1.5 flex min-h-14 items-center rounded-xl border border-finhand-border-strong bg-white px-4 transition focus-within:border-finhand-focus focus-within:ring-2 focus-within:ring-finhand-focus/20">
           <span className="mr-2 text-base font-medium text-finhand-muted">
             {currencySymbols[currencyCode] ?? currencyCode}
           </span>

@@ -53,6 +53,7 @@ export function AccountCard({
     BigInt(account.balanceMinor) - BigInt(account.openingBalanceMinor)
   ).toString();
   const movement = BigInt(netMovement);
+  const balance = BigInt(account.balanceMinor);
   const isBusy = busyAccountId === account.id;
   const isDisabled = busyAccountId !== null;
 
@@ -60,7 +61,7 @@ export function AccountCard({
     <Card className="overflow-hidden">
       <div className="p-6">
         <div className="flex items-start gap-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-finhand-mint-soft text-finhand-primary">
+          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-finhand-accent-soft text-finhand-interactive">
             <Icon aria-hidden="true" className="size-6" />
           </span>
           <div className="min-w-0 flex-1">
@@ -77,13 +78,19 @@ export function AccountCard({
           <Badge variant="income">Active</Badge>
         </div>
 
-        <div className="mt-5 rounded-xl bg-finhand-mint-soft p-5">
+        <div className="mt-5 rounded-xl bg-finhand-canvas-muted p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Current balance
           </p>
           <div className="mt-2 flex items-end justify-between gap-4">
             <CurrencyAmount
-              className="text-2xl font-bold tracking-[-0.025em] text-finhand-primary-strong"
+              className={`text-2xl font-bold tracking-[-0.025em] ${
+                balance > 0n
+                  ? "text-finhand-income"
+                  : balance < 0n
+                    ? "text-finhand-expense"
+                    : "text-finhand-ink"
+              }`}
               currencyCode={account.currencyCode}
               value={account.balanceMinor}
             />

@@ -52,7 +52,7 @@ export function WorkspaceModal({
       role="dialog"
     >
       <section
-        className={`flex max-h-[90vh] w-full ${widthClassName} flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-[0_20px_60px_rgba(25,40,35,0.18)]`}
+        className={`flex max-h-[90vh] w-full ${widthClassName} flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)]`}
       >
         <header className="flex items-start justify-between border-b border-finhand-divider p-6">
           <div>
@@ -66,7 +66,7 @@ export function WorkspaceModal({
           </div>
           <button
             aria-label={`Close ${title.toLowerCase()}`}
-            className="grid size-8 shrink-0 place-items-center rounded-full text-finhand-muted transition hover:bg-finhand-mint-soft hover:text-finhand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-finhand-muted transition hover:bg-finhand-accent-soft hover:text-finhand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus"
             disabled={isBusy}
             onClick={onClose}
             type="button"
