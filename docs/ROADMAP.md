@@ -35,13 +35,34 @@
 
 ## Milestone 3 — AI Document Processing
 
-**Status:** Not Started
+**Status:** In Progress
 
 ### Tasks
-- [ ] Implement file uploads using Amazon S3
-- [ ] Extract structured financial data from documents
-- [ ] Implement transaction confirmation workflow
-- [ ] Store confirmed transactions
+- [ ] Design and migrate the data model for uploads, document capture sessions, and transaction candidates
+- [ ] Implement secure private image and PDF uploads using Amazon S3
+- [ ] Validate supported file types, file sizes, checksums, ownership, and processing state transitions
+- [ ] Build the direct document upload flow for desktop and mobile browsers
+- [ ] Build the mobile receipt camera capture flow
+- [ ] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff
+- [ ] Synchronize capture and processing status between the mobile capture page and initiating desktop session
+- [ ] Extract structured transaction candidates from receipt images and PDF files
+- [ ] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
+- [ ] Build the transaction candidate review and editing interface
+- [ ] Require explicit user confirmation before creating an authoritative transaction
+- [ ] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
+- [ ] Implement retry, rejection, expiration, and abandoned-upload cleanup flows
+- [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
+
+### Acceptance Criteria
+- Users can upload supported receipt images and PDF files directly from desktop or mobile.
+- Mobile users can open the device camera from FinHand and submit a receipt photo.
+- Desktop users can display a QR code, scan it with a phone, and submit a receipt to the same capture session.
+- QR capture tokens are unguessable, expire quickly, work only once, and grant upload access only.
+- The initiating desktop session displays capture, upload, processing, failure, and ready-for-review states without requiring a page reload.
+- AI extraction produces a reviewable transaction candidate and never changes balances before confirmation.
+- Users can correct extracted fields, select an account and category, confirm the transaction, or reject the candidate.
+- Confirming a candidate creates exactly one transaction and cannot be replayed to create duplicates.
+- Uploaded documents remain private and every upload, candidate, and resulting transaction is scoped to its owning user.
 
 ## Milestone 4 — Voice Input
 
