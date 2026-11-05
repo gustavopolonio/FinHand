@@ -14,7 +14,9 @@ The first database migration will contain the financial core:
 Milestone 2 adds Google authentication through Better Auth using the existing
 `users` table plus `auth_accounts`, `auth_sessions`, and `auth_verifications`.
 
-Tables for uploads, AI extraction, audio transcription, and RAG are described as planned extensions but will be introduced only in their corresponding milestones.
+Milestone 3 adds user-owned uploads, short-lived desktop-to-mobile capture
+sessions, and reviewable transaction candidates. Audio transcription and RAG
+storage remain planned extensions for their corresponding milestones.
 
 ## Design principles
 
@@ -38,10 +40,20 @@ users
  │        ├── N:1 account
  │        └── N:0..1 category
  ├── 1:N auth_accounts
- └── 1:N auth_sessions
+ ├── 1:N auth_sessions
+ ├── 1:N uploads
+ │        └── 1:N transaction_candidates
+ └── 1:N document_capture_sessions
+          └── 0..1 upload
+
+transaction_candidates
+ ├── N:0..1 account
+ ├── N:0..1 category
+ └── 1:0..1 confirmed transaction
 ```
 
-All accounts, categories, and transactions are private to their owning user.
+All accounts, categories, transactions, uploads, capture sessions, and
+transaction candidates are private to their owning user.
 
 ## Core entities
 
@@ -187,6 +199,7 @@ Constraints and indexes:
 - Check constraints for transaction type and origin.
 - Composite foreign key `(user_id, account_id, currency_code) → accounts(user_id, id, currency_code)`. This prevents cross-user account references and currency mismatches.
 - Composite foreign key `(user_id, category_id, type) → categories(user_id, id, type)`. This prevents cross-user category references and ensures that an expense cannot use an income category. The relationship remains optional when `category_id` is null.
+- Unique constraint on `(user_id, id)` to support ownership-safe candidate references.
 - Index on `(user_id, occurred_on DESC)` for timelines and summaries.
 - Index on `(user_id, account_id, occurred_on DESC)` for account history.
 - Index on `(user_id, category_id, occurred_on DESC)` for category summaries.
@@ -197,12 +210,144 @@ Amounts are always positive. `type` determines whether an amount adds to or subt
 
 Transactions initially use the account's currency. Foreign exchange, exchange rates, and cross-currency transfers are outside the current requirements.
 
+## Milestone 3 entities
+
+### `uploads`
+
+Stores metadata for a private user-owned object in Amazon S3. The table never
+stores a public URL. A document uploaded directly and one submitted through a
+QR capture session enter the same processing pipeline.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | Primary key |
+| `user_id` | `uuid` | No | Owning user |
+| `kind` | `text` | No | `document` or `audio`; Milestone 3 creates documents only |
+| `source` | `text` | No | `direct` or `qr_capture` |
+| `s3_object_key` | `text` | No | Unique private S3 object key |
+| `original_file_name` | `text` | No | Original client filename, treated as untrusted metadata |
+| `mime_type` | `text` | No | Validated media type |
+| `byte_size` | `bigint` | No | Positive object size in bytes |
+| `checksum_sha256` | `varchar(64)` | Yes | Lowercase hexadecimal SHA-256 checksum when available |
+| `status` | `text` | No | `pending`, `uploaded`, `processing`, `processed`, or `failed` |
+| `failure_code` | `text` | Yes | Sanitized machine-readable failure code; present only for failed uploads |
+| `created_at` | `timestamptz` | No | Creation time |
+| `updated_at` | `timestamptz` | No | Last state change |
+
+Constraints and indexes:
+
+- Foreign key `user_id → users.id`.
+- Unique S3 object key.
+- Positive byte size and lowercase SHA-256 format when a checksum is present.
+- QR capture is restricted to document uploads.
+- Failure state and failure code must be consistent.
+- Unique constraint on `(user_id, id)` for ownership-safe references.
+- Indexes on `(user_id, created_at DESC)` and `(user_id, status)`.
+
+The `pending` state represents metadata created before the object is completely
+stored. File contents remain in private S3 storage; database and application
+logs must not contain document bytes or public object URLs.
+
+### `document_capture_sessions`
+
+Represents a desktop-initiated, upload-only QR handoff. The QR URL contains a
+cryptographically random raw token, while the database stores only its SHA-256
+hash. Possession of the token permits one document upload and never grants
+access to the user's accounts, candidates, or transactions.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | Primary key |
+| `user_id` | `uuid` | No | User who initiated the capture session |
+| `token_hash` | `varchar(64)` | No | Unique lowercase SHA-256 hash of the raw QR token |
+| `status` | `text` | No | `pending`, `consumed`, `expired`, or `cancelled` |
+| `upload_id` | `uuid` | Yes | Unique upload accepted when the session is consumed |
+| `expires_at` | `timestamptz` | No | Time after which the token must be rejected |
+| `consumed_at` | `timestamptz` | Yes | Time the single allowed upload was accepted |
+| `created_at` | `timestamptz` | No | Creation time |
+| `updated_at` | `timestamptz` | No | Last state change |
+
+Constraints and indexes:
+
+- Foreign key `user_id → users.id`.
+- Composite foreign key `(user_id, upload_id) → uploads(user_id, id)`.
+- Unique token hash and unique optional upload reference.
+- Expiration must be later than creation.
+- Only `consumed` sessions may have `upload_id` and `consumed_at`, and both are
+  required together for that state.
+- Indexes on `(user_id, status)` and `expires_at`.
+
+Token validation and session consumption must happen atomically so simultaneous
+or replayed requests cannot attach multiple uploads. Expired sessions are
+marked by application cleanup; the API must also compare `expires_at` during
+every token use rather than relying only on the stored status.
+
+### `transaction_candidates`
+
+Stores one AI-extracted transaction proposal. Candidate fields remain nullable
+while extraction is incomplete or uncertain. Candidates do not participate in
+balances or financial summaries.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | Primary key |
+| `user_id` | `uuid` | No | Owning user |
+| `upload_id` | `uuid` | No | Source upload |
+| `position` | `integer` | No | Zero-based candidate order within the upload |
+| `account_id` | `uuid` | Yes | Proposed account |
+| `category_id` | `uuid` | Yes | Proposed category |
+| `type` | `text` | Yes | Proposed `income` or `expense` |
+| `amount_minor` | `bigint` | Yes | Proposed positive amount in minor units |
+| `currency_code` | `varchar(3)` | Yes | Proposed ISO 4217 currency code |
+| `occurred_on` | `date` | Yes | Proposed financial event date |
+| `description` | `text` | Yes | Proposed description |
+| `counterparty` | `text` | Yes | Proposed merchant, payer, or payee |
+| `notes` | `text` | Yes | Optional proposed notes |
+| `extraction_metadata` | `jsonb` | Yes | Field confidence and non-sensitive extraction warnings |
+| `status` | `text` | No | `pending`, `confirmed`, or `rejected` |
+| `reviewed_at` | `timestamptz` | Yes | Confirmation or rejection time |
+| `transaction_id` | `uuid` | Yes | Unique authoritative transaction created on confirmation |
+| `created_at` | `timestamptz` | No | Creation time |
+| `updated_at` | `timestamptz` | No | Last modification time |
+
+Constraints and indexes:
+
+- Foreign key `user_id → users.id`.
+- Composite foreign key `(user_id, upload_id) → uploads(user_id, id)`.
+- Ownership-, currency-, and type-safe optional account and category foreign
+  keys matching those used by authoritative transactions.
+- Composite foreign key `(user_id, transaction_id) → transactions(user_id, id)`.
+- Positive amount and uppercase three-letter currency when those fields exist.
+- Unique `(upload_id, position)` and unique optional `transaction_id`.
+- Pending candidates have no review or transaction; rejected candidates have a
+  review but no transaction; confirmed candidates require both.
+- A confirmed candidate requires account, type, amount, currency, date, and
+  description.
+- Indexes on `(user_id, status, created_at DESC)` and `upload_id`.
+
+One upload may produce multiple candidates, and each candidate is reviewed
+independently. Confirming all candidates creates one authoritative transaction
+per candidate. Confirmation must run in one database transaction: lock and
+validate the pending candidate, create the authoritative transaction with
+`origin = document`, then mark and link the candidate. The unique transaction
+reference and status checks make confirmation idempotent and prevent duplicate
+financial records.
+
+Only confidence values and warnings required by the review interface belong in
+`extraction_metadata`. Raw model responses and full extracted document text are
+not retained in Milestone 3 by default.
+
 ## Deletion and ownership rules
 
 - User-scoped queries must always include the authenticated `user_id`.
 - Composite foreign keys provide database-level protection against cross-user relationships.
 - Row-level security should be evaluated in Milestone 2 after request authentication and database connection context are defined.
 - Accounts and categories with transaction history are archived, not deleted.
+- Uploads referenced by capture sessions or candidates cannot be deleted until
+  an explicit retention workflow safely removes their dependent records and S3
+  objects.
+- Confirmed and rejected candidates are retained as the audit link between an
+  uploaded document and the user's review decision.
 - Deleting a user and all related financial data must be an explicit account-deletion workflow, not an incidental cascade from normal application operations.
 - `updated_at` is maintained by application persistence logic unless a database trigger is intentionally introduced later.
 
@@ -210,40 +355,20 @@ Transactions initially use the account's currency. Foreign exchange, exchange ra
 
 The following entities are part of the planned architecture but not the first migration.
 
-### Milestones 3 and 4 — uploads and AI extraction
-
-#### `uploads`
-
-Stores metadata for a user-owned object in Amazon S3:
-
-- Owner and upload kind (`document` or `audio`)
-- Private S3 object key, never a public URL
-- Original filename, MIME type, byte size, and checksum
-- Processing status and sanitized failure metadata
-- Creation and update timestamps
-
-#### `transaction_candidates`
-
-Stores one structured transaction proposal extracted from a document or voice recording:
-
-- Source upload and owning user
-- Proposed account, category, type, amount, currency, date, description, and counterparty
-- Field-level confidence or extraction metadata
-- Status: `pending`, `confirmed`, or `rejected`
-- Review timestamp
-- Optional unique reference to the resulting transaction
-
-One upload may produce multiple candidates. Confirmation must run in one database transaction: create the authoritative transaction, mark the candidate confirmed, and link the candidate to that transaction. Rejected or unreviewed candidates never appear in financial calculations.
-
-#### `documents`
-
-Stores document-specific processing state and extracted text for an eligible upload. Document content is sensitive financial data and must use the same ownership checks as transactions.
+### Milestone 4 — voice extraction
 
 #### `audio_transcripts`
 
 If transcript retention is approved, stores the transcription and processing metadata for an audio upload. Retention requirements should be decided before implementation to avoid storing sensitive speech unnecessarily.
 
 ### Milestone 5 — RAG
+
+#### `documents`
+
+Stores document-specific indexing state and any extracted text approved for RAG
+retention. Document content is sensitive financial data and must use the same
+ownership checks as transactions. Milestone 3 does not require retaining full
+document text after transaction extraction.
 
 #### `document_chunks`
 
