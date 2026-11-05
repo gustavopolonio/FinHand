@@ -8,10 +8,12 @@ import { registerApplicationErrorHandler } from "./errors/error-handler.js";
 import { accountRoutes } from "./routes/accounts/accounts.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
+import { documentUploadRoutes } from "./routes/document-uploads/document-uploads.js";
 import { financialSummaryRoutes } from "./routes/financial-summary/financial-summary.js";
 import { healthRoutes } from "./routes/health/health.js";
 import { transactionRoutes } from "./routes/transactions/transactions.js";
 import { userRoutes } from "./routes/users/users.js";
+import type { DocumentStorage } from "./storage/document-storage.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
 declare module "fastify" {
@@ -25,6 +27,7 @@ interface BuildApplicationOptions {
   authenticationBaseUrl: string;
   corsOrigin: string;
   databaseConnection: DatabaseConnection;
+  documentStorage: DocumentStorage;
   logger?: FastifyServerOptions["logger"];
 }
 
@@ -33,6 +36,7 @@ export function buildApplication({
   authenticationBaseUrl,
   corsOrigin,
   databaseConnection,
+  documentStorage,
   logger = false,
 }: BuildApplicationOptions) {
   const application = Fastify({ logger });
@@ -42,6 +46,7 @@ export function buildApplication({
   application.decorate("database", databaseConnection.database);
   registerAuthenticationGuard(application, authentication);
   application.addHook("onClose", async () => {
+    documentStorage.close();
     await databaseConnection.pool.end();
   });
 
@@ -58,6 +63,7 @@ export function buildApplication({
   application.register(categoryRoutes);
   application.register(transactionRoutes);
   application.register(financialSummaryRoutes);
+  application.register(documentUploadRoutes, { documentStorage });
   application.register(authenticationRoutes, {
     authentication,
     baseUrl: authenticationBaseUrl,

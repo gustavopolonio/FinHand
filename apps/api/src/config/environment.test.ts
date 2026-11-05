@@ -8,6 +8,8 @@ const validEnvironment = {
   BETTER_AUTH_URL: "http://localhost:3001/",
   GOOGLE_CLIENT_ID: "google-client-id",
   GOOGLE_CLIENT_SECRET: "google-client-secret",
+  AWS_REGION: "sa-east-1",
+  S3_UPLOAD_BUCKET: "finhand-test-uploads",
   WEB_URL: "http://localhost:3000/",
 };
 
@@ -72,6 +74,15 @@ describe("environment configuration", () => {
     });
   });
 
+  it("returns the private document storage configuration", async () => {
+    const { getDocumentStorageEnvironment } = await importEnvironment();
+
+    expect(getDocumentStorageEnvironment()).toEqual({
+      bucket: "finhand-test-uploads",
+      region: "sa-east-1",
+    });
+  });
+
   it.each([
     ["DATABASE_URL", "", "DATABASE_URL is required."],
     [
@@ -125,5 +136,15 @@ describe("environment configuration", () => {
     vi.stubEnv(name, value);
 
     expect(() => getAuthenticationEnvironment()).toThrow(message);
+  });
+
+  it.each([
+    ["AWS_REGION", "", "AWS_REGION is required."],
+    ["S3_UPLOAD_BUCKET", "", "S3_UPLOAD_BUCKET is required."],
+  ])("rejects missing storage setting %s", async (name, value, message) => {
+    const { getDocumentStorageEnvironment } = await importEnvironment();
+    vi.stubEnv(name, value);
+
+    expect(() => getDocumentStorageEnvironment()).toThrow(message);
   });
 });

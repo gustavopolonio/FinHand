@@ -3,11 +3,15 @@ import { createAuthentication } from "./auth/authentication.js";
 import {
   environment,
   getAuthenticationEnvironment,
+  getDocumentStorageEnvironment,
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
+import { createS3DocumentStorage } from "./storage/document-storage.js";
 
 const databaseConnection = createDatabase(environment.databaseUrl);
 const authenticationEnvironment = getAuthenticationEnvironment();
+const documentStorageEnvironment = getDocumentStorageEnvironment();
+const documentStorage = createS3DocumentStorage(documentStorageEnvironment);
 const authentication = createAuthentication(
   databaseConnection.database,
   authenticationEnvironment,
@@ -17,6 +21,7 @@ const application = buildApplication({
   authenticationBaseUrl: authenticationEnvironment.baseUrl,
   corsOrigin: authenticationEnvironment.webUrl,
   databaseConnection,
+  documentStorage,
   logger: { level: environment.logLevel },
 });
 

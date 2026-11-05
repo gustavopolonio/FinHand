@@ -103,3 +103,10 @@ export function getAuthenticationEnvironment() {
     webUrl: url("WEB_URL"),
   });
 }
+
+export function getDocumentStorageEnvironment() {
+  return Object.freeze({
+    bucket: required("S3_UPLOAD_BUCKET"),
+    region: required("AWS_REGION"),
+  });
+}

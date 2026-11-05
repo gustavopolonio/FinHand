@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildApplication } from "../../app.js";
 import type { Authentication } from "../../auth/authentication.js";
 import { createDatabase } from "../../db/index.js";
+import { createTestDocumentStorage } from "../../test/document-storage.js";
 
 const applications: ReturnType<typeof buildApplication>[] = [];
 
@@ -20,6 +21,7 @@ function createApplication(authentication: Authentication) {
     databaseConnection: createDatabase(
       "postgresql://unused:unused@127.0.0.1:1/unused",
     ),
+    documentStorage: createTestDocumentStorage(),
   });
   applications.push(application);
   return application;

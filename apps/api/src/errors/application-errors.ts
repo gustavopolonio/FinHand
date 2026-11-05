@@ -2,6 +2,12 @@ export class InputError extends Error {
   override readonly name = "InputError";
 }
 
+export class PayloadTooLargeError extends Error {
+  readonly code = "DOCUMENT_TOO_LARGE";
+  override readonly name = "PayloadTooLargeError";
+  readonly statusCode = 413;
+}
+
 export class ConflictError extends Error {
   override readonly name = "ConflictError";
 }

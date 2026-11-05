@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildApplication } from "../../app.js";
 import type { Authentication } from "../../auth/authentication.js";
 import { createDatabase } from "../../db/index.js";
+import { createTestDocumentStorage } from "../../test/document-storage.js";
 
 const applications: ReturnType<typeof buildApplication>[] = [];
 
@@ -27,6 +28,7 @@ describe("GET /health", () => {
       authenticationBaseUrl: "http://localhost:3001",
       corsOrigin: "http://localhost:3000",
       databaseConnection,
+      documentStorage: createTestDocumentStorage(),
     });
     applications.push(application);
 
