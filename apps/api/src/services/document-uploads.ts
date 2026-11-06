@@ -10,7 +10,7 @@ import {
 } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
 
-export const maximumDocumentUploadBytes = 10 * 1024 * 1024;
+export const maximumDocumentUploadBytes = 10 * 1024 * 1024; // 10 MiB
 
 const maximumFileNameLength = 255;
 const signatures = {
