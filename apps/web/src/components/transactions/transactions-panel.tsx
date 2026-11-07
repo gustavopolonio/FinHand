@@ -8,6 +8,7 @@ import {
   ApiError,
   type Account,
   type Category,
+  type DocumentUpload,
   type Transaction,
   type TransactionFilters as TransactionFilterValues,
   createTransaction,
@@ -15,6 +16,7 @@ import {
   getAccounts,
   getCategories,
   getTransactions,
+  uploadDocument,
   updateTransaction,
 } from "@/lib/api";
 
@@ -57,6 +59,7 @@ export function TransactionsPanel() {
   );
   const [isLoadingReferences, setIsLoadingReferences] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reportError = useCallback(
@@ -218,6 +221,22 @@ export function TransactionsPanel() {
     }
   }
 
+  async function submitDocumentUpload(
+    file: File,
+  ): Promise<DocumentUpload | null> {
+    setIsUploadingDocument(true);
+    setError(null);
+
+    try {
+      return await uploadDocument(file);
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    } finally {
+      setIsUploadingDocument(false);
+    }
+  }
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -275,7 +294,10 @@ export function TransactionsPanel() {
           </Button>
           <Button
             disabled={isLoadingReferences}
-            onClick={() => setEditor({ kind: "create" })}
+            onClick={() => {
+              setError(null);
+              setEditor({ kind: "create" });
+            }}
           >
             <Plus aria-hidden="true" className="size-4" />
             Add transaction
@@ -330,11 +352,14 @@ export function TransactionsPanel() {
           categories={categories}
           error={error}
           isSubmitting={busyTransactionId !== null}
+          isUploadingDocument={isUploadingDocument}
           key={
             editor.kind === "create" ? "create" : editor.transaction.id
           }
+          onClearError={() => setError(null)}
           onClose={() => setEditor(null)}
           onSubmit={submitEditor}
+          onUploadDocument={submitDocumentUpload}
           transaction={editedTransaction}
         />
       ) : null}

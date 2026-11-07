@@ -105,6 +105,17 @@ export interface TransactionPage {
   };
 }
 
+export interface DocumentUpload {
+  id: string;
+  originalFileName: string;
+  mimeType: string;
+  byteSize: string;
+  checksumSha256: string;
+  status: "uploaded";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateTransactionInput {
   accountId: string;
   categoryId?: string | null;
@@ -155,10 +166,13 @@ export interface FinancialSummary {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
 
   if (
     init?.body !== undefined &&
     init.body !== null &&
+    !isFormData &&
     !headers.has("Content-Type")
   ) {
     headers.set("Content-Type", "application/json");
@@ -173,8 +187,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
       error?: string;
+      message?: string;
     } | null;
-    throw new ApiError(response.status, body?.error ?? "Request failed.");
+    throw new ApiError(
+      response.status,
+      body?.message ?? body?.error ?? "Request failed.",
+    );
   }
 
   if (response.status === 204) {
@@ -348,6 +366,20 @@ export function deleteTransaction(transactionId: string): Promise<void> {
   return request<void>(`/api/transactions/${transactionId}`, {
     method: "DELETE",
   });
+}
+
+export async function uploadDocument(file: File) {
+  const formData = new FormData();
+  formData.append("document", file);
+  const response = await request<{ upload: DocumentUpload }>(
+    "/api/uploads/documents",
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  return response.upload;
 }
 
 export function getFinancialSummary(

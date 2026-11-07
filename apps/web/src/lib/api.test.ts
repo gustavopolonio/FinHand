@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type Account,
   type Category,
+  type DocumentUpload,
   type Transaction,
   archiveAccount,
   archiveCategory,
@@ -19,6 +20,7 @@ import {
   restoreCategory,
   updateAccount,
   updateTransaction,
+  uploadDocument,
 } from "./api";
 
 const account: Account = {
@@ -324,6 +326,62 @@ describe("transactions API", () => {
     );
     const request = fetch.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+});
+
+describe("document uploads API", () => {
+  it("uploads one document as multipart form data without setting Content-Type", async () => {
+    const upload: DocumentUpload = {
+      id: "77777777-7777-4777-8777-777777777777",
+      originalFileName: "receipt.pdf",
+      mimeType: "application/pdf",
+      byteSize: "12",
+      checksumSha256: "a".repeat(64),
+      status: "uploaded",
+      createdAt: "2026-11-07T12:00:00.000Z",
+      updatedAt: "2026-11-07T12:00:00.000Z",
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ upload }));
+    vi.stubGlobal("fetch", fetch);
+    const file = new File(["%PDF-1.7"], "receipt.pdf", {
+      type: "application/pdf",
+    });
+
+    await expect(uploadDocument(file)).resolves.toEqual(upload);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/uploads/documents",
+      expect.objectContaining({
+        credentials: "include",
+        method: "POST",
+        body: expect.any(FormData),
+      }),
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    const body = request.body as FormData;
+    expect(body.get("document")).toBe(file);
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
+  });
+
+  it("uses the server's detailed multipart error message", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 413,
+      json: vi.fn().mockResolvedValue({
+        error: "Payload Too Large",
+        message: "Document must be at most 10 MB.",
+      }),
+    });
+    vi.stubGlobal("fetch", fetch);
+    const file = new File(["%PDF-1.7"], "receipt.pdf", {
+      type: "application/pdf",
+    });
+
+    await expect(uploadDocument(file)).rejects.toMatchObject({
+      status: 413,
+      message: "Document must be at most 10 MB.",
+    });
   });
 });
 

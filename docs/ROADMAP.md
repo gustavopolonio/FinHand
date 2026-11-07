@@ -42,7 +42,7 @@
 - [x] Implement secure private image and PDF uploads using Amazon S3
 - [x] Validate supported file types, file sizes, checksums, and ownership
 - [x] Implement upload processing state transition rules
-- [ ] Build the direct document upload flow for desktop and mobile browsers
+- [x] Build the direct document upload flow for desktop and mobile browsers
 - [ ] Build the mobile receipt camera capture flow
 - [ ] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff
 - [ ] Synchronize capture and processing status between the mobile capture page and initiating desktop session

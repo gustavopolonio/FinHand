@@ -3,10 +3,16 @@
 import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
-import type { Account, Category, Transaction } from "@/lib/api";
+import type {
+  Account,
+  Category,
+  DocumentUpload,
+  Transaction,
+} from "@/lib/api";
 
 import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
+import { DocumentUploadForm } from "./document-upload-form";
 import { TransactionFields } from "./transaction-fields";
 import {
   emptyTransactionForm,
@@ -14,14 +20,21 @@ import {
   resolveCreateFormValues,
   type TransactionFormValues,
 } from "./transaction-form";
+import {
+  type TransactionCreationMode,
+  TransactionMethodSelector,
+} from "./transaction-method-selector";
 
 interface TransactionDrawerProps {
   accounts: Account[];
   categories: Category[];
   error: string | null;
   isSubmitting: boolean;
+  isUploadingDocument: boolean;
+  onClearError: () => void;
   onClose: () => void;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
+  onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
   transaction: Transaction | null;
 }
 
@@ -30,10 +43,15 @@ export function TransactionDrawer({
   categories,
   error,
   isSubmitting,
+  isUploadingDocument,
+  onClearError,
   onClose,
   onSubmit,
+  onUploadDocument,
   transaction,
 }: TransactionDrawerProps) {
+  const [creationMode, setCreationMode] =
+    useState<TransactionCreationMode>("manual");
   const [values, setValues] = useState(() =>
     transaction
       ? formValuesFromTransaction(transaction)
@@ -62,70 +80,100 @@ export function TransactionDrawer({
     }
   }
 
+  const isBusy = isSubmitting || isUploadingDocument;
+  const description = transaction
+    ? "Adjust the details saved for this transaction."
+    : creationMode === "manual"
+      ? "Record a new expense or income to your ledger."
+      : "Upload a receipt or invoice securely from this device.";
+
   return (
     <WorkspaceModal
-      description={
-        transaction
-          ? "Adjust the details saved for this transaction."
-          : "Record a new expense or income to your ledger."
-      }
-      isBusy={isSubmitting}
+      description={description}
+      isBusy={isBusy}
       onClose={onClose}
       title={transaction ? "Edit Transaction" : "Add Transaction"}
     >
-      <form
-        className="flex min-h-0 flex-1 flex-col"
-        onSubmit={(event) => void submit(event)}
-      >
-        <div className="flex-1 overflow-y-auto p-6">
-          <TransactionFields
-            accounts={availableAccounts}
-            categories={availableCategories}
-            onChange={setValues}
-            values={resolvedValues}
+      {!transaction ? (
+        <div className="border-b border-finhand-divider px-6 py-4">
+          <TransactionMethodSelector
+            disabled={isBusy}
+            onChange={(mode) => {
+              setCreationMode(mode);
+              onClearError();
+            }}
+            value={creationMode}
           />
-
-          {error ? (
-            <p
-              className="mt-4 rounded-lg border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
-              role="alert"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          {!transaction && availableAccounts.length === 0 ? (
-            <p className="mt-4 rounded-lg bg-finhand-warning-soft px-4 py-3 text-sm text-finhand-warning">
-              Create or restore an account before adding a transaction.
-            </p>
-          ) : null}
         </div>
+      ) : null}
 
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-          <Button
-            className="rounded-xl!"
-            disabled={isSubmitting}
-            onClick={onClose}
-            variant="ghost"
-          >
-            Cancel
-          </Button>
-          <Button
-            className="rounded-xl!"
-            disabled={isSubmitting || availableAccounts.length === 0}
-            type="submit"
-          >
-            {!isSubmitting ? (
-              <Check aria-hidden="true" className="size-4" />
+      {!transaction && creationMode === "document" ? (
+        <DocumentUploadForm
+          error={error}
+          isUploading={isUploadingDocument}
+          onClearError={onClearError}
+          onClose={onClose}
+          onUpload={onUploadDocument}
+        />
+      ) : (
+        <form
+          aria-labelledby={
+            transaction ? undefined : "transaction-manual-tab"
+          }
+          className="flex min-h-0 flex-1 flex-col"
+          id={transaction ? undefined : "transaction-manual-panel"}
+          onSubmit={(event) => void submit(event)}
+        >
+          <div className="flex-1 overflow-y-auto p-6">
+            <TransactionFields
+              accounts={availableAccounts}
+              categories={availableCategories}
+              onChange={setValues}
+              values={resolvedValues}
+            />
+
+            {error ? (
+              <p
+                className="mt-4 rounded-lg border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
+                role="alert"
+              >
+                {error}
+              </p>
             ) : null}
-            {isSubmitting
-              ? "Saving…"
-              : transaction
-                ? "Save Changes"
-                : "Save Transaction"}
-          </Button>
-        </div>
-      </form>
+
+            {!transaction && availableAccounts.length === 0 ? (
+              <p className="mt-4 rounded-lg bg-finhand-warning-soft px-4 py-3 text-sm text-finhand-warning">
+                Create or restore an account before adding a transaction.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+            <Button
+              className="rounded-xl!"
+              disabled={isSubmitting}
+              onClick={onClose}
+              variant="ghost"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl!"
+              disabled={isSubmitting || availableAccounts.length === 0}
+              type="submit"
+            >
+              {!isSubmitting ? (
+                <Check aria-hidden="true" className="size-4" />
+              ) : null}
+              {isSubmitting
+                ? "Saving…"
+                : transaction
+                  ? "Save Changes"
+                  : "Save Transaction"}
+            </Button>
+          </div>
+        </form>
+      )}
     </WorkspaceModal>
   );
 }
