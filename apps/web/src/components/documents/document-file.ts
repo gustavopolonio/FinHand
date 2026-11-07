@@ -10,11 +10,15 @@ export const documentFileAccept = [
   "image/jpeg",
 ].join(",");
 
+export const receiptPhotoAccept = "image/jpeg,image/png";
+
 const supportedDocumentMimeTypes = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
 ]);
+
+const supportedReceiptPhotoMimeTypes = new Set(["image/jpeg", "image/png"]);
 
 interface DocumentFileMetadata {
   name: string;
@@ -35,6 +39,24 @@ export function validateDocumentFile(
 
   if (file.size > maximumDocumentBytes) {
     return "The selected document must be at most 10 MiB.";
+  }
+
+  return null;
+}
+
+export function validateReceiptPhoto(
+  file: DocumentFileMetadata,
+): string | null {
+  if (!supportedReceiptPhotoMimeTypes.has(file.type.toLowerCase())) {
+    return "Take a JPEG or PNG photo of the receipt.";
+  }
+
+  if (file.size === 0) {
+    return "The captured photo is empty. Please take it again.";
+  }
+
+  if (file.size > maximumDocumentBytes) {
+    return "The captured photo must be at most 10 MiB.";
   }
 
   return null;

@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, Upload } from "lucide-react";
+import { LoaderCircle, Upload } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { DocumentFilePicker } from "@/components/documents/document-file-picker";
 import type { DocumentUpload } from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { DocumentUploadSuccess } from "./document-upload-success";
 
 interface DocumentUploadFormProps {
   error: string | null;
@@ -42,48 +43,18 @@ export function DocumentUploadForm({
 
   if (uploadedDocument) {
     return (
-      <div
-        aria-labelledby="transaction-document-tab"
-        aria-live="polite"
-        className="flex min-h-0 flex-1 flex-col"
-        id="transaction-document-panel"
-      >
-        <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-8 text-center">
-          <span className="grid size-16 place-items-center rounded-full bg-finhand-income-soft text-finhand-income">
-            <CheckCircle2 aria-hidden="true" className="size-8" />
-          </span>
-          <h3 className="mt-5 text-lg font-bold text-finhand-ink">
-            Document uploaded
-          </h3>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-finhand-muted">
-            <span className="font-semibold text-finhand-neutral">
-              {uploadedDocument.originalFileName}
-            </span>{" "}
-            was stored securely and is ready for the processing flow.
-          </p>
-          <span className="mt-4 rounded-full border border-finhand-income-border bg-finhand-income-soft px-3 py-1 text-xs font-semibold text-finhand-income">
-            Status: Uploaded
-          </span>
-        </div>
-
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-          <Button
-            className="rounded-xl!"
-            onClick={() => {
-              setFile(null);
-              setUploadedDocument(null);
-              setValidationError(null);
-              onClearError();
-            }}
-            variant="secondary"
-          >
-            Upload another
-          </Button>
-          <Button className="rounded-xl!" onClick={onClose}>
-            Done
-          </Button>
-        </div>
-      </div>
+      <DocumentUploadSuccess
+        document={uploadedDocument}
+        onClose={onClose}
+        onUploadAnother={() => {
+          setFile(null);
+          setUploadedDocument(null);
+          setValidationError(null);
+          onClearError();
+        }}
+        panelId="transaction-document-panel"
+        tabId="transaction-document-tab"
+      />
     );
   }
 

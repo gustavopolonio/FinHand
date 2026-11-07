@@ -13,6 +13,7 @@ import type {
 import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import { DocumentUploadForm } from "./document-upload-form";
+import { ReceiptCameraForm } from "./receipt-camera-form";
 import { TransactionFields } from "./transaction-fields";
 import {
   emptyTransactionForm,
@@ -85,7 +86,9 @@ export function TransactionDrawer({
     ? "Adjust the details saved for this transaction."
     : creationMode === "manual"
       ? "Record a new expense or income to your ledger."
-      : "Upload a receipt or invoice securely from this device.";
+      : creationMode === "document"
+        ? "Upload a receipt or invoice securely from this device."
+        : "Photograph and securely upload a receipt from this device.";
 
   return (
     <WorkspaceModal
@@ -109,6 +112,14 @@ export function TransactionDrawer({
 
       {!transaction && creationMode === "document" ? (
         <DocumentUploadForm
+          error={error}
+          isUploading={isUploadingDocument}
+          onClearError={onClearError}
+          onClose={onClose}
+          onUpload={onUploadDocument}
+        />
+      ) : !transaction && creationMode === "camera" ? (
+        <ReceiptCameraForm
           error={error}
           isUploading={isUploadingDocument}
           onClearError={onClearError}

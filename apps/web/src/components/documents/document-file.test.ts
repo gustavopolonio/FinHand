@@ -4,6 +4,7 @@ import {
   formatDocumentFileSize,
   maximumDocumentBytes,
   validateDocumentFile,
+  validateReceiptPhoto,
 } from "./document-file";
 
 describe("document file validation", () => {
@@ -45,6 +46,35 @@ describe("document file validation", () => {
     expect(
       validateDocumentFile({ ...file, size: maximumDocumentBytes + 1 }),
     ).toBe("The selected document must be at most 10 MiB.");
+  });
+});
+
+describe("receipt photo validation", () => {
+  it.each(["image/jpeg", "image/png"])("accepts %s photos", (type) => {
+    expect(
+      validateReceiptPhoto({ name: "receipt", size: 1024, type }),
+    ).toBeNull();
+  });
+
+  it("rejects documents that are not camera images", () => {
+    expect(
+      validateReceiptPhoto({
+        name: "receipt.pdf",
+        size: 1024,
+        type: "application/pdf",
+      }),
+    ).toBe("Take a JPEG or PNG photo of the receipt.");
+  });
+
+  it("rejects empty and oversized photos", () => {
+    const photo = { name: "receipt.jpg", type: "image/jpeg" };
+
+    expect(validateReceiptPhoto({ ...photo, size: 0 })).toBe(
+      "The captured photo is empty. Please take it again.",
+    );
+    expect(
+      validateReceiptPhoto({ ...photo, size: maximumDocumentBytes + 1 }),
+    ).toBe("The captured photo must be at most 10 MiB.");
   });
 });
 

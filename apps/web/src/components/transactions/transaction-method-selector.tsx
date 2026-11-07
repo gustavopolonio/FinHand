@@ -1,10 +1,10 @@
 "use client";
 
-import { FileUp, PenLine } from "lucide-react";
+import { Camera, FileUp, PenLine } from "lucide-react";
 
 import { cn } from "@/lib/class-names";
 
-export type TransactionCreationMode = "manual" | "document";
+export type TransactionCreationMode = "manual" | "document" | "camera";
 
 interface TransactionMethodSelectorProps {
   disabled: boolean;
@@ -15,6 +15,7 @@ interface TransactionMethodSelectorProps {
 const modes = [
   { value: "manual", label: "Manual", icon: PenLine },
   { value: "document", label: "Upload document", icon: FileUp },
+  { value: "camera", label: "Take photo", icon: Camera },
 ] as const;
 
 export function TransactionMethodSelector({
@@ -25,7 +26,7 @@ export function TransactionMethodSelector({
   return (
     <div
       aria-label="Transaction creation method"
-      className="grid grid-cols-2 gap-1 rounded-xl bg-finhand-canvas-muted p-1"
+      className="grid grid-cols-3 gap-1 rounded-xl bg-finhand-canvas-muted p-1 md:grid-cols-2"
       role="group"
     >
       {modes.map((mode) => {
@@ -37,7 +38,8 @@ export function TransactionMethodSelector({
             aria-controls={`transaction-${mode.value}-panel`}
             aria-pressed={isSelected}
             className={cn(
-              "flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus disabled:cursor-not-allowed disabled:opacity-60",
+              "flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm",
+              mode.value === "camera" && "md:hidden",
               isSelected
                 ? "bg-white text-finhand-primary shadow-finhand-card"
                 : "text-finhand-muted hover:text-finhand-ink",

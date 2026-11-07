@@ -54,7 +54,7 @@ const commonProps = {
 };
 
 describe("TransactionDrawer", () => {
-  it("defaults new transactions to manual entry with a document mode option", () => {
+  it("defaults to manual entry with separate document and camera options", () => {
     const markup = renderToStaticMarkup(
       <TransactionDrawer {...commonProps} transaction={null} />,
     );
@@ -65,6 +65,7 @@ describe("TransactionDrawer", () => {
     );
     expect(markup).toContain("Manual");
     expect(markup).toContain("Upload document");
+    expect(markup).toContain("Take photo");
     expect(markup).toContain('id="transaction-manual-panel"');
     expect(markup).toContain("Save Transaction");
   });

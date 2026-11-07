@@ -43,7 +43,7 @@
 - [x] Validate supported file types, file sizes, checksums, and ownership
 - [x] Implement upload processing state transition rules
 - [x] Build the direct document upload flow for desktop and mobile browsers
-- [ ] Build the mobile receipt camera capture flow
+- [x] Build the mobile receipt camera capture flow
 - [ ] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff
 - [ ] Synchronize capture and processing status between the mobile capture page and initiating desktop session
 - [ ] Extract structured transaction candidates from receipt images and PDF files
