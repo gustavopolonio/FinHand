@@ -41,7 +41,7 @@
 - [x] Design and migrate the data model for uploads, document capture sessions, and transaction candidates
 - [x] Implement secure private image and PDF uploads using Amazon S3
 - [x] Validate supported file types, file sizes, checksums, and ownership
-- [ ] Implement upload processing state transition rules
+- [x] Implement upload processing state transition rules
 - [ ] Build the direct document upload flow for desktop and mobile browsers
 - [ ] Build the mobile receipt camera capture flow
 - [ ] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff

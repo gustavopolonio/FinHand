@@ -248,6 +248,19 @@ The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application
 logs must not contain document bytes or public object URLs.
 
+Allowed upload state transitions are:
+
+- `pending → uploaded` after the object is completely stored.
+- `uploaded → processing` when one worker atomically claims the upload.
+- `processing → processed` after processing completes successfully.
+- `pending`, `uploaded`, or `processing → failed` with a sanitized
+  machine-readable failure code.
+
+`processed` and `failed` are terminal states. A later retry flow may introduce
+an explicit `failed → uploaded` transition that clears the failure code. State
+changes must be atomic and ownership-scoped so two workers cannot claim the
+same upload and one user cannot transition another user's upload.
+
 ### `document_capture_sessions`
 
 Represents a desktop-initiated, upload-only QR handoff. The QR URL contains a
