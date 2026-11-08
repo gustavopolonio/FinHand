@@ -3,7 +3,10 @@ import { basename } from "node:path";
 import { Readable } from "node:stream";
 
 import type { Database } from "../db/index.js";
-import { uploads } from "../db/schema/index.js";
+import {
+  uploads,
+  type UploadSource,
+} from "../db/schema/index.js";
 import {
   InputError,
   PayloadTooLargeError,
@@ -33,7 +36,7 @@ interface UploadDocumentInput {
   userId: string;
 }
 
-interface UploadRecord {
+export interface UploadRecord {
   id: string;
   originalFileName: string;
   mimeType: string;
@@ -42,6 +45,16 @@ interface UploadRecord {
   status: "uploaded";
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface StoredDocument {
+  id: string;
+  userId: string;
+  objectKey: string;
+  originalFileName: string;
+  mimeType: SupportedDocumentMimeType;
+  byteSize: bigint;
+  checksumSha256: string;
 }
 
 export interface UploadedDocument {
@@ -170,7 +183,7 @@ function createValidatedDocumentStream(
   };
 }
 
-function serializeUpload(upload: UploadRecord): UploadedDocument {
+export function serializeUpload(upload: UploadRecord): UploadedDocument {
   if (!upload.checksumSha256) {
     throw new Error("Uploaded document is missing its checksum.");
   }
@@ -187,19 +200,35 @@ function serializeUpload(upload: UploadRecord): UploadedDocument {
   };
 }
 
-export async function uploadDocumentForUser({
-  database,
+async function removeStoredDocumentAfterFailure(
+  documentStorage: DocumentStorage,
+  objectKey: string,
+  error: unknown,
+): Promise<never> {
+  try {
+    await documentStorage.deleteDocument(objectKey);
+  } catch (cleanupError) {
+    throw new AggregateError(
+      [error, cleanupError],
+      "Document upload failed and its storage cleanup was unsuccessful.",
+    );
+  }
+
+  throw error;
+}
+
+export async function storeValidatedDocument({
   documentStorage,
   fileName,
   mimeType: declaredMimeType,
   source,
   wasTruncated = () => false,
   userId,
-}: UploadDocumentInput): Promise<UploadedDocument> {
+}: Omit<UploadDocumentInput, "database">): Promise<StoredDocument> {
   const mimeType = normalizeMimeType(declaredMimeType);
   const originalFileName = normalizeFileName(fileName);
-  const uploadId = randomUUID();
-  const objectKey = `${userId}/documents/${uploadId}`;
+  const id = randomUUID();
+  const objectKey = `${userId}/documents/${id}`;
   const validatedDocument = createValidatedDocumentStream(source, mimeType);
 
   try {
@@ -214,46 +243,97 @@ export async function uploadDocumentForUser({
     }
 
     const { byteSize, checksumSha256 } = validatedDocument.result();
-    const [createdUpload] = await database
-      .insert(uploads)
-      .values({
-        id: uploadId,
-        userId,
-        kind: "document",
-        source: "direct",
-        s3ObjectKey: objectKey,
-        originalFileName,
-        mimeType,
-        byteSize,
-        checksumSha256,
-        status: "uploaded",
-      })
-      .returning({
-        id: uploads.id,
-        originalFileName: uploads.originalFileName,
-        mimeType: uploads.mimeType,
-        byteSize: uploads.byteSize,
-        checksumSha256: uploads.checksumSha256,
-        status: uploads.status,
-        createdAt: uploads.createdAt,
-        updatedAt: uploads.updatedAt,
-      });
 
-    if (!createdUpload || createdUpload.status !== "uploaded") {
-      throw new Error("Document upload creation did not return a record.");
-    }
-
-    return serializeUpload(createdUpload as UploadRecord);
+    return {
+      id,
+      userId,
+      objectKey,
+      originalFileName,
+      mimeType,
+      byteSize,
+      checksumSha256,
+    };
   } catch (error) {
-    try {
-      await documentStorage.deleteDocument(objectKey);
-    } catch (cleanupError) {
-      throw new AggregateError(
-        [error, cleanupError],
-        "Document upload failed and its storage cleanup was unsuccessful.",
-      );
-    }
+    return removeStoredDocumentAfterFailure(
+      documentStorage,
+      objectKey,
+      error,
+    );
+  }
+}
 
-    throw error;
+type UploadPersistence = Pick<Database, "insert">;
+
+export async function persistDocumentUpload(
+  database: UploadPersistence,
+  document: StoredDocument,
+  source: UploadSource,
+): Promise<UploadedDocument> {
+  const [createdUpload] = await database
+    .insert(uploads)
+    .values({
+      id: document.id,
+      userId: document.userId,
+      kind: "document",
+      source,
+      s3ObjectKey: document.objectKey,
+      originalFileName: document.originalFileName,
+      mimeType: document.mimeType,
+      byteSize: document.byteSize,
+      checksumSha256: document.checksumSha256,
+      status: "uploaded",
+    })
+    .returning({
+      id: uploads.id,
+      originalFileName: uploads.originalFileName,
+      mimeType: uploads.mimeType,
+      byteSize: uploads.byteSize,
+      checksumSha256: uploads.checksumSha256,
+      status: uploads.status,
+      createdAt: uploads.createdAt,
+      updatedAt: uploads.updatedAt,
+    });
+
+  if (!createdUpload || createdUpload.status !== "uploaded") {
+    throw new Error("Document upload creation did not return a record.");
+  }
+
+  return serializeUpload(createdUpload as UploadRecord);
+}
+
+export async function discardStoredDocument(
+  documentStorage: DocumentStorage,
+  document: StoredDocument,
+  error: unknown,
+): Promise<never> {
+  return removeStoredDocumentAfterFailure(
+    documentStorage,
+    document.objectKey,
+    error,
+  );
+}
+
+export async function uploadDocumentForUser({
+  database,
+  documentStorage,
+  fileName,
+  mimeType,
+  source,
+  wasTruncated,
+  userId,
+}: UploadDocumentInput): Promise<UploadedDocument> {
+  const storedDocument = await storeValidatedDocument({
+    documentStorage,
+    fileName,
+    mimeType,
+    source,
+    wasTruncated,
+    userId,
+  });
+
+  try {
+    return await persistDocumentUpload(database, storedDocument, "direct");
+  } catch (error) {
+    return discardStoredDocument(documentStorage, storedDocument, error);
   }
 }

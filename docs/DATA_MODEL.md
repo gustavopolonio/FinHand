@@ -295,6 +295,8 @@ or replayed requests cannot attach multiple uploads. Expired sessions are
 marked by application cleanup; the API must also compare `expires_at` during
 every token use rather than relying only on the stored status.
 
+New capture sessions expire five minutes after creation.
+
 ### `transaction_candidates`
 
 Stores one AI-extracted transaction proposal. Candidate fields remain nullable

@@ -8,6 +8,7 @@ import { registerApplicationErrorHandler } from "./errors/error-handler.js";
 import { accountRoutes } from "./routes/accounts/accounts.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
+import { documentCaptureSessionRoutes } from "./routes/document-capture-sessions/document-capture-sessions.js";
 import { documentUploadRoutes } from "./routes/document-uploads/document-uploads.js";
 import { financialSummaryRoutes } from "./routes/financial-summary/financial-summary.js";
 import { healthRoutes } from "./routes/health/health.js";
@@ -64,6 +65,10 @@ export function buildApplication({
   application.register(transactionRoutes);
   application.register(financialSummaryRoutes);
   application.register(documentUploadRoutes, { documentStorage });
+  application.register(documentCaptureSessionRoutes, {
+    captureBaseUrl: corsOrigin,
+    documentStorage,
+  });
   application.register(authenticationRoutes, {
     authentication,
     baseUrl: authenticationBaseUrl,

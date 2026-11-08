@@ -16,6 +16,12 @@ export class NotFoundError extends Error {
   override readonly name = "NotFoundError";
 }
 
+export class GoneError extends Error {
+  readonly code = "CAPTURE_SESSION_EXPIRED";
+  override readonly name = "GoneError";
+  readonly statusCode = 410;
+}
+
 export class UnauthorizedError extends Error {
   override readonly name = "UnauthorizedError";
 

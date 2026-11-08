@@ -22,7 +22,10 @@ const application = buildApplication({
   corsOrigin: authenticationEnvironment.webUrl,
   databaseConnection,
   documentStorage,
-  logger: { level: environment.logLevel },
+  logger: {
+    level: environment.logLevel,
+    redact: ["req.headers.authorization"],
+  },
 });
 
 let isShuttingDown = false;
