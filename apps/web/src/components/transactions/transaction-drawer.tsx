@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import type {
   Account,
   Category,
+  DocumentCaptureSession,
   DocumentUpload,
   Transaction,
 } from "@/lib/api";
@@ -13,6 +14,7 @@ import type {
 import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import { DocumentUploadForm } from "./document-upload-form";
+import { QrCaptureForm } from "./qr-capture-form";
 import { ReceiptCameraForm } from "./receipt-camera-form";
 import { TransactionFields } from "./transaction-fields";
 import {
@@ -31,9 +33,12 @@ interface TransactionDrawerProps {
   categories: Category[];
   error: string | null;
   isSubmitting: boolean;
+  isManagingCaptureSession: boolean;
   isUploadingDocument: boolean;
+  onCancelCaptureSession: (sessionId: string) => Promise<void>;
   onClearError: () => void;
   onClose: () => void;
+  onCreateCaptureSession: () => Promise<DocumentCaptureSession | null>;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
   onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
   transaction: Transaction | null;
@@ -44,9 +49,12 @@ export function TransactionDrawer({
   categories,
   error,
   isSubmitting,
+  isManagingCaptureSession,
   isUploadingDocument,
+  onCancelCaptureSession,
   onClearError,
   onClose,
+  onCreateCaptureSession,
   onSubmit,
   onUploadDocument,
   transaction,
@@ -81,14 +89,17 @@ export function TransactionDrawer({
     }
   }
 
-  const isBusy = isSubmitting || isUploadingDocument;
+  const isBusy =
+    isSubmitting || isUploadingDocument || isManagingCaptureSession;
   const description = transaction
     ? "Adjust the details saved for this transaction."
     : creationMode === "manual"
       ? "Record a new expense or income to your ledger."
       : creationMode === "document"
         ? "Upload a receipt or invoice securely from this device."
-        : "Photograph and securely upload a receipt from this device.";
+        : creationMode === "camera"
+          ? "Photograph and securely upload a receipt from this device."
+          : "Securely continue receipt capture on your phone.";
 
   return (
     <WorkspaceModal
@@ -125,6 +136,15 @@ export function TransactionDrawer({
           onClearError={onClearError}
           onClose={onClose}
           onUpload={onUploadDocument}
+        />
+      ) : !transaction && creationMode === "qr" ? (
+        <QrCaptureForm
+          error={error}
+          isManaging={isManagingCaptureSession}
+          onCancel={onCancelCaptureSession}
+          onClearError={onClearError}
+          onClose={onClose}
+          onCreate={onCreateCaptureSession}
         />
       ) : (
         <form

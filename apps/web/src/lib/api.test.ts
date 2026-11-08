@@ -4,6 +4,8 @@ import {
   type Account,
   type Category,
   type DocumentUpload,
+  cancelDocumentCaptureSession,
+  createDocumentCaptureSession,
   type Transaction,
   archiveAccount,
   archiveCategory,
@@ -13,6 +15,7 @@ import {
   deleteTransaction,
   getAccounts,
   getCategories,
+  getDocumentCaptureSession,
   getFinancialSummary,
   getTransactions,
   renameCategory,
@@ -21,6 +24,7 @@ import {
   updateAccount,
   updateTransaction,
   uploadDocument,
+  uploadCaptureDocument,
 } from "./api";
 
 const account: Account = {
@@ -382,6 +386,97 @@ describe("document uploads API", () => {
       status: 413,
       message: "Document must be at most 10 MB.",
     });
+  });
+});
+
+describe("document capture sessions API", () => {
+  const session = {
+    id: "88888888-8888-4888-8888-888888888888",
+    status: "pending" as const,
+    expiresAt: "2026-11-08T12:05:00.000Z",
+    captureUrl: `https://finhand.example/capture#token=${"a".repeat(43)}`,
+  };
+  const token = "a".repeat(43);
+
+  it("creates an authenticated desktop capture session", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ session }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(createDocumentCaptureSession()).resolves.toEqual(session);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/document-capture-sessions",
+      expect.objectContaining({ credentials: "include", method: "POST" }),
+    );
+  });
+
+  it("cancels an authenticated desktop capture session", async () => {
+    const cancelledSession = {
+      id: session.id,
+      status: "cancelled" as const,
+      expiresAt: session.expiresAt,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ session: cancelledSession }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(cancelDocumentCaptureSession(session.id)).resolves.toEqual(
+      cancelledSession,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/document-capture-sessions/${session.id}/cancel`,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("validates a mobile session using the bearer token", async () => {
+    const availableSession = {
+      status: "pending" as const,
+      expiresAt: session.expiresAt,
+      acceptedMimeTypes: ["image/jpeg", "image/png"],
+      maximumBytes: 10 * 1024 * 1024,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ session: availableSession }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getDocumentCaptureSession(token)).resolves.toEqual(
+      availableSession,
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      `Bearer ${token}`,
+    );
+  });
+
+  it("uploads the mobile document with the token and multipart body", async () => {
+    const upload: DocumentUpload = {
+      id: "99999999-9999-4999-8999-999999999999",
+      originalFileName: "receipt.jpg",
+      mimeType: "image/jpeg",
+      byteSize: "6",
+      checksumSha256: "b".repeat(64),
+      status: "uploaded",
+      createdAt: "2026-11-08T12:00:00.000Z",
+      updatedAt: "2026-11-08T12:00:00.000Z",
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ upload }));
+    vi.stubGlobal("fetch", fetch);
+    const file = new File(["receipt"], "receipt.jpg", {
+      type: "image/jpeg",
+    });
+
+    await expect(uploadCaptureDocument(token, file)).resolves.toEqual(upload);
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    const headers = new Headers(request.headers);
+    expect(headers.get("Authorization")).toBe(`Bearer ${token}`);
+    expect(headers.has("Content-Type")).toBe(false);
+    expect((request.body as FormData).get("document")).toBe(file);
   });
 });
 

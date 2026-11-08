@@ -45,16 +45,19 @@ const commonProps = {
   accounts: [account],
   categories: [category],
   error: null,
+  isManagingCaptureSession: false,
   isSubmitting: false,
   isUploadingDocument: false,
+  onCancelCaptureSession: vi.fn(),
   onClearError: vi.fn(),
   onClose: vi.fn(),
+  onCreateCaptureSession: vi.fn(),
   onSubmit: vi.fn(),
   onUploadDocument: vi.fn(),
 };
 
 describe("TransactionDrawer", () => {
-  it("defaults to manual entry with separate document and camera options", () => {
+  it("defaults to manual entry with document, camera, and phone options", () => {
     const markup = renderToStaticMarkup(
       <TransactionDrawer {...commonProps} transaction={null} />,
     );
@@ -66,6 +69,7 @@ describe("TransactionDrawer", () => {
     expect(markup).toContain("Manual");
     expect(markup).toContain("Upload document");
     expect(markup).toContain("Take photo");
+    expect(markup).toContain("Use phone");
     expect(markup).toContain('id="transaction-manual-panel"');
     expect(markup).toContain("Save Transaction");
   });

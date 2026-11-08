@@ -116,6 +116,20 @@ export interface DocumentUpload {
   updatedAt: string;
 }
 
+export interface DocumentCaptureSession {
+  id: string;
+  status: "pending" | "cancelled";
+  expiresAt: string;
+  captureUrl: string;
+}
+
+export interface AvailableDocumentCaptureSession {
+  status: "pending";
+  expiresAt: string;
+  acceptedMimeTypes: string[];
+  maximumBytes: number;
+}
+
 export interface CreateTransactionInput {
   accountId: string;
   categoryId?: string | null;
@@ -375,6 +389,50 @@ export async function uploadDocument(file: File) {
     "/api/uploads/documents",
     {
       method: "POST",
+      body: formData,
+    },
+  );
+
+  return response.upload;
+}
+
+export async function createDocumentCaptureSession() {
+  const response = await request<{ session: DocumentCaptureSession }>(
+    "/api/document-capture-sessions",
+    { method: "POST" },
+  );
+
+  return response.session;
+}
+
+export async function cancelDocumentCaptureSession(sessionId: string) {
+  const response = await request<{
+    session: Omit<DocumentCaptureSession, "captureUrl">;
+  }>(`/api/document-capture-sessions/${sessionId}/cancel`, {
+    method: "POST",
+  });
+
+  return response.session;
+}
+
+export async function getDocumentCaptureSession(token: string) {
+  const response = await request<{
+    session: AvailableDocumentCaptureSession;
+  }>("/api/document-capture-session", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return response.session;
+}
+
+export async function uploadCaptureDocument(token: string, file: File) {
+  const formData = new FormData();
+  formData.append("document", file);
+  const response = await request<{ upload: DocumentUpload }>(
+    "/api/document-capture-session/document",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     },
   );

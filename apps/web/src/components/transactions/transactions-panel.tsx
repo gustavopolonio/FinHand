@@ -8,9 +8,12 @@ import {
   ApiError,
   type Account,
   type Category,
+  type DocumentCaptureSession,
   type DocumentUpload,
   type Transaction,
   type TransactionFilters as TransactionFilterValues,
+  cancelDocumentCaptureSession,
+  createDocumentCaptureSession,
   createTransaction,
   deleteTransaction,
   getAccounts,
@@ -60,6 +63,8 @@ export function TransactionsPanel() {
   const [isLoadingReferences, setIsLoadingReferences] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [isManagingCaptureSession, setIsManagingCaptureSession] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reportError = useCallback(
@@ -237,6 +242,37 @@ export function TransactionsPanel() {
     }
   }
 
+  const startCaptureSession = useCallback(async (): Promise<DocumentCaptureSession | null> => {
+    setIsManagingCaptureSession(true);
+    setError(null);
+
+    try {
+      return await createDocumentCaptureSession();
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    } finally {
+      setIsManagingCaptureSession(false);
+    }
+  }, [reportError]);
+
+  const cancelCaptureSession = useCallback(
+    async (sessionId: string): Promise<void> => {
+      setIsManagingCaptureSession(true);
+
+      try {
+        await cancelDocumentCaptureSession(sessionId);
+      } catch (cause) {
+        if (!(cause instanceof ApiError && cause.status === 409)) {
+          reportError(cause);
+        }
+      } finally {
+        setIsManagingCaptureSession(false);
+      }
+    },
+    [reportError],
+  );
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -351,13 +387,16 @@ export function TransactionsPanel() {
           accounts={accounts}
           categories={categories}
           error={error}
+          isManagingCaptureSession={isManagingCaptureSession}
           isSubmitting={busyTransactionId !== null}
           isUploadingDocument={isUploadingDocument}
           key={
             editor.kind === "create" ? "create" : editor.transaction.id
           }
+          onCancelCaptureSession={cancelCaptureSession}
           onClearError={() => setError(null)}
           onClose={() => setEditor(null)}
+          onCreateCaptureSession={startCaptureSession}
           onSubmit={submitEditor}
           onUploadDocument={submitDocumentUpload}
           transaction={editedTransaction}
