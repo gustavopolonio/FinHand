@@ -9,6 +9,7 @@ import {
   type Account,
   type Category,
   type DocumentCaptureSession,
+  type DocumentCaptureSessionProgress,
   type DocumentUpload,
   type Transaction,
   type TransactionFilters as TransactionFilterValues,
@@ -18,6 +19,7 @@ import {
   deleteTransaction,
   getAccounts,
   getCategories,
+  getDocumentCaptureSessionProgress,
   getTransactions,
   uploadDocument,
   updateTransaction,
@@ -80,6 +82,7 @@ export function TransactionsPanel() {
     },
     [router],
   );
+  const clearError = useCallback(() => setError(null), []);
 
   const loadReferences = useCallback(async () => {
     try {
@@ -273,6 +276,20 @@ export function TransactionsPanel() {
     [reportError],
   );
 
+  const readCaptureSessionProgress = useCallback(
+    async (
+      sessionId: string,
+    ): Promise<DocumentCaptureSessionProgress | null> => {
+      try {
+        return await getDocumentCaptureSessionProgress(sessionId);
+      } catch (cause) {
+        reportError(cause);
+        return null;
+      }
+    },
+    [reportError],
+  );
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -394,9 +411,10 @@ export function TransactionsPanel() {
             editor.kind === "create" ? "create" : editor.transaction.id
           }
           onCancelCaptureSession={cancelCaptureSession}
-          onClearError={() => setError(null)}
+          onClearError={clearError}
           onClose={() => setEditor(null)}
           onCreateCaptureSession={startCaptureSession}
+          onGetCaptureSessionProgress={readCaptureSessionProgress}
           onSubmit={submitEditor}
           onUploadDocument={submitDocumentUpload}
           transaction={editedTransaction}

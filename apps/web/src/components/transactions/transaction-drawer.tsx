@@ -7,6 +7,7 @@ import type {
   Account,
   Category,
   DocumentCaptureSession,
+  DocumentCaptureSessionProgress,
   DocumentUpload,
   Transaction,
 } from "@/lib/api";
@@ -39,6 +40,9 @@ interface TransactionDrawerProps {
   onClearError: () => void;
   onClose: () => void;
   onCreateCaptureSession: () => Promise<DocumentCaptureSession | null>;
+  onGetCaptureSessionProgress: (
+    sessionId: string,
+  ) => Promise<DocumentCaptureSessionProgress | null>;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
   onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
   transaction: Transaction | null;
@@ -55,6 +59,7 @@ export function TransactionDrawer({
   onClearError,
   onClose,
   onCreateCaptureSession,
+  onGetCaptureSessionProgress,
   onSubmit,
   onUploadDocument,
   transaction,
@@ -145,6 +150,7 @@ export function TransactionDrawer({
           onClearError={onClearError}
           onClose={onClose}
           onCreate={onCreateCaptureSession}
+          onGetProgress={onGetCaptureSessionProgress}
         />
       ) : (
         <form

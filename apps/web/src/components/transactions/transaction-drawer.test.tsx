@@ -52,6 +52,7 @@ const commonProps = {
   onClearError: vi.fn(),
   onClose: vi.fn(),
   onCreateCaptureSession: vi.fn(),
+  onGetCaptureSessionProgress: vi.fn(),
   onSubmit: vi.fn(),
   onUploadDocument: vi.fn(),
 };

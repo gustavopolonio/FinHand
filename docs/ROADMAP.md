@@ -46,7 +46,7 @@
 - [x] Build the mobile receipt camera capture flow
 - [x] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff
 - [x] Implement periodic cleanup to mark expired pending document capture sessions as `expired`
-- [ ] Synchronize capture and processing status between the mobile capture page and initiating desktop session
+- [x] Synchronize capture and processing status between the mobile capture page and initiating desktop session
 - [ ] Extract structured transaction candidates from receipt images and PDF files
 - [ ] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
 - [ ] Build the transaction candidate review and editing interface
@@ -94,6 +94,7 @@
 ### Tasks
 - [ ] Configure structured logging
 - [ ] Implement application and AI observability
+- [ ] Replace document-status polling with server-pushed updates using SSE or WebSockets
 - [ ] Configure CI/CD
 - [ ] Run security and performance checks
 - [ ] Deploy the application

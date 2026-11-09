@@ -118,9 +118,32 @@ export interface DocumentUpload {
 
 export interface DocumentCaptureSession {
   id: string;
-  status: "pending" | "cancelled";
+  status: "pending";
   expiresAt: string;
   captureUrl: string;
+}
+
+export type DocumentCaptureSessionStatus =
+  | "pending"
+  | "consumed"
+  | "expired"
+  | "cancelled";
+
+export type DocumentProcessingStatus =
+  | "pending"
+  | "uploaded"
+  | "processing"
+  | "processed"
+  | "failed";
+
+export interface DocumentCaptureSessionProgress {
+  id: string;
+  status: DocumentCaptureSessionStatus;
+  expiresAt: string;
+  upload: {
+    id: string;
+    status: DocumentProcessingStatus;
+  } | null;
 }
 
 export interface AvailableDocumentCaptureSession {
@@ -407,10 +430,22 @@ export async function createDocumentCaptureSession() {
 
 export async function cancelDocumentCaptureSession(sessionId: string) {
   const response = await request<{
-    session: Omit<DocumentCaptureSession, "captureUrl">;
+    session: {
+      id: string;
+      status: "cancelled";
+      expiresAt: string;
+    };
   }>(`/api/document-capture-sessions/${sessionId}/cancel`, {
     method: "POST",
   });
+
+  return response.session;
+}
+
+export async function getDocumentCaptureSessionProgress(sessionId: string) {
+  const response = await request<{
+    session: DocumentCaptureSessionProgress;
+  }>(`/api/document-capture-sessions/${sessionId}`);
 
   return response.session;
 }

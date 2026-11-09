@@ -1,12 +1,28 @@
 "use client";
 
-import { LoaderCircle, QrCode, RefreshCw, Smartphone, X } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  LoaderCircle,
+  QrCode,
+  RefreshCw,
+  Smartphone,
+  X,
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 
-import type { DocumentCaptureSession } from "@/lib/api";
+import type {
+  DocumentCaptureSession,
+  DocumentCaptureSessionProgress,
+  DocumentProcessingStatus,
+} from "@/lib/api";
 
 import { Button } from "../ui/button";
+import {
+  shouldContinueCaptureSessionPolling,
+  startCaptureSessionPolling,
+} from "./capture-session-polling";
 
 interface QrCaptureFormProps {
   error: string | null;
@@ -15,6 +31,13 @@ interface QrCaptureFormProps {
   onClearError: () => void;
   onClose: () => void;
   onCreate: () => Promise<DocumentCaptureSession | null>;
+  onGetProgress: (
+    sessionId: string,
+  ) => Promise<DocumentCaptureSessionProgress | null>;
+}
+
+interface ActiveCaptureSession extends DocumentCaptureSession {
+  progress: DocumentCaptureSessionProgress | null;
 }
 
 function secondsUntil(isoDate: string, now = Date.now()): number {
@@ -27,6 +50,37 @@ function formatCountdown(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+export function processingMessage(
+  status: DocumentProcessingStatus | undefined,
+) {
+  switch (status) {
+    case "processing":
+      return {
+        title: "Processing your receipt",
+        description:
+          "The receipt was received and is being prepared for review.",
+      };
+    case "processed":
+      return {
+        title: "Receipt ready for review",
+        description:
+          "Processing is complete. You can continue with the extracted transaction.",
+      };
+    case "failed":
+      return {
+        title: "Receipt processing failed",
+        description:
+          "The receipt was uploaded, but it could not be processed. You can close this window and try again.",
+      };
+    default:
+      return {
+        title: "Receipt received",
+        description:
+          "Your receipt was uploaded securely and is waiting to be processed.",
+      };
+  }
+}
+
 export function QrCaptureForm({
   error,
   isManaging,
@@ -34,8 +88,9 @@ export function QrCaptureForm({
   onClearError,
   onClose,
   onCreate,
+  onGetProgress,
 }: QrCaptureFormProps) {
-  const [session, setSession] = useState<DocumentCaptureSession | null>(null);
+  const [session, setSession] = useState<ActiveCaptureSession | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const sessionRef = useRef<DocumentCaptureSession | null>(null);
 
@@ -43,13 +98,42 @@ export function QrCaptureForm({
     if (!session) return;
 
     const updateCountdown = () => {
-      setRemainingSeconds(secondsUntil(session.expiresAt));
+      const seconds = secondsUntil(session.expiresAt);
+      setRemainingSeconds(seconds);
+
+      if (seconds === 0) {
+        sessionRef.current = null;
+      }
     };
     updateCountdown();
     const intervalId = window.setInterval(updateCountdown, 1_000);
 
     return () => window.clearInterval(intervalId);
   }, [session]);
+
+  const sessionId = session?.id;
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const polling = startCaptureSessionPolling({
+      readProgress: () => onGetProgress(sessionId),
+      onProgress(progress) {
+        onClearError();
+        setSession((currentSession) =>
+          currentSession?.id === sessionId
+            ? { ...currentSession, progress }
+            : currentSession,
+        );
+
+        if (progress.status !== "pending") {
+          sessionRef.current = null;
+        }
+      },
+    });
+
+    return polling.stop;
+  }, [onClearError, onGetProgress, sessionId]);
 
   useEffect(
     () => () => {
@@ -65,7 +149,7 @@ export function QrCaptureForm({
 
     if (createdSession) {
       sessionRef.current = createdSession;
-      setSession(createdSession);
+      setSession({ ...createdSession, progress: null });
       setRemainingSeconds(secondsUntil(createdSession.expiresAt));
     }
   }
@@ -79,7 +163,14 @@ export function QrCaptureForm({
     if (activeSession) await onCancel(activeSession.id);
   }
 
-  const isExpired = !!session && remainingSeconds === 0;
+  const progress = session?.progress;
+  const isConsumed = progress?.status === "consumed";
+  const isExpired =
+    !!session &&
+    (remainingSeconds === 0 || progress?.status === "expired");
+  const isCancelled = progress?.status === "cancelled";
+  const isUnavailable = isExpired || isCancelled;
+  const progressMessage = processingMessage(progress?.upload?.status);
 
   return (
     <div
@@ -88,7 +179,35 @@ export function QrCaptureForm({
       id="transaction-qr-panel"
     >
       <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-6 text-center">
-        {session && !isExpired ? (
+        {session && isConsumed ? (
+          <>
+            <span
+              className={`grid size-16 place-items-center rounded-full ${
+                progress?.upload?.status === "failed"
+                  ? "bg-finhand-expense-soft text-finhand-expense"
+                  : "bg-finhand-income-soft text-finhand-income"
+              }`}
+            >
+              {progress?.upload?.status === "failed" ? (
+                <CircleAlert aria-hidden="true" className="size-8" />
+              ) : (
+                <CheckCircle2 aria-hidden="true" className="size-8" />
+              )}
+            </span>
+            <h3 className="mt-5 text-lg font-bold text-finhand-ink">
+              {progressMessage.title}
+            </h3>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-finhand-muted">
+              {progressMessage.description}
+            </p>
+            {shouldContinueCaptureSessionPolling(progress) ? (
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-finhand-accent-border bg-finhand-accent-soft px-3 py-1 text-xs font-semibold text-finhand-interactive">
+                <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
+                Checking status
+              </span>
+            ) : null}
+          </>
+        ) : session && !isUnavailable ? (
           <>
             <div className="rounded-3xl border border-finhand-border bg-white p-4 shadow-finhand-card">
               <QRCodeSVG
@@ -116,17 +235,21 @@ export function QrCaptureForm({
         ) : (
           <>
             <span className="grid size-16 place-items-center rounded-2xl bg-finhand-accent text-finhand-interactive">
-              {isExpired ? (
+              {isUnavailable ? (
                 <RefreshCw aria-hidden="true" className="size-8" />
               ) : (
                 <Smartphone aria-hidden="true" className="size-8" />
               )}
             </span>
             <h3 className="mt-5 text-lg font-bold text-finhand-ink">
-              {isExpired ? "QR code expired" : "Continue on your phone"}
+              {isExpired
+                ? "QR code expired"
+                : isCancelled
+                  ? "QR code cancelled"
+                  : "Continue on your phone"}
             </h3>
             <p className="mt-2 max-w-sm text-sm leading-6 text-finhand-muted">
-              {isExpired
+              {isUnavailable
                 ? "Generate a new secure code to continue."
                 : "Generate a secure QR code that permits one receipt upload and expires after five minutes."}
             </p>
@@ -134,7 +257,7 @@ export function QrCaptureForm({
               className="mt-6 rounded-xl!"
               disabled={isManaging}
               onClick={() => {
-                if (isExpired) {
+                if (isUnavailable) {
                   sessionRef.current = null;
                   setSession(null);
                 }
@@ -165,7 +288,7 @@ export function QrCaptureForm({
       </div>
 
       <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-        {session && !isExpired ? (
+        {session && !isUnavailable && !isConsumed ? (
           <Button
             className="rounded-xl!"
             disabled={isManaging}

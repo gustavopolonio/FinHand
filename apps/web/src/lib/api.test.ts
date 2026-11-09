@@ -16,6 +16,7 @@ import {
   getAccounts,
   getCategories,
   getDocumentCaptureSession,
+  getDocumentCaptureSessionProgress,
   getFinancialSummary,
   getTransactions,
   renameCategory,
@@ -428,6 +429,30 @@ describe("document capture sessions API", () => {
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/document-capture-sessions/${session.id}/cancel`,
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("gets the authenticated desktop capture progress", async () => {
+    const progress = {
+      id: session.id,
+      status: "consumed" as const,
+      expiresAt: session.expiresAt,
+      upload: {
+        id: "99999999-9999-4999-8999-999999999999",
+        status: "uploaded" as const,
+      },
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ session: progress }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getDocumentCaptureSessionProgress(session.id),
+    ).resolves.toEqual(progress);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/document-capture-sessions/${session.id}`,
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
