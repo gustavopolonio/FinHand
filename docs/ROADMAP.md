@@ -45,7 +45,7 @@
 - [x] Build the direct document upload flow for desktop and mobile browsers
 - [x] Build the mobile receipt camera capture flow
 - [x] Implement short-lived, single-use QR capture sessions for desktop-to-mobile handoff
-- [ ] Implement periodic cleanup to mark expired pending document capture sessions as `expired`
+- [x] Implement periodic cleanup to mark expired pending document capture sessions as `expired`
 - [ ] Synchronize capture and processing status between the mobile capture page and initiating desktop session
 - [ ] Extract structured transaction candidates from receipt images and PDF files
 - [ ] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
