@@ -18,6 +18,7 @@ const captureMocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   create: vi.fn(),
   getAvailable: vi.fn(),
+  getProgress: vi.fn(),
   tokenFromAuthorization: vi.fn(),
   upload: vi.fn(),
 }));
@@ -27,6 +28,7 @@ vi.mock("../../services/document-capture-sessions.js", () => ({
   captureTokenFromAuthorization: captureMocks.tokenFromAuthorization,
   createDocumentCaptureSession: captureMocks.create,
   getAvailableDocumentCaptureSession: captureMocks.getAvailable,
+  getDocumentCaptureSessionProgress: captureMocks.getProgress,
   uploadDocumentForCaptureSession: captureMocks.upload,
 }));
 
@@ -116,6 +118,12 @@ beforeEach(() => {
     id: sessionId,
     status: "pending",
     expiresAt,
+  });
+  captureMocks.getProgress.mockResolvedValue({
+    id: sessionId,
+    status: "pending",
+    expiresAt,
+    upload: null,
   });
   captureMocks.upload.mockImplementation(async (input) => {
     for await (const _chunk of input.source) {
@@ -210,6 +218,61 @@ describe("POST /api/document-capture-sessions/:id/cancel", () => {
 
     expect(response.statusCode).toBe(400);
     expect(captureMocks.cancel).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/document-capture-sessions/:id", () => {
+  it("returns progress only for the authenticated session owner", async () => {
+    captureMocks.getProgress.mockResolvedValueOnce({
+      id: sessionId,
+      status: "consumed",
+      expiresAt,
+      upload: {
+        id: "55555555-5555-4555-8555-555555555555",
+        status: "uploaded",
+      },
+    });
+    const application = createApplication(userId);
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/document-capture-sessions/${sessionId}`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().session).toMatchObject({
+      status: "consumed",
+      upload: { status: "uploaded" },
+    });
+    expect(captureMocks.getProgress).toHaveBeenCalledWith(
+      expect.anything(),
+      userId,
+      sessionId,
+    );
+  });
+
+  it("requires desktop authentication", async () => {
+    const application = createApplication(null);
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/document-capture-sessions/${sessionId}`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(captureMocks.getProgress).not.toHaveBeenCalled();
+  });
+
+  it("validates the session identifier", async () => {
+    const application = createApplication(userId);
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/document-capture-sessions/not-a-uuid",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(captureMocks.getProgress).not.toHaveBeenCalled();
   });
 });
 

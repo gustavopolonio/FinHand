@@ -8,6 +8,7 @@ import {
   captureTokenFromAuthorization,
   createDocumentCaptureSession,
   getAvailableDocumentCaptureSession,
+  getDocumentCaptureSessionProgress,
   uploadDocumentForCaptureSession,
 } from "../../services/document-capture-sessions.js";
 import { maximumDocumentUploadBytes } from "../../services/document-uploads.js";
@@ -58,6 +59,23 @@ export async function documentCaptureSessionRoutes(
           captureUrl: createCaptureUrl(captureBaseUrl, session.token),
         },
       });
+    },
+  );
+
+  captureApplication.get(
+    "/api/document-capture-sessions/:id",
+    {
+      preHandler: application.requireAuthentication,
+      schema: { params: documentCaptureSessionParamsSchema },
+    },
+    async (request) => {
+      const session = await getDocumentCaptureSessionProgress(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
+
+      return { session };
     },
   );
 

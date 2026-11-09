@@ -4,7 +4,11 @@ import type { Readable } from "node:stream";
 import { and, eq } from "drizzle-orm";
 
 import type { Database } from "../db/index.js";
-import { documentCaptureSessions } from "../db/schema/index.js";
+import {
+  documentCaptureSessions,
+  uploads,
+  type UploadStatus,
+} from "../db/schema/index.js";
 import {
   ConflictError,
   GoneError,
@@ -38,6 +42,16 @@ export interface DocumentCaptureSession {
 
 export interface CreatedDocumentCaptureSession extends DocumentCaptureSession {
   token: string;
+}
+
+export interface DocumentCaptureSessionProgress {
+  id: string;
+  status: CaptureSessionRecord["status"];
+  expiresAt: string;
+  upload: {
+    id: string;
+    status: UploadStatus;
+  } | null;
 }
 
 interface UploadForCaptureSessionInput {
@@ -165,6 +179,51 @@ export async function getAvailableDocumentCaptureSession(
   assertCaptureSessionAvailable(session, now);
 
   return serializeSession(session);
+}
+
+export async function getDocumentCaptureSessionProgress(
+  database: Database,
+  userId: string,
+  sessionId: string,
+  now = new Date(),
+): Promise<DocumentCaptureSessionProgress> {
+  const [session] = await database
+    .select({
+      id: documentCaptureSessions.id,
+      status: documentCaptureSessions.status,
+      expiresAt: documentCaptureSessions.expiresAt,
+      uploadId: uploads.id,
+      uploadStatus: uploads.status,
+    })
+    .from(documentCaptureSessions)
+    .leftJoin(uploads, eq(documentCaptureSessions.uploadId, uploads.id))
+    .where(
+      and(
+        eq(documentCaptureSessions.id, sessionId),
+        eq(documentCaptureSessions.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (!session) {
+    throw new NotFoundError("Capture session not found.");
+  }
+
+  const status =
+    session.status === "pending" &&
+    session.expiresAt.getTime() <= now.getTime()
+      ? "expired"
+      : session.status;
+
+  return {
+    id: session.id,
+    status,
+    expiresAt: session.expiresAt.toISOString(),
+    upload:
+      session.uploadId && session.uploadStatus
+        ? { id: session.uploadId, status: session.uploadStatus }
+        : null,
+  };
 }
 
 export async function cancelDocumentCaptureSession(

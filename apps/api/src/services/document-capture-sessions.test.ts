@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
@@ -20,9 +22,11 @@ import {
   createDocumentCaptureSession,
   documentCaptureSessionLifetimeMs,
   getAvailableDocumentCaptureSession,
+  getDocumentCaptureSessionProgress,
   uploadDocumentForCaptureSession,
 } from "./document-capture-sessions.js";
 
+const postgresDialect = new PgDialect();
 const userId = "33333333-3333-4333-8333-333333333333";
 const sessionId = "44444444-4444-4444-8444-444444444444";
 const token = "a".repeat(43);
@@ -43,7 +47,7 @@ function createSelectDatabase(
     | undefined,
 ) {
   const limit = vi.fn(async () => (record ? [record] : []));
-  const where = vi.fn(() => ({ limit }));
+  const where = vi.fn((_condition: unknown) => ({ limit }));
   const from = vi.fn(() => ({ where }));
   const select = vi.fn(() => ({ from }));
 
@@ -67,6 +71,36 @@ function createStorage() {
   } satisfies DocumentStorage;
 
   return { storage, storedContent };
+}
+
+function createProgressDatabase(
+  record:
+    | {
+        id: string;
+        status: "pending" | "consumed" | "expired" | "cancelled";
+        expiresAt: Date;
+        uploadId: string | null;
+        uploadStatus:
+          | "pending"
+          | "uploaded"
+          | "processing"
+          | "processed"
+          | "failed"
+          | null;
+      }
+    | undefined,
+) {
+  const limit = vi.fn(async () => (record ? [record] : []));
+  const where = vi.fn((_condition: unknown) => ({ limit }));
+  const leftJoin = vi.fn(() => ({ where }));
+  const from = vi.fn(() => ({ leftJoin }));
+  const select = vi.fn(() => ({ from }));
+
+  return { database: { select } as unknown as Database, where };
+}
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
 }
 
 afterEach(() => {
@@ -184,6 +218,91 @@ describe("getAvailableDocumentCaptureSession", () => {
       ).rejects.toThrow(ConflictError);
     },
   );
+});
+
+describe("getDocumentCaptureSessionProgress", () => {
+  it("returns the owned pending session without an upload", async () => {
+    const fixture = createProgressDatabase({
+      id: sessionId,
+      status: "pending",
+      expiresAt,
+      uploadId: null,
+      uploadStatus: null,
+    });
+
+    await expect(
+      getDocumentCaptureSessionProgress(
+        fixture.database,
+        userId,
+        sessionId,
+        now,
+      ),
+    ).resolves.toEqual({
+      id: sessionId,
+      status: "pending",
+      expiresAt: expiresAt.toISOString(),
+      upload: null,
+    });
+    expect(getSqlParameters(fixture.where.mock.calls[0]?.[0])).toEqual([
+      sessionId,
+      userId,
+    ]);
+  });
+
+  it("returns the linked upload status after consumption", async () => {
+    const uploadId = "55555555-5555-4555-8555-555555555555";
+    const fixture = createProgressDatabase({
+      id: sessionId,
+      status: "consumed",
+      expiresAt,
+      uploadId,
+      uploadStatus: "processing",
+    });
+
+    await expect(
+      getDocumentCaptureSessionProgress(
+        fixture.database,
+        userId,
+        sessionId,
+        now,
+      ),
+    ).resolves.toMatchObject({
+      status: "consumed",
+      upload: { id: uploadId, status: "processing" },
+    });
+  });
+
+  it("reports an effectively expired session before periodic cleanup runs", async () => {
+    const fixture = createProgressDatabase({
+      id: sessionId,
+      status: "pending",
+      expiresAt: now,
+      uploadId: null,
+      uploadStatus: null,
+    });
+
+    await expect(
+      getDocumentCaptureSessionProgress(
+        fixture.database,
+        userId,
+        sessionId,
+        now,
+      ),
+    ).resolves.toMatchObject({ status: "expired", upload: null });
+  });
+
+  it("does not reveal a missing or differently owned session", async () => {
+    const fixture = createProgressDatabase(undefined);
+
+    await expect(
+      getDocumentCaptureSessionProgress(
+        fixture.database,
+        userId,
+        sessionId,
+        now,
+      ),
+    ).rejects.toThrow(NotFoundError);
+  });
 });
 
 describe("cancelDocumentCaptureSession", () => {
