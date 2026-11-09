@@ -19,6 +19,7 @@
     "db:up": "docker compose up --detach --wait postgres",
     "db:verify": "npm run db:verify --workspace @finhand/api",
     "dev:api": "npm run dev --workspace @finhand/api",
+    "dev:tunnel": "npm run dev:tunnel --workspace @finhand/api",
     "dev:worker": "npm run dev:worker --workspace @finhand/api",
     "dev:web": "npm run dev --workspace @finhand/web",
     "lint": "npm run lint --workspaces --if-present",

@@ -10,6 +10,7 @@
     "db:studio": "drizzle-kit studio",
     "db:verify": "tsx scripts/verify-database.ts",
     "dev": "tsx watch src/server.ts",
+    "dev:tunnel": "tsx scripts/dev-tunnel.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
