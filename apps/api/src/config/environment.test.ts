@@ -10,6 +10,8 @@ const validEnvironment = {
   GOOGLE_CLIENT_SECRET: "google-client-secret",
   AWS_REGION: "sa-east-1",
   S3_UPLOAD_BUCKET: "finhand-test-uploads",
+  OPENAI_API_KEY: "openai-test-api-key",
+  OPENAI_DOCUMENT_MODEL: "test-vision-model",
   WEB_URL: "http://localhost:3000/",
 };
 
@@ -22,6 +24,7 @@ function stubValidEnvironment() {
   vi.stubEnv("API_PORT", "");
   vi.stubEnv("LOG_LEVEL", "");
   vi.stubEnv("NODE_ENV", "");
+  vi.stubEnv("DOCUMENT_EXTRACTION_POLL_INTERVAL_MS", "");
 }
 
 async function importEnvironment() {
@@ -81,6 +84,25 @@ describe("environment configuration", () => {
       bucket: "finhand-test-uploads",
       region: "sa-east-1",
     });
+  });
+
+  it("returns the AI document extraction configuration", async () => {
+    const { getDocumentExtractionEnvironment } = await importEnvironment();
+
+    expect(getDocumentExtractionEnvironment()).toEqual({
+      apiKey: "openai-test-api-key",
+      model: "test-vision-model",
+      pollIntervalMilliseconds: 2_000,
+    });
+  });
+
+  it("accepts an explicit document extraction poll interval", async () => {
+    vi.stubEnv("DOCUMENT_EXTRACTION_POLL_INTERVAL_MS", "5000");
+    const { getDocumentExtractionEnvironment } = await importEnvironment();
+
+    expect(
+      getDocumentExtractionEnvironment().pollIntervalMilliseconds,
+    ).toBe(5_000);
   });
 
   it.each([
@@ -147,4 +169,31 @@ describe("environment configuration", () => {
 
     expect(() => getDocumentStorageEnvironment()).toThrow(message);
   });
+
+  it.each([
+    ["OPENAI_API_KEY", "", "OPENAI_API_KEY is required."],
+    [
+      "OPENAI_DOCUMENT_MODEL",
+      "",
+      "OPENAI_DOCUMENT_MODEL is required.",
+    ],
+    [
+      "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",
+      "0",
+      "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS must be a positive integer.",
+    ],
+    [
+      "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",
+      "1.5",
+      "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS must be a positive integer.",
+    ],
+  ])(
+    "rejects invalid document extraction setting %s",
+    async (name, value, message) => {
+      const { getDocumentExtractionEnvironment } = await importEnvironment();
+      vi.stubEnv(name, value);
+
+      expect(() => getDocumentExtractionEnvironment()).toThrow(message);
+    },
+  );
 });

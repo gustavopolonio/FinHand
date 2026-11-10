@@ -81,5 +81,10 @@ export const uploads = pgTable(
       table.createdAt.desc(),
     ),
     index("uploads_user_id_status_index").on(table.userId, table.status),
+    index("uploads_status_created_at_id_index").on(
+      table.status,
+      table.createdAt,
+      table.id,
+    ),
   ],
 );

@@ -1,4 +1,8 @@
-import { DeleteObjectCommand, type S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  type S3Client,
+} from "@aws-sdk/client-s3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const uploadMocks = vi.hoisted(() => ({
@@ -74,6 +78,46 @@ describe("createS3DocumentStorage", () => {
       Bucket: "finhand-test-uploads",
       Key: "user/documents/upload-id",
     });
+  });
+
+  it("reads a private object for document processing", async () => {
+    const content = Uint8Array.from([1, 2, 3]);
+    const client = createClient();
+    vi.mocked(client.send).mockResolvedValueOnce({
+      Body: {
+        transformToByteArray: vi.fn().mockResolvedValue(content),
+      },
+    } as never);
+    const storage = createS3DocumentStorage({
+      bucket: "finhand-test-uploads",
+      client,
+      region: "sa-east-1",
+    });
+
+    await expect(
+      storage.readDocument("user/documents/upload-id"),
+    ).resolves.toEqual(Buffer.from(content));
+
+    const send = client.send as ReturnType<typeof vi.fn>;
+    const command = send.mock.calls[0]?.[0];
+    expect(command).toBeInstanceOf(GetObjectCommand);
+    expect(command.input).toEqual({
+      Bucket: "finhand-test-uploads",
+      Key: "user/documents/upload-id",
+    });
+  });
+
+  it("rejects a stored object without a response body", async () => {
+    const client = createClient();
+    const storage = createS3DocumentStorage({
+      bucket: "finhand-test-uploads",
+      client,
+      region: "sa-east-1",
+    });
+
+    await expect(
+      storage.readDocument("user/documents/upload-id"),
+    ).rejects.toThrow("Stored document has no content.");
   });
 
   it("destroys the S3 client when application storage closes", () => {

@@ -1,0 +1,1 @@
+CREATE INDEX "uploads_status_created_at_id_index" ON "uploads" USING btree ("status","created_at","id");

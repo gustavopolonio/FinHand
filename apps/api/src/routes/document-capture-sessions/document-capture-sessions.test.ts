@@ -74,6 +74,7 @@ function createApplication(authenticatedUserId: string | null) {
   const documentStorage = {
     close: vi.fn(),
     deleteDocument: vi.fn(),
+    readDocument: vi.fn(),
     storeDocument: vi.fn(),
   } satisfies DocumentStorage;
 

@@ -65,6 +65,7 @@ describe("Milestone 3 document-processing schema", () => {
         "uploads_s3_object_key_unique",
         "uploads_user_id_created_at_index",
         "uploads_user_id_status_index",
+        "uploads_status_created_at_id_index",
       ]),
       table: "uploads",
       uniqueConstraints: expect.arrayContaining(["uploads_user_id_id_unique"]),

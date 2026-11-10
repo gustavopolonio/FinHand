@@ -1,4 +1,8 @@
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import type { Readable } from "node:stream";
 
@@ -11,6 +15,7 @@ export interface StoreDocumentInput {
 export interface DocumentStorage {
   close(): void;
   deleteDocument(objectKey: string): Promise<void>;
+  readDocument(objectKey: string): Promise<Buffer>;
   storeDocument(input: StoreDocumentInput): Promise<void>;
 }
 
@@ -38,6 +43,21 @@ export function createS3DocumentStorage(
           Key: objectKey,
         }),
       );
+    },
+
+    async readDocument(objectKey) {
+      const response = await client.send(
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: objectKey,
+        }),
+      );
+
+      if (!response.Body) {
+        throw new Error("Stored document has no content.");
+      }
+
+      return Buffer.from(await response.Body.transformToByteArray());
     },
 
     async storeDocument({ body, contentType, objectKey }) {

@@ -68,6 +68,7 @@ function createStorage(options: { storeError?: Error } = {}) {
   const storage = {
     close: vi.fn(),
     deleteDocument: vi.fn().mockResolvedValue(undefined),
+    readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument: vi.fn(async ({ body }: StoreDocumentInput) => {
       for await (const chunk of body) {
         storedContent.push(Buffer.from(chunk));

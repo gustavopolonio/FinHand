@@ -80,6 +80,7 @@ function createStorageFixture(options: {
   const storage = {
     close: vi.fn(),
     deleteDocument,
+    readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument,
   } satisfies DocumentStorage;
 

@@ -242,7 +242,9 @@ Constraints and indexes:
 - QR capture is restricted to document uploads.
 - Failure state and failure code must be consistent.
 - Unique constraint on `(user_id, id)` for ownership-safe references.
-- Indexes on `(user_id, created_at DESC)` and `(user_id, status)`.
+- Indexes on `(user_id, created_at DESC)`, `(user_id, status)`, and
+  `(status, created_at, id)`. The final index lets concurrent workers claim the
+  oldest available upload efficiently.
 
 The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application

@@ -46,6 +46,22 @@ function port(name: string, fallback: number): number {
   return parsedValue;
 }
 
+function positiveInteger(name: string, fallback: number): number {
+  const value = process.env[name];
+
+  if (!value) {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue) || parsedValue < 1) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return parsedValue;
+}
+
 function enumeration<const Values extends readonly string[]>(
   name: string,
   values: Values,
@@ -108,5 +124,16 @@ export function getDocumentStorageEnvironment() {
   return Object.freeze({
     bucket: required("S3_UPLOAD_BUCKET"),
     region: required("AWS_REGION"),
+  });
+}
+
+export function getDocumentExtractionEnvironment() {
+  return Object.freeze({
+    apiKey: required("OPENAI_API_KEY"),
+    model: required("OPENAI_DOCUMENT_MODEL"),
+    pollIntervalMilliseconds: positiveInteger(
+      "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",
+      2_000,
+    ),
   });
 }
