@@ -370,6 +370,20 @@ marked as failed instead of creating an empty review. Passing normalization
 does not make a candidate authoritative; explicit user review and confirmation
 are still required.
 
+The owning user may edit a candidate only while its status is `pending`.
+Candidate edits remain draft data, do not create an authoritative transaction,
+and do not affect account balances or financial summaries. The review API also
+returns the owned upload status so clients can move from queued and processing
+states into the editable candidate interface without exposing another user's
+upload or candidates.
+
+An ownership-scoped open-review query exposes nonterminal uploads and processed
+uploads that still have pending candidates. Failed uploads are excluded and
+reported separately as transient user notifications. This lets the
+Transactions page rediscover review work after a modal closes, a page reload,
+or a different-device capture. Clients may poll while at least one upload is
+nonterminal, but ready items alone do not require continuous polling.
+
 ## Deletion and ownership rules
 
 - User-scoped queries must always include the authenticated `user_id`.
