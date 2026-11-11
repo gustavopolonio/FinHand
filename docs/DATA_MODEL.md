@@ -354,6 +354,22 @@ Only confidence values and warnings required by the review interface belong in
 `extraction_metadata`. Raw model responses and full extracted document text are
 not retained in Milestone 3 by default.
 
+Before candidates are persisted, the application validates and normalizes the
+model output deterministically. Amounts are converted from positive base-10
+minor-unit strings to PostgreSQL `bigint` values without floating-point
+arithmetic. Currency codes are uppercased and checked against supported ISO
+4217 codes, dates must be real calendar dates in `YYYY-MM-DD` format, and text
+fields have whitespace normalized and are limited to the same lengths accepted
+by authoritative transactions. Invalid or missing fields remain `null` and add
+a non-sensitive warning to `extraction_metadata` for the review interface.
+
+A partial candidate is retained when it contains meaningful review data: an
+amount, date, description, or counterparty. Candidates containing none of those
+fields are discarded. If every extracted candidate is discarded, the upload is
+marked as failed instead of creating an empty review. Passing normalization
+does not make a candidate authoritative; explicit user review and confirmation
+are still required.
+
 ## Deletion and ownership rules
 
 - User-scoped queries must always include the authenticated `user_id`.

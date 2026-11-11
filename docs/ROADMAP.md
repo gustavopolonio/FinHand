@@ -48,7 +48,7 @@
 - [x] Implement periodic cleanup to mark expired pending document capture sessions as `expired`
 - [x] Synchronize capture and processing status between the mobile capture page and initiating desktop session
 - [x] Extract structured transaction candidates from receipt images and PDF files
-- [ ] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
+- [x] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
 - [ ] Build the transaction candidate review and editing interface
 - [ ] Require explicit user confirmation before creating an authoritative transaction
 - [ ] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
