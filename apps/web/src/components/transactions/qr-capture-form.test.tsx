@@ -12,6 +12,8 @@ describe("QrCaptureForm", () => {
   it("explains the short-lived single-use phone flow before generation", () => {
     const markup = renderToStaticMarkup(
       <QrCaptureForm
+        accounts={[]}
+        categories={[]}
         error={null}
         isManaging={false}
         onCancel={vi.fn()}
@@ -19,6 +21,8 @@ describe("QrCaptureForm", () => {
         onClose={vi.fn()}
         onCreate={vi.fn()}
         onGetProgress={onGetProgress}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
       />,
     );
 
@@ -31,6 +35,8 @@ describe("QrCaptureForm", () => {
   it("renders session creation errors", () => {
     const markup = renderToStaticMarkup(
       <QrCaptureForm
+        accounts={[]}
+        categories={[]}
         error="Capture session could not be created."
         isManaging={false}
         onCancel={vi.fn()}
@@ -38,6 +44,8 @@ describe("QrCaptureForm", () => {
         onClose={vi.fn()}
         onCreate={vi.fn()}
         onGetProgress={onGetProgress}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
       />,
     );
 

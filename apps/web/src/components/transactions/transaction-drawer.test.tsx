@@ -53,8 +53,10 @@ const commonProps = {
   onClose: vi.fn(),
   onCreateCaptureSession: vi.fn(),
   onGetCaptureSessionProgress: vi.fn(),
+  onGetCandidateReview: vi.fn(),
   onSubmit: vi.fn(),
   onUploadDocument: vi.fn(),
+  onUpdateCandidate: vi.fn(),
 };
 
 describe("TransactionDrawer", () => {
@@ -85,5 +87,18 @@ describe("TransactionDrawer", () => {
       'aria-label="Transaction creation method"',
     );
     expect(markup).toContain("Save Changes");
+  });
+
+  it("can reopen directly in document upload mode", () => {
+    const markup = renderToStaticMarkup(
+      <TransactionDrawer
+        {...commonProps}
+        initialCreationMode="document"
+        transaction={null}
+      />,
+    );
+
+    expect(markup).toContain("Select a receipt or invoice");
+    expect(markup).toContain('id="transaction-document-panel"');
   });
 });

@@ -4,24 +4,44 @@ import { LoaderCircle, Upload } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { DocumentFilePicker } from "@/components/documents/document-file-picker";
-import type { DocumentUpload } from "@/lib/api";
+import type {
+  Account,
+  Category,
+  DocumentUpload,
+  TransactionCandidate,
+  TransactionCandidateReview,
+  UpdateTransactionCandidateInput,
+} from "@/lib/api";
 
 import { Button } from "../ui/button";
-import { DocumentUploadSuccess } from "./document-upload-success";
+import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 
 interface DocumentUploadFormProps {
+  accounts: Account[];
+  categories: Category[];
   error: string | null;
   isUploading: boolean;
   onClearError: () => void;
   onClose: () => void;
+  onGetReview: (
+    uploadId: string,
+  ) => Promise<TransactionCandidateReview | null>;
+  onUpdateCandidate: (
+    candidateId: string,
+    input: UpdateTransactionCandidateInput,
+  ) => Promise<TransactionCandidate | null>;
   onUpload: (file: File) => Promise<DocumentUpload | null>;
 }
 
 export function DocumentUploadForm({
+  accounts,
+  categories,
   error,
   isUploading,
   onClearError,
   onClose,
+  onGetReview,
+  onUpdateCandidate,
   onUpload,
 }: DocumentUploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -43,17 +63,22 @@ export function DocumentUploadForm({
 
   if (uploadedDocument) {
     return (
-      <DocumentUploadSuccess
-        document={uploadedDocument}
+      <TransactionCandidateReviewPanel
+        accounts={accounts}
+        categories={categories}
+        error={error}
         onClose={onClose}
-        onUploadAnother={() => {
+        onGetReview={onGetReview}
+        onReset={() => {
           setFile(null);
           setUploadedDocument(null);
           setValidationError(null);
           onClearError();
         }}
+        onUpdate={onUpdateCandidate}
         panelId="transaction-document-panel"
         tabId="transaction-document-tab"
+        uploadId={uploadedDocument.id}
       />
     );
   }
@@ -75,7 +100,7 @@ export function DocumentUploadForm({
           </h3>
           <p className="mt-1 text-xs leading-5 text-finhand-muted">
             Your file is validated before being stored privately. Automatic
-            extraction will be connected in a later step.
+            extraction starts automatically after the secure upload.
           </p>
         </div>
 

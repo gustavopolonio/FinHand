@@ -7,10 +7,14 @@ describe("DocumentUploadForm", () => {
   it("renders the supported direct-upload flow", () => {
     const markup = renderToStaticMarkup(
       <DocumentUploadForm
+        accounts={[]}
+        categories={[]}
         error={null}
         isUploading={false}
         onClearError={vi.fn()}
         onClose={vi.fn()}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,
     );
@@ -24,16 +28,20 @@ describe("DocumentUploadForm", () => {
       'accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"',
     );
     expect(markup).toContain("Upload document");
-    expect(markup).toContain("Automatic extraction will be connected");
+    expect(markup).toContain("extraction starts automatically");
   });
 
   it("renders a server error in the upload panel", () => {
     const markup = renderToStaticMarkup(
       <DocumentUploadForm
+        accounts={[]}
+        categories={[]}
         error="Document content does not match its declared file type."
         isUploading={false}
         onClearError={vi.fn()}
         onClose={vi.fn()}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,
     );

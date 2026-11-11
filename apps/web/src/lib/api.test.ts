@@ -4,6 +4,8 @@ import {
   type Account,
   type Category,
   type DocumentUpload,
+  type DocumentReview,
+  type TransactionCandidate,
   cancelDocumentCaptureSession,
   createDocumentCaptureSession,
   type Transaction,
@@ -17,13 +19,16 @@ import {
   getCategories,
   getDocumentCaptureSession,
   getDocumentCaptureSessionProgress,
+  getDocumentReviews,
   getFinancialSummary,
+  getTransactionCandidateReview,
   getTransactions,
   renameCategory,
   restoreAccount,
   restoreCategory,
   updateAccount,
   updateTransaction,
+  updateTransactionCandidate,
   uploadDocument,
   uploadCaptureDocument,
 } from "./api";
@@ -502,6 +507,97 @@ describe("document capture sessions API", () => {
     expect(headers.get("Authorization")).toBe(`Bearer ${token}`);
     expect(headers.has("Content-Type")).toBe(false);
     expect((request.body as FormData).get("document")).toBe(file);
+  });
+});
+
+describe("transaction candidates API", () => {
+  const candidate: TransactionCandidate = {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    uploadId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    position: 0,
+    accountId: null,
+    categoryId: null,
+    type: "expense",
+    amountMinor: "4290",
+    currencyCode: "BRL",
+    occurredOn: "2026-11-10",
+    description: "Groceries",
+    counterparty: "Market",
+    notes: null,
+    extractionMetadata: { confidence: { amountMinor: 0.9 } },
+    status: "pending",
+    createdAt: "2026-11-10T12:00:00.000Z",
+    updatedAt: "2026-11-10T12:00:00.000Z",
+  };
+
+  it("gets review progress and candidates for one upload", async () => {
+    const review = {
+      upload: {
+        id: candidate.uploadId,
+        originalFileName: "receipt.pdf",
+        status: "processed" as const,
+        failureCode: null,
+      },
+      candidates: [candidate],
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(review));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getTransactionCandidateReview(candidate.uploadId),
+    ).resolves.toEqual(review);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transaction-candidates?uploadId=${candidate.uploadId}`,
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("updates a candidate draft", async () => {
+    const input = {
+      description: "Corrected groceries",
+      accountId: account.id,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ candidate }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      updateTransactionCandidate(candidate.id, input),
+    ).resolves.toEqual(candidate);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transaction-candidates/${candidate.id}`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+});
+
+describe("document reviews API", () => {
+  it("lists the authenticated user's open document reviews", async () => {
+    const reviews: DocumentReview[] = [
+      {
+        uploadId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        originalFileName: "receipt.pdf",
+        status: "processed",
+        failureCode: null,
+        pendingCandidateCount: 1,
+        createdAt: "2026-11-10T12:00:00.000Z",
+        updatedAt: "2026-11-10T12:01:00.000Z",
+      },
+    ];
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ reviews }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getDocumentReviews()).resolves.toEqual(reviews);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/document-reviews",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 });
 

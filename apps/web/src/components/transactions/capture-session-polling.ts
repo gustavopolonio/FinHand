@@ -8,7 +8,11 @@ export function shouldContinueCaptureSessionPolling(
   if (progress.status === "pending") return true;
   if (progress.status !== "consumed") return false;
 
-  return progress.upload?.status === "processing";
+  return (
+    progress.upload?.status === "pending" ||
+    progress.upload?.status === "uploaded" ||
+    progress.upload?.status === "processing"
+  );
 }
 
 interface StartCaptureSessionPollingOptions {

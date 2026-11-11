@@ -10,8 +10,11 @@ import {
   type Category,
   type DocumentCaptureSession,
   type DocumentCaptureSessionProgress,
+  type DocumentReview,
   type DocumentUpload,
   type Transaction,
+  type TransactionCandidate,
+  type TransactionCandidateReview,
   type TransactionFilters as TransactionFilterValues,
   cancelDocumentCaptureSession,
   createDocumentCaptureSession,
@@ -20,17 +23,31 @@ import {
   getAccounts,
   getCategories,
   getDocumentCaptureSessionProgress,
+  getDocumentReviews,
   getTransactions,
+  getTransactionCandidateReview,
   uploadDocument,
   updateTransaction,
+  updateTransactionCandidate,
+  type UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { WorkspaceModal } from "../ui/workspace-modal";
+import {
+  DocumentFailureToasts,
+  type DocumentFailureNotice,
+} from "./document-failure-toasts";
+import { DocumentReviewsSection } from "./document-reviews-section";
+import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 import { TransactionDeleteModal } from "./transaction-delete-modal";
 import { TransactionDrawer } from "./transaction-drawer";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionList } from "./transaction-list";
 import { TransactionPagination } from "./transaction-pagination";
+import {
+  type TransactionCreationMode,
+} from "./transaction-method-selector";
 import {
   type TransactionFormValues,
   transactionInputFromForm,
@@ -39,7 +56,7 @@ import {
 const pageSize = 10;
 
 type TransactionEditor =
-  | { kind: "create" }
+  | { kind: "create"; initialMode?: TransactionCreationMode }
   | { kind: "edit"; transaction: Transaction };
 
 export function TransactionsPanel() {
@@ -57,6 +74,11 @@ export function TransactionsPanel() {
     offset: 0,
   });
   const [editor, setEditor] = useState<TransactionEditor | null>(null);
+  const [reviewUploadId, setReviewUploadId] = useState<string | null>(null);
+  const [documentReviewRefreshKey, setDocumentReviewRefreshKey] = useState(0);
+  const [documentFailureNotices, setDocumentFailureNotices] = useState<
+    DocumentFailureNotice[]
+  >([]);
   const [transactionToDelete, setTransactionToDelete] =
     useState<Transaction | null>(null);
   const [busyTransactionId, setBusyTransactionId] = useState<string | null>(
@@ -236,7 +258,9 @@ export function TransactionsPanel() {
     setError(null);
 
     try {
-      return await uploadDocument(file);
+      const upload = await uploadDocument(file);
+      setDocumentReviewRefreshKey((key) => key + 1);
+      return upload;
     } catch (cause) {
       reportError(cause);
       return null;
@@ -290,6 +314,82 @@ export function TransactionsPanel() {
     [reportError],
   );
 
+  const showDocumentFailure = useCallback(
+    (notice: DocumentFailureNotice) => {
+      setDocumentFailureNotices((currentNotices) => {
+        if (
+          currentNotices.some(
+            (currentNotice) => currentNotice.uploadId === notice.uploadId,
+          )
+        ) {
+          return currentNotices;
+        }
+
+        return [notice, ...currentNotices].slice(0, 3);
+      });
+    },
+    [],
+  );
+
+  const readCandidateReview = useCallback(
+    async (uploadId: string): Promise<TransactionCandidateReview | null> => {
+      try {
+        const review = await getTransactionCandidateReview(uploadId);
+        setError(null);
+
+        if (review.upload.status === "failed") {
+          showDocumentFailure({
+            uploadId: review.upload.id,
+            originalFileName: review.upload.originalFileName,
+          });
+        }
+
+        return review;
+      } catch (cause) {
+        reportError(cause);
+        return null;
+      }
+    },
+    [reportError, showDocumentFailure],
+  );
+
+  const inspectMissingDocumentReview = useCallback(
+    async (uploadId: string): Promise<void> => {
+      await readCandidateReview(uploadId);
+    },
+    [readCandidateReview],
+  );
+
+  const readDocumentReviews = useCallback(async (): Promise<
+    DocumentReview[] | null
+  > => {
+    try {
+      const reviews = await getDocumentReviews();
+      setError(null);
+      return reviews;
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    }
+  }, [reportError]);
+
+  const saveCandidate = useCallback(
+    async (
+      candidateId: string,
+      input: UpdateTransactionCandidateInput,
+    ): Promise<TransactionCandidate | null> => {
+      setError(null);
+
+      try {
+        return await updateTransactionCandidate(candidateId, input);
+      } catch (cause) {
+        reportError(cause);
+        return null;
+      }
+    },
+    [reportError],
+  );
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -331,6 +431,7 @@ export function TransactionsPanel() {
               setError(null);
               setIsLoadingReferences(true);
               setIsLoadingTransactions(true);
+              setDocumentReviewRefreshKey((key) => key + 1);
               void Promise.all([loadReferences(), loadTransactions(query)]);
             }}
             variant="secondary"
@@ -357,6 +458,17 @@ export function TransactionsPanel() {
           </Button>
         </div>
       </header>
+
+      <DocumentReviewsSection
+        onLoad={readDocumentReviews}
+        onMissingReview={inspectMissingDocumentReview}
+        onOpenReview={(uploadId) => {
+          setError(null);
+          setEditor(null);
+          setReviewUploadId(uploadId);
+        }}
+        refreshKey={documentReviewRefreshKey}
+      />
 
       <TransactionFilters
         accounts={accounts}
@@ -407,18 +519,52 @@ export function TransactionsPanel() {
           isManagingCaptureSession={isManagingCaptureSession}
           isSubmitting={busyTransactionId !== null}
           isUploadingDocument={isUploadingDocument}
+          initialCreationMode={
+            editor.kind === "create" ? editor.initialMode : undefined
+          }
           key={
             editor.kind === "create" ? "create" : editor.transaction.id
           }
           onCancelCaptureSession={cancelCaptureSession}
           onClearError={clearError}
-          onClose={() => setEditor(null)}
+          onClose={() => {
+            setEditor(null);
+            setDocumentReviewRefreshKey((key) => key + 1);
+          }}
           onCreateCaptureSession={startCaptureSession}
           onGetCaptureSessionProgress={readCaptureSessionProgress}
+          onGetCandidateReview={readCandidateReview}
           onSubmit={submitEditor}
           onUploadDocument={submitDocumentUpload}
+          onUpdateCandidate={saveCandidate}
           transaction={editedTransaction}
         />
+      ) : null}
+
+      {reviewUploadId ? (
+        <WorkspaceModal
+          description="Review and correct the transaction details extracted from your document."
+          isBusy={false}
+          onClose={() => {
+            setReviewUploadId(null);
+            setDocumentReviewRefreshKey((key) => key + 1);
+          }}
+          title="Review Document"
+        >
+          <TransactionCandidateReviewPanel
+            accounts={accounts.filter((account) => !account.archivedAt)}
+            categories={categories.filter((category) => !category.archivedAt)}
+            error={error}
+            onClose={() => {
+              setReviewUploadId(null);
+              setDocumentReviewRefreshKey((key) => key + 1);
+            }}
+            onGetReview={readCandidateReview}
+            onUpdate={saveCandidate}
+            panelId="pending-document-review-panel"
+            uploadId={reviewUploadId}
+          />
+        </WorkspaceModal>
       ) : null}
 
       {transactionToDelete ? (
@@ -443,6 +589,22 @@ export function TransactionsPanel() {
           transaction={transactionToDelete}
         />
       ) : null}
+
+      <DocumentFailureToasts
+        notices={documentFailureNotices}
+        onDismiss={(uploadId) =>
+          setDocumentFailureNotices((notices) =>
+            notices.filter((notice) => notice.uploadId !== uploadId),
+          )
+        }
+        onUploadAnother={(uploadId) => {
+          setDocumentFailureNotices((notices) =>
+            notices.filter((notice) => notice.uploadId !== uploadId),
+          );
+          setReviewUploadId(null);
+          setEditor({ kind: "create", initialMode: "document" });
+        }}
+      />
     </div>
   );
 }

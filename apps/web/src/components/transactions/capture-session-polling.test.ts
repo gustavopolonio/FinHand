@@ -21,7 +21,7 @@ afterEach(() => {
 describe("capture session polling", () => {
   it.each([
     { status: "pending", uploadStatus: null, expected: true },
-    { status: "consumed", uploadStatus: "uploaded", expected: false },
+    { status: "consumed", uploadStatus: "uploaded", expected: true },
     { status: "consumed", uploadStatus: "processing", expected: true },
     { status: "consumed", uploadStatus: "processed", expected: false },
     { status: "consumed", uploadStatus: "failed", expected: false },

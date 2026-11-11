@@ -13,9 +13,14 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 
 import type {
+  Account,
+  Category,
   DocumentCaptureSession,
   DocumentCaptureSessionProgress,
   DocumentProcessingStatus,
+  TransactionCandidate,
+  TransactionCandidateReview,
+  UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
@@ -23,8 +28,11 @@ import {
   shouldContinueCaptureSessionPolling,
   startCaptureSessionPolling,
 } from "./capture-session-polling";
+import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 
 interface QrCaptureFormProps {
+  accounts: Account[];
+  categories: Category[];
   error: string | null;
   isManaging: boolean;
   onCancel: (sessionId: string) => Promise<void>;
@@ -34,6 +42,13 @@ interface QrCaptureFormProps {
   onGetProgress: (
     sessionId: string,
   ) => Promise<DocumentCaptureSessionProgress | null>;
+  onGetReview: (
+    uploadId: string,
+  ) => Promise<TransactionCandidateReview | null>;
+  onUpdateCandidate: (
+    candidateId: string,
+    input: UpdateTransactionCandidateInput,
+  ) => Promise<TransactionCandidate | null>;
 }
 
 interface ActiveCaptureSession extends DocumentCaptureSession {
@@ -82,6 +97,8 @@ export function processingMessage(
 }
 
 export function QrCaptureForm({
+  accounts,
+  categories,
   error,
   isManaging,
   onCancel,
@@ -89,6 +106,8 @@ export function QrCaptureForm({
   onClose,
   onCreate,
   onGetProgress,
+  onGetReview,
+  onUpdateCandidate,
 }: QrCaptureFormProps) {
   const [session, setSession] = useState<ActiveCaptureSession | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -164,6 +183,15 @@ export function QrCaptureForm({
   }
 
   const progress = session?.progress;
+  const progressUploadId = progress?.upload?.id;
+  const progressUploadStatus = progress?.upload?.status;
+
+  useEffect(() => {
+    if (progressUploadId && progressUploadStatus === "failed") {
+      void onGetReview(progressUploadId);
+    }
+  }, [onGetReview, progressUploadId, progressUploadStatus]);
+
   const isConsumed = progress?.status === "consumed";
   const isExpired =
     !!session &&
@@ -171,6 +199,22 @@ export function QrCaptureForm({
   const isCancelled = progress?.status === "cancelled";
   const isUnavailable = isExpired || isCancelled;
   const progressMessage = processingMessage(progress?.upload?.status);
+
+  if (progress?.upload?.status === "processed") {
+    return (
+      <TransactionCandidateReviewPanel
+        accounts={accounts}
+        categories={categories}
+        error={error}
+        onClose={onClose}
+        onGetReview={onGetReview}
+        onUpdate={onUpdateCandidate}
+        panelId="transaction-qr-panel"
+        tabId="transaction-qr-tab"
+        uploadId={progress.upload.id}
+      />
+    );
+  }
 
   return (
     <div

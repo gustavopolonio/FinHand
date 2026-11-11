@@ -10,6 +10,9 @@ import type {
   DocumentCaptureSessionProgress,
   DocumentUpload,
   Transaction,
+  TransactionCandidate,
+  TransactionCandidateReview,
+  UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
@@ -36,6 +39,7 @@ interface TransactionDrawerProps {
   isSubmitting: boolean;
   isManagingCaptureSession: boolean;
   isUploadingDocument: boolean;
+  initialCreationMode?: TransactionCreationMode;
   onCancelCaptureSession: (sessionId: string) => Promise<void>;
   onClearError: () => void;
   onClose: () => void;
@@ -43,8 +47,15 @@ interface TransactionDrawerProps {
   onGetCaptureSessionProgress: (
     sessionId: string,
   ) => Promise<DocumentCaptureSessionProgress | null>;
+  onGetCandidateReview: (
+    uploadId: string,
+  ) => Promise<TransactionCandidateReview | null>;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
   onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
+  onUpdateCandidate: (
+    candidateId: string,
+    input: UpdateTransactionCandidateInput,
+  ) => Promise<TransactionCandidate | null>;
   transaction: Transaction | null;
 }
 
@@ -55,17 +66,20 @@ export function TransactionDrawer({
   isSubmitting,
   isManagingCaptureSession,
   isUploadingDocument,
+  initialCreationMode = "manual",
   onCancelCaptureSession,
   onClearError,
   onClose,
   onCreateCaptureSession,
   onGetCaptureSessionProgress,
+  onGetCandidateReview,
   onSubmit,
   onUploadDocument,
+  onUpdateCandidate,
   transaction,
 }: TransactionDrawerProps) {
   const [creationMode, setCreationMode] =
-    useState<TransactionCreationMode>("manual");
+    useState<TransactionCreationMode>(initialCreationMode);
   const [values, setValues] = useState(() =>
     transaction
       ? formValuesFromTransaction(transaction)
@@ -128,22 +142,32 @@ export function TransactionDrawer({
 
       {!transaction && creationMode === "document" ? (
         <DocumentUploadForm
+          accounts={availableAccounts}
+          categories={availableCategories}
           error={error}
           isUploading={isUploadingDocument}
           onClearError={onClearError}
           onClose={onClose}
+          onGetReview={onGetCandidateReview}
+          onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
         />
       ) : !transaction && creationMode === "camera" ? (
         <ReceiptCameraForm
+          accounts={availableAccounts}
+          categories={availableCategories}
           error={error}
           isUploading={isUploadingDocument}
           onClearError={onClearError}
           onClose={onClose}
+          onGetReview={onGetCandidateReview}
+          onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
         />
       ) : !transaction && creationMode === "qr" ? (
         <QrCaptureForm
+          accounts={availableAccounts}
+          categories={availableCategories}
           error={error}
           isManaging={isManagingCaptureSession}
           onCancel={onCancelCaptureSession}
@@ -151,6 +175,8 @@ export function TransactionDrawer({
           onClose={onClose}
           onCreate={onCreateCaptureSession}
           onGetProgress={onGetCaptureSessionProgress}
+          onGetReview={onGetCandidateReview}
+          onUpdateCandidate={onUpdateCandidate}
         />
       ) : (
         <form

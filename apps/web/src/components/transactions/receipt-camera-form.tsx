@@ -4,24 +4,44 @@ import { LoaderCircle, Upload } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { ReceiptCameraPicker } from "@/components/documents/receipt-camera-picker";
-import type { DocumentUpload } from "@/lib/api";
+import type {
+  Account,
+  Category,
+  DocumentUpload,
+  TransactionCandidate,
+  TransactionCandidateReview,
+  UpdateTransactionCandidateInput,
+} from "@/lib/api";
 
 import { Button } from "../ui/button";
-import { DocumentUploadSuccess } from "./document-upload-success";
+import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 
 interface ReceiptCameraFormProps {
+  accounts: Account[];
+  categories: Category[];
   error: string | null;
   isUploading: boolean;
   onClearError: () => void;
   onClose: () => void;
+  onGetReview: (
+    uploadId: string,
+  ) => Promise<TransactionCandidateReview | null>;
+  onUpdateCandidate: (
+    candidateId: string,
+    input: UpdateTransactionCandidateInput,
+  ) => Promise<TransactionCandidate | null>;
   onUpload: (file: File) => Promise<DocumentUpload | null>;
 }
 
 export function ReceiptCameraForm({
+  accounts,
+  categories,
   error,
   isUploading,
   onClearError,
   onClose,
+  onGetReview,
+  onUpdateCandidate,
   onUpload,
 }: ReceiptCameraFormProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -50,12 +70,17 @@ export function ReceiptCameraForm({
 
   if (uploadedDocument) {
     return (
-      <DocumentUploadSuccess
-        document={uploadedDocument}
+      <TransactionCandidateReviewPanel
+        accounts={accounts}
+        categories={categories}
+        error={error}
         onClose={onClose}
-        onUploadAnother={reset}
+        onGetReview={onGetReview}
+        onReset={reset}
+        onUpdate={onUpdateCandidate}
         panelId="transaction-camera-panel"
         tabId="transaction-camera-tab"
+        uploadId={uploadedDocument.id}
       />
     );
   }

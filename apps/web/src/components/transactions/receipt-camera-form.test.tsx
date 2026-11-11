@@ -7,10 +7,14 @@ describe("ReceiptCameraForm", () => {
   it("renders a camera flow separate from document selection", () => {
     const markup = renderToStaticMarkup(
       <ReceiptCameraForm
+        accounts={[]}
+        categories={[]}
         error={null}
         isUploading={false}
         onClearError={vi.fn()}
         onClose={vi.fn()}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,
     );
@@ -26,10 +30,14 @@ describe("ReceiptCameraForm", () => {
   it("renders upload errors in the camera panel", () => {
     const markup = renderToStaticMarkup(
       <ReceiptCameraForm
+        accounts={[]}
+        categories={[]}
         error="The uploaded photo could not be stored."
         isUploading={false}
         onClearError={vi.fn()}
         onClose={vi.fn()}
+        onGetReview={vi.fn()}
+        onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,
     );

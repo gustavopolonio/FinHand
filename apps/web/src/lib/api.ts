@@ -153,6 +153,65 @@ export interface AvailableDocumentCaptureSession {
   maximumBytes: number;
 }
 
+export type TransactionCandidateStatus =
+  | "pending"
+  | "confirmed"
+  | "rejected";
+
+export interface TransactionCandidate {
+  id: string;
+  uploadId: string;
+  position: number;
+  accountId: string | null;
+  categoryId: string | null;
+  type: TransactionType | null;
+  amountMinor: string | null;
+  currencyCode: string | null;
+  occurredOn: string | null;
+  description: string | null;
+  counterparty: string | null;
+  notes: string | null;
+  extractionMetadata: {
+    confidence?: Record<string, number>;
+    warnings?: string[];
+  } | null;
+  status: TransactionCandidateStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionCandidateReview {
+  upload: {
+    id: string;
+    originalFileName: string;
+    status: DocumentProcessingStatus;
+    failureCode: string | null;
+  };
+  candidates: TransactionCandidate[];
+}
+
+export interface DocumentReview {
+  uploadId: string;
+  originalFileName: string;
+  status: DocumentProcessingStatus;
+  failureCode: string | null;
+  pendingCandidateCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateTransactionCandidateInput {
+  accountId?: string | null;
+  categoryId?: string | null;
+  type?: TransactionType | null;
+  amountMinor?: string | null;
+  currencyCode?: string | null;
+  occurredOn?: string | null;
+  description?: string | null;
+  counterparty?: string | null;
+  notes?: string | null;
+}
+
 export interface CreateTransactionInput {
   accountId: string;
   categoryId?: string | null;
@@ -473,6 +532,34 @@ export async function uploadCaptureDocument(token: string, file: File) {
   );
 
   return response.upload;
+}
+
+export async function getDocumentReviews() {
+  const response = await request<{ reviews: DocumentReview[] }>(
+    "/api/document-reviews",
+  );
+
+  return response.reviews;
+}
+
+export function getTransactionCandidateReview(uploadId: string) {
+  const query = new URLSearchParams({ uploadId });
+
+  return request<TransactionCandidateReview>(
+    `/api/transaction-candidates?${query.toString()}`,
+  );
+}
+
+export async function updateTransactionCandidate(
+  candidateId: string,
+  input: UpdateTransactionCandidateInput,
+) {
+  const response = await request<{ candidate: TransactionCandidate }>(
+    `/api/transaction-candidates/${candidateId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+
+  return response.candidate;
 }
 
 export function getFinancialSummary(
