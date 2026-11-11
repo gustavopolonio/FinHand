@@ -9,9 +9,11 @@ import { accountRoutes } from "./routes/accounts/accounts.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
 import { documentCaptureSessionRoutes } from "./routes/document-capture-sessions/document-capture-sessions.js";
+import { documentReviewRoutes } from "./routes/document-reviews/document-reviews.js";
 import { documentUploadRoutes } from "./routes/document-uploads/document-uploads.js";
 import { financialSummaryRoutes } from "./routes/financial-summary/financial-summary.js";
 import { healthRoutes } from "./routes/health/health.js";
+import { transactionCandidateRoutes } from "./routes/transaction-candidates/transaction-candidates.js";
 import { transactionRoutes } from "./routes/transactions/transactions.js";
 import { userRoutes } from "./routes/users/users.js";
 import type { DocumentStorage } from "./storage/document-storage.js";
@@ -63,8 +65,10 @@ export function buildApplication({
   application.register(accountRoutes);
   application.register(categoryRoutes);
   application.register(transactionRoutes);
+  application.register(transactionCandidateRoutes);
   application.register(financialSummaryRoutes);
   application.register(documentUploadRoutes, { documentStorage });
+  application.register(documentReviewRoutes);
   application.register(documentCaptureSessionRoutes, {
     captureBaseUrl: corsOrigin,
     documentStorage,
