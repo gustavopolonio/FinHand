@@ -10,10 +10,13 @@ import type { Database } from "../db/index.js";
 import {
   transactionCandidates,
   uploads,
-  type TransactionCandidateExtractionMetadata,
 } from "../db/schema/index.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
 import type { SupportedDocumentMimeType } from "./document-uploads.js";
+import {
+  normalizeExtractedTransactionCandidates,
+  type NormalizedTransactionCandidate,
+} from "./transaction-candidate-normalization.js";
 import { markUploadAsFailed } from "./upload-state.js";
 
 const supportedDocumentMimeTypes = new Set<SupportedDocumentMimeType>([
@@ -76,27 +79,10 @@ export async function claimNextDocumentUpload(
   return result.rows[0] ?? null;
 }
 
-function createExtractionMetadata(
-  candidate: ExtractedTransactionCandidate,
-): TransactionCandidateExtractionMetadata {
-  const confidence = Object.fromEntries(
-    Object.entries(candidate.confidence).filter(
-      (entry): entry is [string, number] => entry[1] !== null,
-    ),
-  );
-
-  return {
-    ...(Object.keys(confidence).length > 0 ? { confidence } : {}),
-    ...(candidate.warnings.length > 0
-      ? { warnings: candidate.warnings }
-      : {}),
-  };
-}
-
 async function persistExtractedCandidates(
   database: Database,
   upload: ClaimedDocumentUpload,
-  candidates: ExtractedTransactionCandidate[],
+  candidates: NormalizedTransactionCandidate[],
 ): Promise<void> {
   await database.transaction(async (transaction) => {
     await transaction.insert(transactionCandidates).values(
@@ -105,16 +91,13 @@ async function persistExtractedCandidates(
         uploadId: upload.id,
         position,
         type: candidate.type,
-        amountMinor:
-          candidate.amountMinor === null
-            ? null
-            : BigInt(candidate.amountMinor),
+        amountMinor: candidate.amountMinor,
         currencyCode: candidate.currencyCode,
         occurredOn: candidate.occurredOn,
         description: candidate.description,
         counterparty: candidate.counterparty,
         notes: candidate.notes,
-        extractionMetadata: createExtractionMetadata(candidate),
+        extractionMetadata: candidate.extractionMetadata,
         status: "pending" as const,
       })),
     );
@@ -251,8 +234,27 @@ export async function processNextDocumentUpload({
     );
   }
 
+  const normalizationResult = normalizeExtractedTransactionCandidates(
+    candidates,
+  );
+
+  if (normalizationResult.candidates.length === 0) {
+    return failClaimedUpload(
+      database,
+      upload,
+      "no_usable_transaction_candidates",
+      new Error(
+        "Document extraction returned no candidates with meaningful transaction data.",
+      ),
+    );
+  }
+
   try {
-    await persistExtractedCandidates(database, upload, candidates);
+    await persistExtractedCandidates(
+      database,
+      upload,
+      normalizationResult.candidates,
+    );
   } catch (error) {
     return failClaimedUpload(
       database,
@@ -265,6 +267,6 @@ export async function processNextDocumentUpload({
   return {
     uploadId: upload.id,
     status: "processed",
-    candidateCount: candidates.length,
+    candidateCount: normalizationResult.candidates.length,
   };
 }

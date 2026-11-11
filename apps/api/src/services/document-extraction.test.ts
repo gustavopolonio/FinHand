@@ -341,8 +341,61 @@ describe("document extraction service", () => {
     expect(databaseFixture.transaction).not.toHaveBeenCalled();
   });
 
-  it("preserves the order of multiple extracted transaction candidates", async () => {
+  it("marks an upload failed when every extracted candidate is unusable", async () => {
     const databaseFixture = createDatabaseFixture();
+    const unusableCandidate: ExtractedTransactionCandidate = {
+      type: null,
+      amountMinor: null,
+      currencyCode: null,
+      occurredOn: null,
+      description: null,
+      counterparty: null,
+      notes: null,
+      confidence: {
+        type: null,
+        amountMinor: null,
+        currencyCode: null,
+        occurredOn: null,
+        description: null,
+        counterparty: null,
+      },
+      warnings: ["No transaction data was visible"],
+    };
+
+    await expect(
+      processNextDocumentUpload({
+        database: databaseFixture.database,
+        documentStorage: createStorage(),
+        extractor: createExtractor({ candidates: [unusableCandidate] }),
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      failureCode: "no_usable_transaction_candidates",
+    });
+
+    expect(databaseFixture.transaction).not.toHaveBeenCalled();
+  });
+
+  it("filters unusable candidates and preserves the relative order of useful candidates", async () => {
+    const databaseFixture = createDatabaseFixture();
+    const unusableCandidate: ExtractedTransactionCandidate = {
+      type: null,
+      amountMinor: null,
+      currencyCode: null,
+      occurredOn: null,
+      description: null,
+      counterparty: null,
+      notes: null,
+      confidence: {
+        type: null,
+        amountMinor: null,
+        currencyCode: null,
+        occurredOn: null,
+        description: null,
+        counterparty: null,
+      },
+      warnings: [],
+    };
     const secondCandidate: ExtractedTransactionCandidate = {
       ...candidate,
       amountMinor: null,
@@ -363,7 +416,7 @@ describe("document extraction service", () => {
         database: databaseFixture.database,
         documentStorage: createStorage(),
         extractor: createExtractor({
-          candidates: [candidate, secondCandidate],
+          candidates: [candidate, unusableCandidate, secondCandidate],
         }),
       }),
     ).resolves.toMatchObject({ candidateCount: 2, status: "processed" });
