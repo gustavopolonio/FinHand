@@ -11,12 +11,14 @@ import { transactionCandidateRoutes } from "./transaction-candidates.js";
 const candidateMocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   getReview: vi.fn(),
+  reject: vi.fn(),
   update: vi.fn(),
 }));
 
 vi.mock("../../services/transaction-candidates.js", () => ({
   confirmTransactionCandidateForUser: candidateMocks.confirm,
   getTransactionCandidateReviewForUser: candidateMocks.getReview,
+  rejectTransactionCandidateForUser: candidateMocks.reject,
   updateTransactionCandidateForUser: candidateMocks.update,
 }));
 
@@ -103,6 +105,10 @@ beforeEach(() => {
       failureCode: null,
     },
     candidates: [candidate],
+  });
+  candidateMocks.reject.mockResolvedValue({
+    candidate: { ...candidate, status: "rejected" },
+    changed: true,
   });
   candidateMocks.update.mockResolvedValue(candidate);
 });
@@ -318,5 +324,48 @@ describe("POST /api/transaction-candidates/:id/confirm", () => {
 
     expect(response.statusCode).toBe(400);
     expect(candidateMocks.confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/transaction-candidates/:id/reject", () => {
+  it("rejects the authenticated user's pending candidate", async () => {
+    const application = createApplication(userId);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${candidateId}/reject`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      candidate: { id: candidateId, status: "rejected" },
+      changed: true,
+    });
+    expect(candidateMocks.reject).toHaveBeenCalledWith(
+      expect.anything(),
+      userId,
+      candidateId,
+    );
+  });
+
+  it("requires authentication", async () => {
+    const application = createApplication(null);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${candidateId}/reject`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(candidateMocks.reject).not.toHaveBeenCalled();
+  });
+
+  it("validates the candidate identifier", async () => {
+    const application = createApplication(userId);
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/transaction-candidates/not-a-uuid/reject",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(candidateMocks.reject).not.toHaveBeenCalled();
   });
 });

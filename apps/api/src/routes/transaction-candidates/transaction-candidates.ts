@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import {
   confirmTransactionCandidateForUser,
   getTransactionCandidateReviewForUser,
+  rejectTransactionCandidateForUser,
   updateTransactionCandidateForUser,
 } from "../../services/transaction-candidates.js";
 import {
@@ -71,5 +72,16 @@ export async function transactionCandidateRoutes(
 
       return reply.status(result.created ? 201 : 200).send(result);
     },
+  );
+
+  candidatesApplication.post(
+    "/api/transaction-candidates/:id/reject",
+    { schema: { params: transactionCandidateParamsSchema } },
+    async (request) =>
+      rejectTransactionCandidateForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      ),
   );
 }

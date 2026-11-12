@@ -109,6 +109,11 @@ export interface ConfirmTransactionCandidateResult {
   created: boolean;
 }
 
+export interface RejectTransactionCandidateResult {
+  candidate: TransactionCandidateListItem;
+  changed: boolean;
+}
+
 function serializeCandidate(
   candidate: TransactionCandidateRecord,
 ): TransactionCandidateListItem {
@@ -692,6 +697,103 @@ export async function confirmTransactionCandidateForUser(
       candidate: serializeCandidate(confirmedCandidate),
       transaction: serializeTransaction(createdTransaction),
       created: true,
+    };
+  });
+}
+
+export async function rejectTransactionCandidateForUser(
+  database: Database,
+  userId: string,
+  candidateId: string,
+  now: () => Date = () => new Date(),
+): Promise<RejectTransactionCandidateResult> {
+  return database.transaction(async (transaction) => {
+    const [candidate] = await transaction
+      .select({
+        id: transactionCandidates.id,
+        uploadId: transactionCandidates.uploadId,
+        position: transactionCandidates.position,
+        accountId: transactionCandidates.accountId,
+        categoryId: transactionCandidates.categoryId,
+        type: transactionCandidates.type,
+        amountMinor: transactionCandidates.amountMinor,
+        currencyCode: transactionCandidates.currencyCode,
+        occurredOn: transactionCandidates.occurredOn,
+        description: transactionCandidates.description,
+        counterparty: transactionCandidates.counterparty,
+        notes: transactionCandidates.notes,
+        extractionMetadata: transactionCandidates.extractionMetadata,
+        status: transactionCandidates.status,
+        createdAt: transactionCandidates.createdAt,
+        updatedAt: transactionCandidates.updatedAt,
+      })
+      .from(transactionCandidates)
+      .where(
+        and(
+          eq(transactionCandidates.id, candidateId),
+          eq(transactionCandidates.userId, userId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+
+    if (!candidate) {
+      throw new NotFoundError("Transaction candidate not found");
+    }
+
+    if (candidate.status === "confirmed") {
+      throw new ConflictError(
+        "Confirmed transaction candidates cannot be discarded.",
+      );
+    }
+
+    if (candidate.status === "rejected") {
+      return { candidate: serializeCandidate(candidate), changed: false };
+    }
+
+    const reviewedAt = now();
+    const [rejectedCandidate] = await transaction
+      .update(transactionCandidates)
+      .set({
+        status: "rejected",
+        reviewedAt,
+        updatedAt: reviewedAt,
+      })
+      .where(
+        and(
+          eq(transactionCandidates.id, candidateId),
+          eq(transactionCandidates.userId, userId),
+          eq(transactionCandidates.status, "pending"),
+        ),
+      )
+      .returning({
+        id: transactionCandidates.id,
+        uploadId: transactionCandidates.uploadId,
+        position: transactionCandidates.position,
+        accountId: transactionCandidates.accountId,
+        categoryId: transactionCandidates.categoryId,
+        type: transactionCandidates.type,
+        amountMinor: transactionCandidates.amountMinor,
+        currencyCode: transactionCandidates.currencyCode,
+        occurredOn: transactionCandidates.occurredOn,
+        description: transactionCandidates.description,
+        counterparty: transactionCandidates.counterparty,
+        notes: transactionCandidates.notes,
+        extractionMetadata: transactionCandidates.extractionMetadata,
+        status: transactionCandidates.status,
+        createdAt: transactionCandidates.createdAt,
+        updatedAt: transactionCandidates.updatedAt,
+      });
+
+    if (!rejectedCandidate) {
+      throw new ConflictError(
+        "Transaction candidate is no longer available for rejection.",
+      );
+    }
+
+    return {
+      candidate: serializeCandidate(rejectedCandidate),
+      changed: true,
     };
   });
 }

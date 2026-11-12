@@ -16,6 +16,7 @@ import {
 import {
   confirmTransactionCandidateForUser,
   getTransactionCandidateReviewForUser,
+  rejectTransactionCandidateForUser,
   updateTransactionCandidateForUser,
 } from "./transaction-candidates.js";
 
@@ -837,6 +838,114 @@ describe("confirmTransactionCandidateForUser", () => {
     ).rejects.toEqual(
       new ConflictError(
         "Transaction candidate is no longer available for confirmation.",
+      ),
+    );
+  });
+});
+
+describe("rejectTransactionCandidateForUser", () => {
+  it("marks a pending candidate rejected without creating a transaction", async () => {
+    const reviewedAt = new Date("2026-11-12T14:00:00.000Z");
+    const fixture = createConfirmationFixture({
+      returnedCandidate: {
+        ...candidateRecord,
+        status: "rejected",
+        updatedAt: reviewedAt,
+      },
+    });
+
+    await expect(
+      rejectTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+        () => reviewedAt,
+      ),
+    ).resolves.toMatchObject({
+      candidate: { id: candidateId, status: "rejected" },
+      changed: true,
+    });
+
+    expect(fixture.lockFor).toHaveBeenCalledWith("update");
+    expect(fixture.insert).not.toHaveBeenCalled();
+    expect(fixture.update).toHaveBeenCalledWith(transactionCandidates);
+    expect(fixture.updateSet).toHaveBeenCalledWith({
+      status: "rejected",
+      reviewedAt,
+      updatedAt: reviewedAt,
+    });
+  });
+
+  it("returns an already rejected candidate idempotently", async () => {
+    const fixture = createConfirmationFixture({
+      lockedCandidate: {
+        ...candidateRecord,
+        status: "rejected",
+        transactionId: null,
+      },
+    });
+
+    await expect(
+      rejectTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+      ),
+    ).resolves.toMatchObject({
+      candidate: { id: candidateId, status: "rejected" },
+      changed: false,
+    });
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
+  it("does not expose another user's candidate", async () => {
+    const fixture = createConfirmationFixture({ lockedCandidate: undefined });
+
+    await expect(
+      rejectTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+      ),
+    ).rejects.toEqual(new NotFoundError("Transaction candidate not found"));
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
+  it("does not discard a confirmed candidate", async () => {
+    const fixture = createConfirmationFixture({
+      lockedCandidate: {
+        ...candidateRecord,
+        status: "confirmed",
+        transactionId,
+      },
+    });
+
+    await expect(
+      rejectTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+      ),
+    ).rejects.toEqual(
+      new ConflictError(
+        "Confirmed transaction candidates cannot be discarded.",
+      ),
+    );
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
+  it("handles a concurrent status change without overwriting it", async () => {
+    const fixture = createConfirmationFixture({ returnedCandidate: undefined });
+
+    await expect(
+      rejectTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+      ),
+    ).rejects.toEqual(
+      new ConflictError(
+        "Transaction candidate is no longer available for rejection.",
       ),
     );
   });
