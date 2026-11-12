@@ -250,6 +250,12 @@ The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application
 logs must not contain document bytes or public object URLs.
 
+During candidate review, the authenticated API may issue a five-minute S3
+presigned `GET` URL after verifying the upload belongs to the requesting user.
+The URL grants temporary access only to that source object, is never persisted,
+and API responses containing it must not be cached. The S3 bucket remains
+private.
+
 Allowed upload state transitions are:
 
 - `pending → uploaded` after the object is completely stored.

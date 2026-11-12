@@ -50,7 +50,7 @@
 - [x] Extract structured transaction candidates from receipt images and PDF files
 - [x] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
 - [x] Build the transaction candidate review and editing interface
-- [ ] Display private source documents during candidate review using short-lived S3 presigned URLs
+- [x] Display private source documents during candidate review using short-lived S3 presigned URLs
 - [ ] Require explicit user confirmation before creating an authoritative transaction
 - [ ] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
 - [ ] Implement retry, rejection, expiration, and abandoned-upload cleanup flows
@@ -97,6 +97,7 @@
 - [ ] Configure structured logging
 - [ ] Implement application and AI observability
 - [ ] Replace document-status polling with server-pushed updates using SSE or WebSockets
+- [ ] Replace user-ID-based S3 object key prefixes with opaque random storage namespaces and migrate existing objects
 - [ ] Configure CI/CD
 - [ ] Run security and performance checks
 - [ ] Deploy the application
