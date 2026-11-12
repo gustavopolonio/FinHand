@@ -15,6 +15,7 @@ describe("ReceiptCameraForm", () => {
         onClose={vi.fn()}
         onConfirmCandidate={vi.fn()}
         onGetReview={vi.fn()}
+        onRejectCandidate={vi.fn()}
         onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,
@@ -39,6 +40,7 @@ describe("ReceiptCameraForm", () => {
         onClose={vi.fn()}
         onConfirmCandidate={vi.fn()}
         onGetReview={vi.fn()}
+        onRejectCandidate={vi.fn()}
         onUpdateCandidate={vi.fn()}
         onUpload={vi.fn()}
       />,

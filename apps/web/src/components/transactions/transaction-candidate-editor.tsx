@@ -1,6 +1,6 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 
 import {
@@ -12,6 +12,7 @@ import type {
   Category,
   ConfirmTransactionCandidateInput,
   ConfirmTransactionCandidateResult,
+  RejectTransactionCandidateResult,
   TransactionCandidate,
   TransactionType,
   UpdateTransactionCandidateInput,
@@ -20,6 +21,7 @@ import type {
 import { Button } from "../ui/button";
 import { Select, type SelectOption } from "../ui/select";
 import { HoldToConfirmButton } from "./hold-to-confirm-button";
+import { TransactionCandidateRejectModal } from "./transaction-candidate-reject-modal";
 import {
   candidateInputFromForm,
   formValuesFromCandidate,
@@ -39,6 +41,10 @@ interface TransactionCandidateEditorProps {
   ) => Promise<ConfirmTransactionCandidateResult | null>;
   onConfirmed: (result: ConfirmTransactionCandidateResult) => void;
   onClose: () => void;
+  onReject: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
+  onRejected: (result: RejectTransactionCandidateResult) => void;
   onSave: (
     candidateId: string,
     input: UpdateTransactionCandidateInput,
@@ -63,6 +69,8 @@ export function TransactionCandidateEditor({
   onConfirm,
   onConfirmed,
   onClose,
+  onReject,
+  onRejected,
   onSave,
   onSaved,
 }: TransactionCandidateEditorProps) {
@@ -74,6 +82,8 @@ export function TransactionCandidateEditor({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [wasSaved, setWasSaved] = useState(false);
   const [fieldErrors, setFieldErrors] =
@@ -208,15 +218,27 @@ export function TransactionCandidateEditor({
     if (result) onConfirmed(result);
   }
 
-  const isBusy = isSaving || isConfirming;
+  async function rejectCandidate() {
+    setIsRejecting(true);
+    const result = await onReject(candidate.id);
+    setIsRejecting(false);
+
+    if (result) {
+      setIsRejectModalOpen(false);
+      onRejected(result);
+    }
+  }
+
+  const isBusy = isSaving || isConfirming || isRejecting;
 
   return (
-    <form
-      aria-busy={isBusy}
-      className="flex min-h-0 min-w-0 flex-1 flex-col"
-      onSubmit={(event) => void submit(event)}
-      ref={formRef}
-    >
+    <>
+      <form
+        aria-busy={isBusy}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+        onSubmit={(event) => void submit(event)}
+        ref={formRef}
+      >
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
         {warnings.length > 0 ? (
           <div className="rounded-xl border border-finhand-warning/20 bg-finhand-warning-soft px-4 py-3">
@@ -450,6 +472,15 @@ export function TransactionCandidateEditor({
 
       <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
         <Button
+          className="mr-auto rounded-xl!"
+          disabled={isBusy}
+          onClick={() => setIsRejectModalOpen(true)}
+          variant="danger"
+        >
+          <Trash2 aria-hidden="true" className="size-4" />
+          Discard candidate
+        </Button>
+        <Button
           className="rounded-xl!"
           disabled={isBusy}
           onClick={onClose}
@@ -468,6 +499,17 @@ export function TransactionCandidateEditor({
           onConfirm={confirmCandidate}
         />
       </div>
-    </form>
+      </form>
+
+      {isRejectModalOpen ? (
+        <TransactionCandidateRejectModal
+          candidate={candidate}
+          error={error}
+          isRejecting={isRejecting}
+          onCancel={() => setIsRejectModalOpen(false)}
+          onConfirm={() => void rejectCandidate()}
+        />
+      ) : null}
+    </>
   );
 }

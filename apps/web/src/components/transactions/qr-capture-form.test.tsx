@@ -23,6 +23,7 @@ describe("QrCaptureForm", () => {
         onCreate={vi.fn()}
         onGetProgress={onGetProgress}
         onGetReview={vi.fn()}
+        onRejectCandidate={vi.fn()}
         onUpdateCandidate={vi.fn()}
       />,
     );
@@ -47,6 +48,7 @@ describe("QrCaptureForm", () => {
         onCreate={vi.fn()}
         onGetProgress={onGetProgress}
         onGetReview={vi.fn()}
+        onRejectCandidate={vi.fn()}
         onUpdateCandidate={vi.fn()}
       />,
     );

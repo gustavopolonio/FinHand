@@ -55,6 +55,7 @@ const commonProps = {
   onCreateCaptureSession: vi.fn(),
   onGetCaptureSessionProgress: vi.fn(),
   onGetCandidateReview: vi.fn(),
+  onRejectCandidate: vi.fn(),
   onSubmit: vi.fn(),
   onUploadDocument: vi.fn(),
   onUpdateCandidate: vi.fn(),

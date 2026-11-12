@@ -55,6 +55,8 @@ describe("TransactionCandidateEditor", () => {
         onConfirm={vi.fn()}
         onConfirmed={vi.fn()}
         onClose={vi.fn()}
+        onReject={vi.fn()}
+        onRejected={vi.fn()}
         onSave={vi.fn()}
         onSaved={vi.fn()}
       />,
@@ -68,5 +70,6 @@ describe("TransactionCandidateEditor", () => {
     expect(markup).toContain("does not create a transaction");
     expect(markup).toContain("Save draft");
     expect(markup).toContain("Hold to confirm");
+    expect(markup).toContain("Discard candidate");
   });
 });

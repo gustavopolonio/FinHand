@@ -16,6 +16,7 @@ interface ConfirmModalProps {
   children: ReactNode;
   confirmIcon?: ReactNode;
   confirmLabel: string;
+  confirmingLabel?: string;
   description: string;
   error?: string | null;
   eyebrow: string;
@@ -31,6 +32,7 @@ export function ConfirmModal({
   children,
   confirmIcon,
   confirmLabel,
+  confirmingLabel = "Deleting…",
   description,
   error,
   eyebrow,
@@ -52,14 +54,18 @@ export function ConfirmModal({
     cancelButtonRef.current?.focus();
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isConfirming) onCancel();
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (!isConfirming) onCancel();
     }
 
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", closeOnEscape, true);
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", closeOnEscape, true);
 
       if (previouslyFocusedElement instanceof HTMLElement) {
         previouslyFocusedElement.focus();
@@ -152,7 +158,7 @@ export function ConfirmModal({
             ) : (
               confirmIcon
             )}
-            {isConfirming ? "Deleting…" : confirmLabel}
+            {isConfirming ? confirmingLabel : confirmLabel}
           </Button>
         </footer>
       </section>

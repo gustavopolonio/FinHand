@@ -12,6 +12,7 @@ import type {
   DocumentUpload,
   TransactionCandidate,
   TransactionCandidateReview,
+  RejectTransactionCandidateResult,
   UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
@@ -32,6 +33,9 @@ interface ReceiptCameraFormProps {
   onGetReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
+  onRejectCandidate: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
   onUpdateCandidate: (
     candidateId: string,
     input: UpdateTransactionCandidateInput,
@@ -48,6 +52,7 @@ export function ReceiptCameraForm({
   onClose,
   onConfirmCandidate,
   onGetReview,
+  onRejectCandidate,
   onUpdateCandidate,
   onUpload,
 }: ReceiptCameraFormProps) {
@@ -84,6 +89,7 @@ export function ReceiptCameraForm({
         onConfirm={onConfirmCandidate}
         onClose={onClose}
         onGetReview={onGetReview}
+        onReject={onRejectCandidate}
         onReset={reset}
         onUpdate={onUpdateCandidate}
         panelId="transaction-camera-panel"

@@ -15,6 +15,7 @@ import type {
   Category,
   ConfirmTransactionCandidateInput,
   ConfirmTransactionCandidateResult,
+  RejectTransactionCandidateResult,
   TransactionCandidate,
   TransactionCandidateReview,
   UpdateTransactionCandidateInput,
@@ -36,6 +37,9 @@ interface TransactionCandidateReviewPanelProps {
   onGetReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
+  onReject: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
   onReset?: () => void;
   onUpdate: (
     candidateId: string,
@@ -66,6 +70,7 @@ export function TransactionCandidateReviewPanel({
   onConfirm,
   onClose,
   onGetReview,
+  onReject,
   onReset,
   onUpdate,
   panelId,
@@ -124,13 +129,11 @@ export function TransactionCandidateReviewPanel({
     );
   }
 
-  function removeConfirmedCandidate(
-    result: ConfirmTransactionCandidateResult,
-  ) {
+  function removeReviewedCandidate(candidateId: string) {
     if (!review) return;
 
     const remainingCandidates = review.candidates.filter(
-      (item) => item.id !== result.candidate.id,
+      (item) => item.id !== candidateId,
     );
 
     if (remainingCandidates.length === 0) {
@@ -198,8 +201,14 @@ export function TransactionCandidateReviewPanel({
             error={error}
             key={candidate.id}
             onConfirm={onConfirm}
-            onConfirmed={removeConfirmedCandidate}
+            onConfirmed={(result) =>
+              removeReviewedCandidate(result.candidate.id)
+            }
             onClose={onClose}
+            onReject={onReject}
+            onRejected={(result) =>
+              removeReviewedCandidate(result.candidate.id)
+            }
             onSave={onUpdate}
             onSaved={replaceCandidate}
           />

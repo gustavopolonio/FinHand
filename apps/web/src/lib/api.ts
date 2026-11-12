@@ -236,6 +236,11 @@ export interface ConfirmTransactionCandidateResult {
   created: boolean;
 }
 
+export interface RejectTransactionCandidateResult {
+  candidate: TransactionCandidate;
+  changed: boolean;
+}
+
 export interface CreateTransactionInput {
   accountId: string;
   categoryId?: string | null;
@@ -599,6 +604,13 @@ export function confirmTransactionCandidate(
   return request<ConfirmTransactionCandidateResult>(
     `/api/transaction-candidates/${candidateId}/confirm`,
     { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function rejectTransactionCandidate(candidateId: string) {
+  return request<RejectTransactionCandidateResult>(
+    `/api/transaction-candidates/${candidateId}/reject`,
+    { method: "POST" },
   );
 }
 

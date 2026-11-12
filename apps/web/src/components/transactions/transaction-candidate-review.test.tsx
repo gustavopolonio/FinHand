@@ -43,6 +43,7 @@ describe("transaction candidate review", () => {
         onConfirm={vi.fn()}
         onClose={vi.fn()}
         onGetReview={vi.fn()}
+        onReject={vi.fn()}
         onUpdate={vi.fn()}
         panelId="candidate-panel"
         tabId="candidate-tab"

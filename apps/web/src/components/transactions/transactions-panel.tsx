@@ -17,6 +17,7 @@ import {
   type Transaction,
   type TransactionCandidate,
   type TransactionCandidateReview,
+  type RejectTransactionCandidateResult,
   type TransactionFilters as TransactionFilterValues,
   cancelDocumentCaptureSession,
   confirmTransactionCandidate,
@@ -29,6 +30,7 @@ import {
   getDocumentReviews,
   getTransactions,
   getTransactionCandidateReview,
+  rejectTransactionCandidate,
   uploadDocument,
   updateTransaction,
   updateTransactionCandidate,
@@ -92,6 +94,7 @@ export function TransactionsPanel() {
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [isConfirmingCandidate, setIsConfirmingCandidate] = useState(false);
+  const [isRejectingCandidate, setIsRejectingCandidate] = useState(false);
   const [confirmedTransactionDescription, setConfirmedTransactionDescription] =
     useState<string | null>(null);
   const [isManagingCaptureSession, setIsManagingCaptureSession] =
@@ -418,6 +421,24 @@ export function TransactionsPanel() {
     }
   }
 
+  async function rejectCandidate(
+    candidateId: string,
+  ): Promise<RejectTransactionCandidateResult | null> {
+    setIsRejectingCandidate(true);
+    setError(null);
+
+    try {
+      const result = await rejectTransactionCandidate(candidateId);
+      setDocumentReviewRefreshKey((key) => key + 1);
+      return result;
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    } finally {
+      setIsRejectingCandidate(false);
+    }
+  }
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -546,7 +567,9 @@ export function TransactionsPanel() {
           error={error}
           isManagingCaptureSession={isManagingCaptureSession}
           isSubmitting={
-            busyTransactionId !== null || isConfirmingCandidate
+            busyTransactionId !== null ||
+            isConfirmingCandidate ||
+            isRejectingCandidate
           }
           isUploadingDocument={isUploadingDocument}
           initialCreationMode={
@@ -565,6 +588,7 @@ export function TransactionsPanel() {
           onConfirmCandidate={confirmCandidate}
           onGetCaptureSessionProgress={readCaptureSessionProgress}
           onGetCandidateReview={readCandidateReview}
+          onRejectCandidate={rejectCandidate}
           onSubmit={submitEditor}
           onUploadDocument={submitDocumentUpload}
           onUpdateCandidate={saveCandidate}
@@ -575,7 +599,7 @@ export function TransactionsPanel() {
       {reviewUploadId ? (
         <WorkspaceModal
           description="Review and correct the transaction details extracted from your document."
-          isBusy={isConfirmingCandidate}
+          isBusy={isConfirmingCandidate || isRejectingCandidate}
           onClose={() => {
             setReviewUploadId(null);
             setDocumentReviewRefreshKey((key) => key + 1);
@@ -593,6 +617,7 @@ export function TransactionsPanel() {
               setDocumentReviewRefreshKey((key) => key + 1);
             }}
             onGetReview={readCandidateReview}
+            onReject={rejectCandidate}
             onUpdate={saveCandidate}
             panelId="pending-document-review-panel"
             uploadId={reviewUploadId}

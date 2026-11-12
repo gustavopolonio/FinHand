@@ -14,6 +14,7 @@ import type {
   Transaction,
   TransactionCandidate,
   TransactionCandidateReview,
+  RejectTransactionCandidateResult,
   UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
@@ -56,6 +57,9 @@ interface TransactionDrawerProps {
   onGetCandidateReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
+  onRejectCandidate: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
   onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
   onUpdateCandidate: (
@@ -80,6 +84,7 @@ export function TransactionDrawer({
   onCreateCaptureSession,
   onGetCaptureSessionProgress,
   onGetCandidateReview,
+  onRejectCandidate,
   onSubmit,
   onUploadDocument,
   onUpdateCandidate,
@@ -162,6 +167,7 @@ export function TransactionDrawer({
           onClose={onClose}
           onConfirmCandidate={onConfirmCandidate}
           onGetReview={onGetCandidateReview}
+          onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
         />
@@ -175,6 +181,7 @@ export function TransactionDrawer({
           onClose={onClose}
           onConfirmCandidate={onConfirmCandidate}
           onGetReview={onGetCandidateReview}
+          onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
         />
@@ -191,6 +198,7 @@ export function TransactionDrawer({
           onCreate={onCreateCaptureSession}
           onGetProgress={onGetCaptureSessionProgress}
           onGetReview={onGetCandidateReview}
+          onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
         />
       ) : (

@@ -26,6 +26,7 @@ import {
   getTransactionCandidateReview,
   getTransactions,
   renameCategory,
+  rejectTransactionCandidate,
   restoreAccount,
   restoreCategory,
   updateAccount,
@@ -605,6 +606,23 @@ describe("transaction candidates API", () => {
         method: "POST",
         body: JSON.stringify(input),
       }),
+    );
+  });
+
+  it("rejects a pending candidate without creating a transaction", async () => {
+    const result = {
+      candidate: { ...candidate, status: "rejected" as const },
+      changed: true,
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(result));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(rejectTransactionCandidate(candidate.id)).resolves.toEqual(
+      result,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transaction-candidates/${candidate.id}/reject`,
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });

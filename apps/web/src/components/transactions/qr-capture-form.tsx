@@ -22,6 +22,7 @@ import type {
   DocumentProcessingStatus,
   TransactionCandidate,
   TransactionCandidateReview,
+  RejectTransactionCandidateResult,
   UpdateTransactionCandidateInput,
 } from "@/lib/api";
 
@@ -51,6 +52,9 @@ interface QrCaptureFormProps {
   onGetReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
+  onRejectCandidate: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
   onUpdateCandidate: (
     candidateId: string,
     input: UpdateTransactionCandidateInput,
@@ -114,6 +118,7 @@ export function QrCaptureForm({
   onCreate,
   onGetProgress,
   onGetReview,
+  onRejectCandidate,
   onUpdateCandidate,
 }: QrCaptureFormProps) {
   const [session, setSession] = useState<ActiveCaptureSession | null>(null);
@@ -216,6 +221,7 @@ export function QrCaptureForm({
         onConfirm={onConfirmCandidate}
         onClose={onClose}
         onGetReview={onGetReview}
+        onReject={onRejectCandidate}
         onUpdate={onUpdateCandidate}
         panelId="transaction-qr-panel"
         tabId="transaction-qr-tab"
