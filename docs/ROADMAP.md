@@ -54,7 +54,9 @@
 - [x] Require explicit user confirmation before creating an authoritative transaction
 - [x] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
 - [x] Let users discard pending transaction candidates by marking them as `rejected`
-- [ ] Implement retry, rejection, expiration, and abandoned-upload cleanup flows
+- [ ] Implement manual retry for retryable failed document processing
+- [ ] Recover uploads stuck after interrupted worker processing
+- [ ] Define and implement retention cleanup for abandoned database records and S3 objects
 - [ ] Build a document-processing History tab for successful and failed imports
 - [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
 
