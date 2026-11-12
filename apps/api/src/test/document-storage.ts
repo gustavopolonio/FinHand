@@ -5,6 +5,9 @@ import type { DocumentStorage } from "../storage/document-storage.js";
 export function createTestDocumentStorage(): DocumentStorage {
   return {
     close: vi.fn(),
+    createDocumentPreviewUrl: vi
+      .fn()
+      .mockResolvedValue("https://signed.example/document"),
     deleteDocument: vi.fn().mockResolvedValue(undefined),
     readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument: vi.fn().mockResolvedValue(undefined),

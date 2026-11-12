@@ -73,6 +73,7 @@ function createApplication(authenticatedUserId: string | null) {
   const application = Fastify();
   const documentStorage = {
     close: vi.fn(),
+    createDocumentPreviewUrl: vi.fn(),
     deleteDocument: vi.fn(),
     readDocument: vi.fn(),
     storeDocument: vi.fn(),

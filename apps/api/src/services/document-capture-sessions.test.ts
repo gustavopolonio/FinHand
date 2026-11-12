@@ -62,6 +62,7 @@ function createStorage() {
   const storedContent: Buffer[] = [];
   const storage = {
     close: vi.fn(),
+    createDocumentPreviewUrl: vi.fn(),
     deleteDocument: vi.fn().mockResolvedValue(undefined),
     readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument: vi.fn(async ({ body }: StoreDocumentInput) => {

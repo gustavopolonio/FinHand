@@ -146,6 +146,7 @@ function createStorage(options: { error?: Error; value?: Buffer } = {}) {
 
   return {
     close: vi.fn(),
+    createDocumentPreviewUrl: vi.fn(),
     deleteDocument: vi.fn(),
     readDocument,
     storeDocument: vi.fn(),

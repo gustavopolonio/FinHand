@@ -4,6 +4,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { Readable } from "node:stream";
 
 export interface StoreDocumentInput {
@@ -14,6 +15,10 @@ export interface StoreDocumentInput {
 
 export interface DocumentStorage {
   close(): void;
+  createDocumentPreviewUrl(
+    objectKey: string,
+    expiresInSeconds: number,
+  ): Promise<string>;
   deleteDocument(objectKey: string): Promise<void>;
   readDocument(objectKey: string): Promise<Buffer>;
   storeDocument(input: StoreDocumentInput): Promise<void>;
@@ -34,6 +39,18 @@ export function createS3DocumentStorage(
   return {
     close() {
       client.destroy();
+    },
+
+    async createDocumentPreviewUrl(objectKey, expiresInSeconds) {
+      return getSignedUrl(
+        client,
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: objectKey,
+          ResponseContentDisposition: "inline",
+        }),
+        { expiresIn: expiresInSeconds },
+      );
     },
 
     async deleteDocument(objectKey) {

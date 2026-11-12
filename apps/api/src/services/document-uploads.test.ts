@@ -79,6 +79,7 @@ function createStorageFixture(options: {
     : vi.fn().mockResolvedValue(undefined);
   const storage = {
     close: vi.fn(),
+    createDocumentPreviewUrl: vi.fn(),
     deleteDocument,
     readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument,

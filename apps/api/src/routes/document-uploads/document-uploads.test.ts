@@ -10,6 +10,7 @@ import type {
   DocumentStorage,
   StoreDocumentInput,
 } from "../../storage/document-storage.js";
+import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { documentUploadRoutes } from "./document-uploads.js";
 
 const applications: ReturnType<typeof Fastify>[] = [];
@@ -63,10 +64,15 @@ function createEmptyMultipartPayload() {
   };
 }
 
-function createStorage(options: { storeError?: Error } = {}) {
+function createStorage(
+  options: { previewError?: Error; storeError?: Error } = {},
+) {
   const storedContent: Buffer[] = [];
   const storage = {
     close: vi.fn(),
+    createDocumentPreviewUrl: options.previewError
+      ? vi.fn().mockRejectedValue(options.previewError)
+      : vi.fn().mockResolvedValue("https://signed.example/document"),
     deleteDocument: vi.fn().mockResolvedValue(undefined),
     readDocument: vi.fn().mockResolvedValue(Buffer.from("document")),
     storeDocument: vi.fn(async ({ body }: StoreDocumentInput) => {
@@ -85,15 +91,20 @@ function createStorage(options: { storeError?: Error } = {}) {
 
 function createApplication(options: {
   documentStorage?: DocumentStorage;
+  findFirst?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
   userId: string | null;
 }) {
   const application = Fastify();
   const database = {
     insert: options.insert ?? vi.fn(),
+    query: {
+      uploads: { findFirst: options.findFirst ?? vi.fn() },
+    },
   } as unknown as Database;
   const documentStorage = options.documentStorage ?? createStorage().storage;
 
+  registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", database);
   registerAuthenticationGuard(
@@ -320,5 +331,119 @@ describe("POST /api/uploads/documents", () => {
     expect(response.json()).toEqual({ error: "Internal server error" });
     expect(response.body).not.toContain("database secret");
     expect(storageFixture.storage.deleteDocument).toHaveBeenCalledOnce();
+  });
+});
+
+describe("GET /api/uploads/documents/:id/preview", () => {
+  const uploadId = "44444444-4444-4444-8444-444444444444";
+
+  it("returns a short-lived URL for the authenticated user's document", async () => {
+    const findFirst = vi.fn().mockResolvedValue({
+      mimeType: "application/pdf",
+      s3ObjectKey: `${userId}/documents/${uploadId}`,
+    });
+    const storageFixture = createStorage();
+    const application = createApplication({
+      documentStorage: storageFixture.storage,
+      findFirst,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/documents/${uploadId}/preview`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      url: "https://signed.example/document",
+      contentType: "application/pdf",
+      expiresAt: expect.any(String),
+    });
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(storageFixture.storage.createDocumentPreviewUrl).toHaveBeenCalledWith(
+      `${userId}/documents/${uploadId}`,
+      300,
+    );
+  });
+
+  it("does not expose another user's document", async () => {
+    const storageFixture = createStorage();
+    const application = createApplication({
+      documentStorage: storageFixture.storage,
+      findFirst: vi.fn().mockResolvedValue(undefined),
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/documents/${uploadId}/preview`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "Document upload not found" });
+    expect(
+      storageFixture.storage.createDocumentPreviewUrl,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("requires authentication", async () => {
+    const storageFixture = createStorage();
+    const application = createApplication({
+      documentStorage: storageFixture.storage,
+      userId: null,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/documents/${uploadId}/preview`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(
+      storageFixture.storage.createDocumentPreviewUrl,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("validates the upload identifier", async () => {
+    const storageFixture = createStorage();
+    const application = createApplication({
+      documentStorage: storageFixture.storage,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/uploads/documents/not-a-uuid/preview",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(
+      storageFixture.storage.createDocumentPreviewUrl,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe error when S3 cannot sign the preview", async () => {
+    const findFirst = vi.fn().mockResolvedValue({
+      mimeType: "image/jpeg",
+      s3ObjectKey: `${userId}/documents/${uploadId}`,
+    });
+    const storageFixture = createStorage({
+      previewError: new Error("AWS credential secret"),
+    });
+    const application = createApplication({
+      documentStorage: storageFixture.storage,
+      findFirst,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/documents/${uploadId}/preview`,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: "Internal server error" });
+    expect(response.body).not.toContain("AWS credential secret");
   });
 });

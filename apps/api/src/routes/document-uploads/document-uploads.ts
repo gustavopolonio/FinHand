@@ -1,12 +1,15 @@
 import fastifyMultipart from "@fastify/multipart";
+import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
 import { InputError } from "../../errors/application-errors.js";
+import { getDocumentPreviewForUser } from "../../services/document-previews.js";
 import {
   maximumDocumentUploadBytes,
   uploadDocumentForUser,
 } from "../../services/document-uploads.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
+import { documentUploadParamsSchema } from "../../validation/document-upload-schemas.js";
 
 interface DocumentUploadRoutesOptions {
   documentStorage: DocumentStorage;
@@ -26,6 +29,22 @@ export async function documentUploadRoutes(
   });
 
   application.addHook("preHandler", application.requireAuthentication);
+  const uploadsApplication = application.withTypeProvider<ZodTypeProvider>();
+
+  uploadsApplication.get(
+    "/api/uploads/documents/:id/preview",
+    { schema: { params: documentUploadParamsSchema } },
+    async (request, reply) => {
+      const preview = await getDocumentPreviewForUser({
+        database: application.database,
+        documentStorage,
+        uploadId: request.params.id,
+        userId: request.authenticatedUserId,
+      });
+
+      return reply.header("Cache-Control", "private, no-store").send(preview);
+    },
+  );
 
   application.post("/api/uploads/documents", async (request, reply) => {
     if (!request.isMultipart()) {
