@@ -51,8 +51,9 @@
 - [x] Validate and normalize extracted amounts, currency, dates, descriptions, and counterparties
 - [x] Build the transaction candidate review and editing interface
 - [x] Display private source documents during candidate review using short-lived S3 presigned URLs
-- [ ] Require explicit user confirmation before creating an authoritative transaction
-- [ ] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
+- [x] Require explicit user confirmation before creating an authoritative transaction
+- [x] Store confirmed transactions with `document` origin and preserve their source-candidate relationship
+- [ ] Let users discard pending transaction candidates by marking them as `rejected`
 - [ ] Implement retry, rejection, expiration, and abandoned-upload cleanup flows
 - [ ] Build a document-processing History tab for successful and failed imports
 - [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
