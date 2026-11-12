@@ -2,10 +2,12 @@ import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
 import {
+  confirmTransactionCandidateForUser,
   getTransactionCandidateReviewForUser,
   updateTransactionCandidateForUser,
 } from "../../services/transaction-candidates.js";
 import {
+  confirmTransactionCandidateBodySchema,
   listTransactionCandidatesQuerySchema,
   transactionCandidateParamsSchema,
   updateTransactionCandidateBodySchema,
@@ -48,6 +50,26 @@ export async function transactionCandidateRoutes(
       );
 
       return { candidate };
+    },
+  );
+
+  candidatesApplication.post(
+    "/api/transaction-candidates/:id/confirm",
+    {
+      schema: {
+        params: transactionCandidateParamsSchema,
+        body: confirmTransactionCandidateBodySchema,
+      },
+    },
+    async (request, reply) => {
+      const result = await confirmTransactionCandidateForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+        request.body,
+      );
+
+      return reply.status(result.created ? 201 : 200).send(result);
     },
   );
 }

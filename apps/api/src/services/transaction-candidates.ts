@@ -3,8 +3,10 @@ import { and, eq } from "drizzle-orm";
 import type { Database } from "../db/index.js";
 import {
   transactionCandidates,
+  transactions,
   type TransactionCandidateExtractionMetadata,
   type TransactionCandidateStatus,
+  type TransactionOrigin,
   type TransactionType,
   type UploadStatus,
 } from "../db/schema/index.js";
@@ -13,7 +15,10 @@ import {
   InputError,
   NotFoundError,
 } from "../errors/application-errors.js";
-import type { UpdateTransactionCandidateInput } from "../validation/transaction-candidate-schemas.js";
+import type {
+  ConfirmTransactionCandidateInput,
+  UpdateTransactionCandidateInput,
+} from "../validation/transaction-candidate-schemas.js";
 
 const maximumPostgresBigInt = 9_223_372_036_854_775_807n;
 const supportedCurrencies = new Set(Intl.supportedValuesOf("currency"));
@@ -33,6 +38,22 @@ interface TransactionCandidateRecord {
   notes: string | null;
   extractionMetadata: TransactionCandidateExtractionMetadata | null;
   status: TransactionCandidateStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface AuthoritativeTransactionRecord {
+  id: string;
+  accountId: string;
+  categoryId: string | null;
+  type: TransactionType;
+  amountMinor: bigint;
+  currencyCode: string;
+  occurredOn: string;
+  description: string;
+  counterparty: string | null;
+  notes: string | null;
+  origin: TransactionOrigin;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +87,28 @@ export interface TransactionCandidateReview {
   candidates: TransactionCandidateListItem[];
 }
 
+export interface ConfirmedTransaction {
+  id: string;
+  accountId: string;
+  categoryId: string | null;
+  type: TransactionType;
+  amountMinor: string;
+  currencyCode: string;
+  occurredOn: string;
+  description: string;
+  counterparty: string | null;
+  notes: string | null;
+  origin: TransactionOrigin;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfirmTransactionCandidateResult {
+  candidate: TransactionCandidateListItem;
+  transaction: ConfirmedTransaction;
+  created: boolean;
+}
+
 function serializeCandidate(
   candidate: TransactionCandidateRecord,
 ): TransactionCandidateListItem {
@@ -74,6 +117,17 @@ function serializeCandidate(
     amountMinor: candidate.amountMinor?.toString() ?? null,
     createdAt: candidate.createdAt.toISOString(),
     updatedAt: candidate.updatedAt.toISOString(),
+  };
+}
+
+function serializeTransaction(
+  transaction: AuthoritativeTransactionRecord,
+): ConfirmedTransaction {
+  return {
+    ...transaction,
+    amountMinor: transaction.amountMinor.toString(),
+    createdAt: transaction.createdAt.toISOString(),
+    updatedAt: transaction.updatedAt.toISOString(),
   };
 }
 
@@ -169,6 +223,7 @@ export async function getTransactionCandidateReviewForUser(
         and(
           eq(candidate.uploadId, uploadId),
           eq(candidate.userId, userId),
+          eq(candidate.status, "pending"),
         ),
       orderBy: (candidate, { asc }) => [
         asc(candidate.position),
@@ -382,4 +437,261 @@ export async function updateTransactionCandidateForUser(
   }
 
   return serializeCandidate(updatedCandidate);
+}
+
+export async function confirmTransactionCandidateForUser(
+  database: Database,
+  userId: string,
+  candidateId: string,
+  input: ConfirmTransactionCandidateInput,
+  now: () => Date = () => new Date(),
+): Promise<ConfirmTransactionCandidateResult> {
+  return database.transaction(async (transaction) => {
+    const [candidate] = await transaction
+      .select({
+        id: transactionCandidates.id,
+        uploadId: transactionCandidates.uploadId,
+        position: transactionCandidates.position,
+        accountId: transactionCandidates.accountId,
+        categoryId: transactionCandidates.categoryId,
+        type: transactionCandidates.type,
+        amountMinor: transactionCandidates.amountMinor,
+        currencyCode: transactionCandidates.currencyCode,
+        occurredOn: transactionCandidates.occurredOn,
+        description: transactionCandidates.description,
+        counterparty: transactionCandidates.counterparty,
+        notes: transactionCandidates.notes,
+        extractionMetadata: transactionCandidates.extractionMetadata,
+        status: transactionCandidates.status,
+        transactionId: transactionCandidates.transactionId,
+        createdAt: transactionCandidates.createdAt,
+        updatedAt: transactionCandidates.updatedAt,
+      })
+      .from(transactionCandidates)
+      .where(
+        and(
+          eq(transactionCandidates.id, candidateId),
+          eq(transactionCandidates.userId, userId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+
+    if (!candidate) {
+      throw new NotFoundError("Transaction candidate not found");
+    }
+
+    if (candidate.status === "confirmed") {
+      if (!candidate.transactionId) {
+        throw new Error(
+          "Confirmed transaction candidate has no transaction reference.",
+        );
+      }
+
+      const existingTransaction =
+        await transaction.query.transactions.findFirst({
+          columns: {
+            id: true,
+            accountId: true,
+            categoryId: true,
+            type: true,
+            amountMinor: true,
+            currencyCode: true,
+            occurredOn: true,
+            description: true,
+            counterparty: true,
+            notes: true,
+            origin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          where: (candidateTransaction, { and, eq }) =>
+            and(
+              eq(candidateTransaction.id, candidate.transactionId!),
+              eq(candidateTransaction.userId, userId),
+            ),
+        });
+
+      if (!existingTransaction) {
+        throw new Error(
+          "Confirmed transaction candidate references a missing transaction.",
+        );
+      }
+
+      return {
+        candidate: serializeCandidate(candidate),
+        transaction: serializeTransaction(existingTransaction),
+        created: false,
+      };
+    }
+
+    if (candidate.status === "rejected") {
+      throw new ConflictError(
+        "Rejected transaction candidates cannot be confirmed.",
+      );
+    }
+
+    const amountMinor = parseCandidateAmount(input.amountMinor);
+    const currencyCode = normalizeCandidateCurrency(input.currencyCode);
+    const description = normalizeCandidateText(input.description);
+    const counterparty = normalizeCandidateText(input.counterparty ?? null);
+    const notes = normalizeCandidateText(input.notes ?? null);
+
+    if (amountMinor === null) {
+      throw new InputError("Transaction candidate amount is required.");
+    }
+
+    if (currencyCode === null) {
+      throw new InputError("Transaction candidate currency is required.");
+    }
+
+    if (description === null) {
+      throw new InputError("Transaction candidate description is required.");
+    }
+
+    const account = await transaction.query.accounts.findFirst({
+      columns: { id: true, currencyCode: true, archivedAt: true },
+      where: (candidateAccount, { and, eq }) =>
+        and(
+          eq(candidateAccount.id, input.accountId),
+          eq(candidateAccount.userId, userId),
+        ),
+    });
+
+    if (!account) {
+      throw new NotFoundError("Account not found");
+    }
+
+    if (account.archivedAt) {
+      throw new ConflictError(
+        "Archived accounts cannot receive new transactions.",
+      );
+    }
+
+    if (currencyCode !== account.currencyCode) {
+      throw new InputError(
+        "Transaction candidate currency must match the selected account currency.",
+      );
+    }
+
+    const categoryId = input.categoryId ?? null;
+
+    if (categoryId !== null) {
+      const category = await transaction.query.categories.findFirst({
+        columns: { id: true, type: true, archivedAt: true },
+        where: (candidateCategory, { and, eq }) =>
+          and(
+            eq(candidateCategory.id, categoryId),
+            eq(candidateCategory.userId, userId),
+          ),
+      });
+
+      if (!category) {
+        throw new NotFoundError("Category not found");
+      }
+
+      if (category.archivedAt) {
+        throw new ConflictError(
+          "Archived categories cannot receive new transactions.",
+        );
+      }
+
+      if (category.type !== input.type) {
+        throw new InputError(
+          "Transaction candidate type must match the selected category type.",
+        );
+      }
+    }
+
+    const reviewedAt = now();
+    const [createdTransaction] = await transaction
+      .insert(transactions)
+      .values({
+        userId,
+        accountId: account.id,
+        categoryId,
+        type: input.type,
+        amountMinor,
+        currencyCode,
+        occurredOn: input.occurredOn,
+        description,
+        counterparty,
+        notes,
+        origin: "document",
+      })
+      .returning({
+        id: transactions.id,
+        accountId: transactions.accountId,
+        categoryId: transactions.categoryId,
+        type: transactions.type,
+        amountMinor: transactions.amountMinor,
+        currencyCode: transactions.currencyCode,
+        occurredOn: transactions.occurredOn,
+        description: transactions.description,
+        counterparty: transactions.counterparty,
+        notes: transactions.notes,
+        origin: transactions.origin,
+        createdAt: transactions.createdAt,
+        updatedAt: transactions.updatedAt,
+      });
+
+    if (!createdTransaction) {
+      throw new Error("Transaction confirmation did not return a record.");
+    }
+
+    const [confirmedCandidate] = await transaction
+      .update(transactionCandidates)
+      .set({
+        accountId: account.id,
+        categoryId,
+        type: input.type,
+        amountMinor,
+        currencyCode,
+        occurredOn: input.occurredOn,
+        description,
+        counterparty,
+        notes,
+        status: "confirmed",
+        reviewedAt,
+        transactionId: createdTransaction.id,
+        updatedAt: reviewedAt,
+      })
+      .where(
+        and(
+          eq(transactionCandidates.id, candidateId),
+          eq(transactionCandidates.userId, userId),
+          eq(transactionCandidates.status, "pending"),
+        ),
+      )
+      .returning({
+        id: transactionCandidates.id,
+        uploadId: transactionCandidates.uploadId,
+        position: transactionCandidates.position,
+        accountId: transactionCandidates.accountId,
+        categoryId: transactionCandidates.categoryId,
+        type: transactionCandidates.type,
+        amountMinor: transactionCandidates.amountMinor,
+        currencyCode: transactionCandidates.currencyCode,
+        occurredOn: transactionCandidates.occurredOn,
+        description: transactionCandidates.description,
+        counterparty: transactionCandidates.counterparty,
+        notes: transactionCandidates.notes,
+        extractionMetadata: transactionCandidates.extractionMetadata,
+        status: transactionCandidates.status,
+        createdAt: transactionCandidates.createdAt,
+        updatedAt: transactionCandidates.updatedAt,
+      });
+
+    if (!confirmedCandidate) {
+      throw new ConflictError(
+        "Transaction candidate is no longer available for confirmation.",
+      );
+    }
+
+    return {
+      candidate: serializeCandidate(confirmedCandidate),
+      transaction: serializeTransaction(createdTransaction),
+      created: true,
+    };
+  });
 }

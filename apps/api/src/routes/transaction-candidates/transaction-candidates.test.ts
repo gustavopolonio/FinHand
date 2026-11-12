@@ -9,11 +9,13 @@ import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { transactionCandidateRoutes } from "./transaction-candidates.js";
 
 const candidateMocks = vi.hoisted(() => ({
+  confirm: vi.fn(),
   getReview: vi.fn(),
   update: vi.fn(),
 }));
 
 vi.mock("../../services/transaction-candidates.js", () => ({
+  confirmTransactionCandidateForUser: candidateMocks.confirm,
   getTransactionCandidateReviewForUser: candidateMocks.getReview,
   updateTransactionCandidateForUser: candidateMocks.update,
 }));
@@ -39,6 +41,21 @@ const candidate = {
   status: "pending",
   createdAt: "2026-11-10T12:00:00.000Z",
   updatedAt: "2026-11-10T12:00:00.000Z",
+};
+const transaction = {
+  id: "66666666-6666-4666-8666-666666666666",
+  accountId: "44444444-4444-4444-8444-444444444444",
+  categoryId: null,
+  type: "expense",
+  amountMinor: "5500",
+  currencyCode: "BRL",
+  occurredOn: "2026-11-11",
+  description: "Corrected groceries",
+  counterparty: "Corner market",
+  notes: null,
+  origin: "document",
+  createdAt: "2026-11-11T12:00:00.000Z",
+  updatedAt: "2026-11-11T12:00:00.000Z",
 };
 
 function createAuthentication(authenticatedUserId: string | null) {
@@ -73,6 +90,11 @@ function createApplication(authenticatedUserId: string | null) {
 }
 
 beforeEach(() => {
+  candidateMocks.confirm.mockResolvedValue({
+    candidate: { ...candidate, status: "confirmed" },
+    transaction,
+    created: true,
+  });
   candidateMocks.getReview.mockResolvedValue({
     upload: {
       id: uploadId,
@@ -197,5 +219,104 @@ describe("PATCH /api/transaction-candidates/:id", () => {
 
     expect(response.statusCode).toBe(400);
     expect(candidateMocks.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/transaction-candidates/:id/confirm", () => {
+  const payload = {
+    accountId: "44444444-4444-4444-8444-444444444444",
+    categoryId: null,
+    type: "expense",
+    amountMinor: "5500",
+    currencyCode: "BRL",
+    occurredOn: "2026-11-11",
+    description: "Corrected groceries",
+    counterparty: "Corner market",
+    notes: null,
+  };
+
+  it("creates an authoritative transaction from the reviewed candidate", async () => {
+    const application = createApplication(userId);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${candidateId}/confirm`,
+      payload,
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      candidate: { id: candidateId, status: "confirmed" },
+      transaction: { id: transaction.id, origin: "document" },
+      created: true,
+    });
+    expect(candidateMocks.confirm).toHaveBeenCalledWith(
+      expect.anything(),
+      userId,
+      candidateId,
+      payload,
+    );
+  });
+
+  it("returns the existing transaction for an idempotent replay", async () => {
+    candidateMocks.confirm.mockResolvedValueOnce({
+      candidate: { ...candidate, status: "confirmed" },
+      transaction,
+      created: false,
+    });
+    const application = createApplication(userId);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${candidateId}/confirm`,
+      payload,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ created: false });
+  });
+
+  it("requires authentication", async () => {
+    const application = createApplication(null);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${candidateId}/confirm`,
+      payload,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(candidateMocks.confirm).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "invalid candidate identifier", id: "not-a-uuid", body: payload },
+    {
+      name: "missing account",
+      id: candidateId,
+      body: { ...payload, accountId: undefined },
+    },
+    {
+      name: "missing amount",
+      id: candidateId,
+      body: { ...payload, amountMinor: undefined },
+    },
+    {
+      name: "blank description",
+      id: candidateId,
+      body: { ...payload, description: "" },
+    },
+    {
+      name: "unknown field",
+      id: candidateId,
+      body: { ...payload, status: "confirmed" },
+    },
+  ])("rejects $name", async ({ id, body }) => {
+    const application = createApplication(userId);
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/transaction-candidates/${id}/confirm`,
+      payload: body,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(candidateMocks.confirm).not.toHaveBeenCalled();
   });
 });
