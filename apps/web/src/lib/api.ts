@@ -218,6 +218,24 @@ export interface UpdateTransactionCandidateInput {
   notes?: string | null;
 }
 
+export interface ConfirmTransactionCandidateInput {
+  accountId: string;
+  categoryId?: string | null;
+  type: TransactionType;
+  amountMinor: string;
+  currencyCode: string;
+  occurredOn: string;
+  description: string;
+  counterparty?: string | null;
+  notes?: string | null;
+}
+
+export interface ConfirmTransactionCandidateResult {
+  candidate: TransactionCandidate;
+  transaction: Transaction;
+  created: boolean;
+}
+
 export interface CreateTransactionInput {
   accountId: string;
   categoryId?: string | null;
@@ -572,6 +590,16 @@ export async function updateTransactionCandidate(
   );
 
   return response.candidate;
+}
+
+export function confirmTransactionCandidate(
+  candidateId: string,
+  input: ConfirmTransactionCandidateInput,
+) {
+  return request<ConfirmTransactionCandidateResult>(
+    `/api/transaction-candidates/${candidateId}/confirm`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
 }
 
 export function getFinancialSummary(

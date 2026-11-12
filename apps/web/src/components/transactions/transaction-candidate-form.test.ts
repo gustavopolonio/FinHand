@@ -5,6 +5,7 @@ import type { Account, TransactionCandidate } from "@/lib/api";
 import {
   candidateInputFromForm,
   formValuesFromCandidate,
+  validateCandidateForConfirmation,
 } from "./transaction-candidate-form";
 
 const account: Account = {
@@ -111,5 +112,80 @@ describe("transaction candidate form", () => {
     expect(() =>
       candidateInputFromForm({ ...values, amount: "0.00" }, []),
     ).toThrow("Transaction candidate amount must be greater than zero.");
+  });
+
+  it("builds a complete confirmation input from valid fields", () => {
+    const values = {
+      ...formValuesFromCandidate(candidate),
+      accountId: account.id,
+      categoryId: "",
+      description: "  Groceries  ",
+    };
+
+    expect(validateCandidateForConfirmation(values, [account])).toEqual({
+      isValid: true,
+      input: {
+        accountId: account.id,
+        categoryId: null,
+        type: "expense",
+        amountMinor: "4290",
+        currencyCode: "BRL",
+        occurredOn: "2026-11-10",
+        description: "Groceries",
+        counterparty: "Market",
+        notes: null,
+      },
+      errors: {},
+    });
+  });
+
+  it("returns field errors without producing a confirmation request", () => {
+    expect(
+      validateCandidateForConfirmation(
+        {
+          accountId: "",
+          categoryId: "",
+          type: "",
+          amount: "0.00",
+          currencyCode: "",
+          occurredOn: "",
+          description: "   ",
+          counterparty: "",
+          notes: "",
+        },
+        [account],
+      ),
+    ).toEqual({
+      isValid: false,
+      input: null,
+      errors: {
+        accountId: "Select an account.",
+        type: "Select income or expense.",
+        amount: "Amount must be greater than zero.",
+        currencyCode: "Enter a valid three-letter currency.",
+        occurredOn: "Select a date.",
+        description: "Enter a description.",
+      },
+    });
+  });
+
+  it("rejects archived accounts and unreal calendar dates", () => {
+    const values = {
+      ...formValuesFromCandidate(candidate),
+      accountId: account.id,
+      occurredOn: "2026-02-30",
+    };
+
+    expect(
+      validateCandidateForConfirmation(values, [
+        { ...account, archivedAt: "2026-11-12T12:00:00.000Z" },
+      ]),
+    ).toMatchObject({
+      isValid: false,
+      errors: {
+        accountId: "Select an active account.",
+        occurredOn: "Select a valid date.",
+      },
+    });
   });
 });

@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   TransactionCandidate,
   TransactionCandidateReview,
   UpdateTransactionCandidateInput,
@@ -26,6 +28,10 @@ interface TransactionCandidateReviewPanelProps {
   accounts: Account[];
   categories: Category[];
   error: string | null;
+  onConfirm: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
   onClose: () => void;
   onGetReview: (
     uploadId: string,
@@ -57,6 +63,7 @@ export function TransactionCandidateReviewPanel({
   accounts,
   categories,
   error,
+  onConfirm,
   onClose,
   onGetReview,
   onReset,
@@ -117,6 +124,26 @@ export function TransactionCandidateReviewPanel({
     );
   }
 
+  function removeConfirmedCandidate(
+    result: ConfirmTransactionCandidateResult,
+  ) {
+    if (!review) return;
+
+    const remainingCandidates = review.candidates.filter(
+      (item) => item.id !== result.candidate.id,
+    );
+
+    if (remainingCandidates.length === 0) {
+      onClose();
+      return;
+    }
+
+    setReview({ ...review, candidates: remainingCandidates });
+    setActiveIndex((index) =>
+      Math.min(index, remainingCandidates.length - 1),
+    );
+  }
+
   if (review?.upload.status === "processed" && candidate) {
     return (
       <div
@@ -170,6 +197,8 @@ export function TransactionCandidateReviewPanel({
             categories={categories}
             error={error}
             key={candidate.id}
+            onConfirm={onConfirm}
+            onConfirmed={removeConfirmedCandidate}
             onClose={onClose}
             onSave={onUpdate}
             onSaved={replaceCandidate}

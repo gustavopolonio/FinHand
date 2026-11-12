@@ -8,6 +8,8 @@ import {
   ApiError,
   type Account,
   type Category,
+  type ConfirmTransactionCandidateInput,
+  type ConfirmTransactionCandidateResult,
   type DocumentCaptureSession,
   type DocumentCaptureSessionProgress,
   type DocumentReview,
@@ -17,6 +19,7 @@ import {
   type TransactionCandidateReview,
   type TransactionFilters as TransactionFilterValues,
   cancelDocumentCaptureSession,
+  confirmTransactionCandidate,
   createDocumentCaptureSession,
   createTransaction,
   deleteTransaction,
@@ -40,6 +43,7 @@ import {
 } from "./document-failure-toasts";
 import { DocumentReviewsSection } from "./document-reviews-section";
 import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
+import { TransactionConfirmationToast } from "./transaction-confirmation-toast";
 import { TransactionDeleteModal } from "./transaction-delete-modal";
 import { TransactionDrawer } from "./transaction-drawer";
 import { TransactionFilters } from "./transaction-filters";
@@ -87,6 +91,9 @@ export function TransactionsPanel() {
   const [isLoadingReferences, setIsLoadingReferences] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [isConfirmingCandidate, setIsConfirmingCandidate] = useState(false);
+  const [confirmedTransactionDescription, setConfirmedTransactionDescription] =
+    useState<string | null>(null);
   const [isManagingCaptureSession, setIsManagingCaptureSession] =
     useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -390,6 +397,27 @@ export function TransactionsPanel() {
     [reportError],
   );
 
+  async function confirmCandidate(
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ): Promise<ConfirmTransactionCandidateResult | null> {
+    setIsConfirmingCandidate(true);
+    setError(null);
+
+    try {
+      const result = await confirmTransactionCandidate(candidateId, input);
+      setConfirmedTransactionDescription(result.transaction.description);
+      setDocumentReviewRefreshKey((key) => key + 1);
+      await refreshAfterChange();
+      return result;
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    } finally {
+      setIsConfirmingCandidate(false);
+    }
+  }
+
   function showPreviousPage() {
     setIsLoadingTransactions(true);
     setQuery((currentQuery) => ({
@@ -517,7 +545,9 @@ export function TransactionsPanel() {
           categories={categories}
           error={error}
           isManagingCaptureSession={isManagingCaptureSession}
-          isSubmitting={busyTransactionId !== null}
+          isSubmitting={
+            busyTransactionId !== null || isConfirmingCandidate
+          }
           isUploadingDocument={isUploadingDocument}
           initialCreationMode={
             editor.kind === "create" ? editor.initialMode : undefined
@@ -532,6 +562,7 @@ export function TransactionsPanel() {
             setDocumentReviewRefreshKey((key) => key + 1);
           }}
           onCreateCaptureSession={startCaptureSession}
+          onConfirmCandidate={confirmCandidate}
           onGetCaptureSessionProgress={readCaptureSessionProgress}
           onGetCandidateReview={readCandidateReview}
           onSubmit={submitEditor}
@@ -544,7 +575,7 @@ export function TransactionsPanel() {
       {reviewUploadId ? (
         <WorkspaceModal
           description="Review and correct the transaction details extracted from your document."
-          isBusy={false}
+          isBusy={isConfirmingCandidate}
           onClose={() => {
             setReviewUploadId(null);
             setDocumentReviewRefreshKey((key) => key + 1);
@@ -556,6 +587,7 @@ export function TransactionsPanel() {
             accounts={accounts.filter((account) => !account.archivedAt)}
             categories={categories.filter((category) => !category.archivedAt)}
             error={error}
+            onConfirm={confirmCandidate}
             onClose={() => {
               setReviewUploadId(null);
               setDocumentReviewRefreshKey((key) => key + 1);
@@ -605,6 +637,10 @@ export function TransactionsPanel() {
           setReviewUploadId(null);
           setEditor({ kind: "create", initialMode: "document" });
         }}
+      />
+      <TransactionConfirmationToast
+        description={confirmedTransactionDescription}
+        onDismiss={() => setConfirmedTransactionDescription(null)}
       />
     </div>
   );

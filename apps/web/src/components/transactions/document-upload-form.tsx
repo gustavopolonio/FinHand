@@ -7,6 +7,8 @@ import { DocumentFilePicker } from "@/components/documents/document-file-picker"
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   DocumentUpload,
   TransactionCandidate,
   TransactionCandidateReview,
@@ -23,6 +25,10 @@ interface DocumentUploadFormProps {
   isUploading: boolean;
   onClearError: () => void;
   onClose: () => void;
+  onConfirmCandidate: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
   onGetReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
@@ -40,6 +46,7 @@ export function DocumentUploadForm({
   isUploading,
   onClearError,
   onClose,
+  onConfirmCandidate,
   onGetReview,
   onUpdateCandidate,
   onUpload,
@@ -67,6 +74,7 @@ export function DocumentUploadForm({
         accounts={accounts}
         categories={categories}
         error={error}
+        onConfirm={onConfirmCandidate}
         onClose={onClose}
         onGetReview={onGetReview}
         onReset={() => {

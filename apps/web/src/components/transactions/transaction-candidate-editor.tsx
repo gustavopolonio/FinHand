@@ -1,7 +1,7 @@
 "use client";
 
 import { Save } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import {
   accountOptions,
@@ -10,6 +10,8 @@ import {
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   TransactionCandidate,
   TransactionType,
   UpdateTransactionCandidateInput,
@@ -17,9 +19,13 @@ import type {
 
 import { Button } from "../ui/button";
 import { Select, type SelectOption } from "../ui/select";
+import { HoldToConfirmButton } from "./hold-to-confirm-button";
 import {
   candidateInputFromForm,
   formValuesFromCandidate,
+  type TransactionCandidateConfirmationErrors,
+  type TransactionCandidateConfirmationField,
+  validateCandidateForConfirmation,
 } from "./transaction-candidate-form";
 
 interface TransactionCandidateEditorProps {
@@ -27,6 +33,11 @@ interface TransactionCandidateEditorProps {
   candidate: TransactionCandidate;
   categories: Category[];
   error: string | null;
+  onConfirm: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
+  onConfirmed: (result: ConfirmTransactionCandidateResult) => void;
   onClose: () => void;
   onSave: (
     candidateId: string,
@@ -49,16 +60,24 @@ export function TransactionCandidateEditor({
   candidate,
   categories,
   error,
+  onConfirm,
+  onConfirmed,
   onClose,
   onSave,
   onSaved,
 }: TransactionCandidateEditorProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirmationInputRef =
+    useRef<ConfirmTransactionCandidateInput | null>(null);
   const [values, setValues] = useState(() =>
     formValuesFromCandidate(candidate),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [wasSaved, setWasSaved] = useState(false);
+  const [fieldErrors, setFieldErrors] =
+    useState<TransactionCandidateConfirmationErrors>({});
   const activeAccounts = accounts.filter(
     (account) => !account.archivedAt || account.id === values.accountId,
   );
@@ -72,6 +91,30 @@ export function TransactionCandidateEditor({
   );
   const warnings = candidate.extractionMetadata?.warnings ?? [];
 
+  function clearFieldError(field: TransactionCandidateConfirmationField) {
+    setFieldErrors((currentErrors) => {
+      if (!currentErrors[field]) return currentErrors;
+
+      const nextErrors = { ...currentErrors };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  }
+
+  function fieldError(field: TransactionCandidateConfirmationField) {
+    const message = fieldErrors[field];
+    if (!message) return null;
+
+    return (
+      <span
+        className="mt-1.5 block text-xs font-medium text-finhand-expense"
+        id={`candidate-${candidate.id}-${field}-error`}
+      >
+        {message}
+      </span>
+    );
+  }
+
   function changeType(type: TransactionType | "") {
     const selectedCategory = categories.find(
       (category) => category.id === values.categoryId,
@@ -83,6 +126,7 @@ export function TransactionCandidateEditor({
       categoryId:
         type && selectedCategory?.type === type ? values.categoryId : "",
     });
+    clearFieldError("type");
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -111,11 +155,67 @@ export function TransactionCandidateEditor({
     }
   }
 
+  function prepareConfirmation(): boolean {
+    setLocalError(null);
+    setWasSaved(false);
+    const validation = validateCandidateForConfirmation(
+      values,
+      activeAccounts,
+    );
+    setFieldErrors(validation.errors);
+
+    if (!validation.isValid) {
+      confirmationInputRef.current = null;
+      const fieldOrder: TransactionCandidateConfirmationField[] = [
+        "type",
+        "accountId",
+        "amount",
+        "currencyCode",
+        "occurredOn",
+        "description",
+      ];
+      const firstInvalidField = fieldOrder.find(
+        (field) => validation.errors[field],
+      );
+
+      if (firstInvalidField) {
+        setTimeout(() => {
+          const field = formRef.current?.querySelector<HTMLElement>(
+            `[data-candidate-field="${firstInvalidField}"]`,
+          );
+          field
+            ?.querySelector<HTMLElement>("button, input, textarea")
+            ?.focus();
+        }, 0);
+      }
+
+      return false;
+    }
+
+    confirmationInputRef.current = validation.input;
+    return true;
+  }
+
+  async function confirmCandidate() {
+    const input = confirmationInputRef.current;
+    if (!input) return;
+
+    setIsConfirming(true);
+    const result = await onConfirm(candidate.id, input);
+    setIsConfirming(false);
+    confirmationInputRef.current = null;
+
+    if (result) onConfirmed(result);
+  }
+
+  const isBusy = isSaving || isConfirming;
+
   return (
     <form
-      aria-busy={isSaving}
+      aria-busy={isBusy}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
       onSubmit={(event) => void submit(event)}
+      ref={formRef}
     >
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
         {warnings.length > 0 ? (
@@ -132,9 +232,15 @@ export function TransactionCandidateEditor({
         ) : null}
 
         <div className="grid grid-cols-2 gap-4">
-          <label className={labelClassName}>
+          <label className={labelClassName} data-candidate-field="type">
             Type
             <Select
+              ariaDescribedBy={
+                fieldErrors.type
+                  ? `candidate-${candidate.id}-type-error`
+                  : undefined
+              }
+              ariaInvalid={Boolean(fieldErrors.type)}
               ariaLabel="Candidate type"
               className="mt-1.5"
               onValueChange={(type) =>
@@ -145,11 +251,18 @@ export function TransactionCandidateEditor({
               value={values.type}
               variant="soft"
             />
+            {fieldError("type")}
           </label>
 
-          <label className={labelClassName}>
+          <label className={labelClassName} data-candidate-field="accountId">
             Account
             <Select
+              ariaDescribedBy={
+                fieldErrors.accountId
+                  ? `candidate-${candidate.id}-accountId-error`
+                  : undefined
+              }
+              ariaInvalid={Boolean(fieldErrors.accountId)}
               ariaLabel="Candidate account"
               className="mt-1.5"
               onValueChange={(accountId) => {
@@ -161,6 +274,8 @@ export function TransactionCandidateEditor({
                   accountId,
                   currencyCode: account?.currencyCode ?? values.currencyCode,
                 });
+                clearFieldError("accountId");
+                clearFieldError("currencyCode");
               }}
               options={[
                 { label: "Not selected", value: "" },
@@ -170,38 +285,55 @@ export function TransactionCandidateEditor({
               value={values.accountId}
               variant="soft"
             />
+            {fieldError("accountId")}
           </label>
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
-          <label className={labelClassName}>
+          <label className={labelClassName} data-candidate-field="amount">
             Amount
             <input
-              className={controlClassName}
-              inputMode="decimal"
-              onChange={(event) =>
-                setValues({ ...values, amount: event.target.value })
+              aria-describedby={
+                fieldErrors.amount
+                  ? `candidate-${candidate.id}-amount-error`
+                  : undefined
               }
+              aria-invalid={Boolean(fieldErrors.amount)}
+              className={`${controlClassName} ${fieldErrors.amount ? "border-finhand-expense" : ""}`}
+              inputMode="decimal"
+              onChange={(event) => {
+                setValues({ ...values, amount: event.target.value });
+                clearFieldError("amount");
+              }}
               placeholder="0.00"
               value={values.amount}
             />
+            {fieldError("amount")}
           </label>
 
-          <label className={labelClassName}>
+          <label className={labelClassName} data-candidate-field="currencyCode">
             Currency
             <input
-              className={`${controlClassName} uppercase`}
+              aria-describedby={
+                fieldErrors.currencyCode
+                  ? `candidate-${candidate.id}-currencyCode-error`
+                  : undefined
+              }
+              aria-invalid={Boolean(fieldErrors.currencyCode)}
+              className={`${controlClassName} uppercase ${fieldErrors.currencyCode ? "border-finhand-expense" : ""}`}
               disabled={Boolean(selectedAccount)}
               maxLength={3}
-              onChange={(event) =>
+              onChange={(event) => {
                 setValues({
                   ...values,
                   currencyCode: event.target.value.toUpperCase(),
-                })
-              }
+                });
+                clearFieldError("currencyCode");
+              }}
               placeholder="BRL"
               value={selectedAccount?.currencyCode ?? values.currencyCode}
             />
+            {fieldError("currencyCode")}
           </label>
         </div>
 
@@ -221,30 +353,49 @@ export function TransactionCandidateEditor({
             />
           </label>
 
-          <label className={labelClassName}>
+          <label className={labelClassName} data-candidate-field="occurredOn">
             Date
             <input
-              className={controlClassName}
-              onChange={(event) =>
-                setValues({ ...values, occurredOn: event.target.value })
+              aria-describedby={
+                fieldErrors.occurredOn
+                  ? `candidate-${candidate.id}-occurredOn-error`
+                  : undefined
               }
+              aria-invalid={Boolean(fieldErrors.occurredOn)}
+              className={`${controlClassName} ${fieldErrors.occurredOn ? "border-finhand-expense" : ""}`}
+              onChange={(event) => {
+                setValues({ ...values, occurredOn: event.target.value });
+                clearFieldError("occurredOn");
+              }}
               type="date"
               value={values.occurredOn}
             />
+            {fieldError("occurredOn")}
           </label>
         </div>
 
-        <label className={`block ${labelClassName}`}>
+        <label
+          className={`block ${labelClassName}`}
+          data-candidate-field="description"
+        >
           Description
           <input
-            className={controlClassName}
-            maxLength={200}
-            onChange={(event) =>
-              setValues({ ...values, description: event.target.value })
+            aria-describedby={
+              fieldErrors.description
+                ? `candidate-${candidate.id}-description-error`
+                : undefined
             }
+            aria-invalid={Boolean(fieldErrors.description)}
+            className={`${controlClassName} ${fieldErrors.description ? "border-finhand-expense" : ""}`}
+            maxLength={200}
+            onChange={(event) => {
+              setValues({ ...values, description: event.target.value });
+              clearFieldError("description");
+            }}
             placeholder="What was this transaction for?"
             value={values.description}
           />
+          {fieldError("description")}
         </label>
 
         <label className={`block ${labelClassName}`}>
@@ -300,16 +451,22 @@ export function TransactionCandidateEditor({
       <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
         <Button
           className="rounded-xl!"
-          disabled={isSaving}
+          disabled={isBusy}
           onClick={onClose}
           variant="ghost"
         >
           Close
         </Button>
-        <Button className="rounded-xl!" disabled={isSaving} type="submit">
+        <Button className="rounded-xl!" disabled={isBusy} type="submit">
           <Save aria-hidden="true" className="size-4" />
           {isSaving ? "Saving…" : "Save draft"}
         </Button>
+        <HoldToConfirmButton
+          disabled={isSaving}
+          isConfirming={isConfirming}
+          onBeforeStart={prepareConfirmation}
+          onConfirm={confirmCandidate}
+        />
       </div>
     </form>
   );

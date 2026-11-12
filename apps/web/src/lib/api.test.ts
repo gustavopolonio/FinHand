@@ -7,6 +7,7 @@ import {
   type DocumentReview,
   type TransactionCandidate,
   cancelDocumentCaptureSession,
+  confirmTransactionCandidate,
   createDocumentCaptureSession,
   type Transaction,
   archiveAccount,
@@ -570,6 +571,38 @@ describe("transaction candidates API", () => {
       `http://localhost:3001/api/transaction-candidates/${candidate.id}`,
       expect.objectContaining({
         method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("confirms a candidate and creates its document transaction", async () => {
+    const input = {
+      accountId: account.id,
+      categoryId: category.id,
+      type: "expense" as const,
+      amountMinor: "4290",
+      currencyCode: "BRL",
+      occurredOn: "2026-11-10",
+      description: "Groceries",
+      counterparty: "Market",
+      notes: null,
+    };
+    const result = {
+      candidate: { ...candidate, status: "confirmed" as const },
+      transaction: { ...transaction, origin: "document" as const },
+      created: true,
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(result));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      confirmTransactionCandidate(candidate.id, input),
+    ).resolves.toEqual(result);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transaction-candidates/${candidate.id}/confirm`,
+      expect.objectContaining({
+        method: "POST",
         body: JSON.stringify(input),
       }),
     );

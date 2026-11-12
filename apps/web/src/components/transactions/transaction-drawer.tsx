@@ -6,6 +6,8 @@ import { type FormEvent, useState } from "react";
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   DocumentCaptureSession,
   DocumentCaptureSessionProgress,
   DocumentUpload,
@@ -43,6 +45,10 @@ interface TransactionDrawerProps {
   onCancelCaptureSession: (sessionId: string) => Promise<void>;
   onClearError: () => void;
   onClose: () => void;
+  onConfirmCandidate: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
   onCreateCaptureSession: () => Promise<DocumentCaptureSession | null>;
   onGetCaptureSessionProgress: (
     sessionId: string,
@@ -70,6 +76,7 @@ export function TransactionDrawer({
   onCancelCaptureSession,
   onClearError,
   onClose,
+  onConfirmCandidate,
   onCreateCaptureSession,
   onGetCaptureSessionProgress,
   onGetCandidateReview,
@@ -153,6 +160,7 @@ export function TransactionDrawer({
           isUploading={isUploadingDocument}
           onClearError={onClearError}
           onClose={onClose}
+          onConfirmCandidate={onConfirmCandidate}
           onGetReview={onGetCandidateReview}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
@@ -165,6 +173,7 @@ export function TransactionDrawer({
           isUploading={isUploadingDocument}
           onClearError={onClearError}
           onClose={onClose}
+          onConfirmCandidate={onConfirmCandidate}
           onGetReview={onGetCandidateReview}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
@@ -178,6 +187,7 @@ export function TransactionDrawer({
           onCancel={onCancelCaptureSession}
           onClearError={onClearError}
           onClose={onClose}
+          onConfirmCandidate={onConfirmCandidate}
           onCreate={onCreateCaptureSession}
           onGetProgress={onGetCaptureSessionProgress}
           onGetReview={onGetCandidateReview}

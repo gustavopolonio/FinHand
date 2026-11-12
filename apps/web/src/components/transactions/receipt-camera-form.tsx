@@ -7,6 +7,8 @@ import { ReceiptCameraPicker } from "@/components/documents/receipt-camera-picke
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   DocumentUpload,
   TransactionCandidate,
   TransactionCandidateReview,
@@ -23,6 +25,10 @@ interface ReceiptCameraFormProps {
   isUploading: boolean;
   onClearError: () => void;
   onClose: () => void;
+  onConfirmCandidate: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
   onGetReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
@@ -40,6 +46,7 @@ export function ReceiptCameraForm({
   isUploading,
   onClearError,
   onClose,
+  onConfirmCandidate,
   onGetReview,
   onUpdateCandidate,
   onUpload,
@@ -74,6 +81,7 @@ export function ReceiptCameraForm({
         accounts={accounts}
         categories={categories}
         error={error}
+        onConfirm={onConfirmCandidate}
         onClose={onClose}
         onGetReview={onGetReview}
         onReset={reset}

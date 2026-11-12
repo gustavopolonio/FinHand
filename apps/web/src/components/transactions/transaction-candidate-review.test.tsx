@@ -40,6 +40,7 @@ describe("transaction candidate review", () => {
         accounts={[]}
         categories={[]}
         error={null}
+        onConfirm={vi.fn()}
         onClose={vi.fn()}
         onGetReview={vi.fn()}
         onUpdate={vi.fn()}

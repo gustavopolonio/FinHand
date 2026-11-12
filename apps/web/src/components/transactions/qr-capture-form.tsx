@@ -15,6 +15,8 @@ import { useEffect, useRef, useState } from "react";
 import type {
   Account,
   Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
   DocumentCaptureSession,
   DocumentCaptureSessionProgress,
   DocumentProcessingStatus,
@@ -38,6 +40,10 @@ interface QrCaptureFormProps {
   onCancel: (sessionId: string) => Promise<void>;
   onClearError: () => void;
   onClose: () => void;
+  onConfirmCandidate: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
   onCreate: () => Promise<DocumentCaptureSession | null>;
   onGetProgress: (
     sessionId: string,
@@ -104,6 +110,7 @@ export function QrCaptureForm({
   onCancel,
   onClearError,
   onClose,
+  onConfirmCandidate,
   onCreate,
   onGetProgress,
   onGetReview,
@@ -206,6 +213,7 @@ export function QrCaptureForm({
         accounts={accounts}
         categories={categories}
         error={error}
+        onConfirm={onConfirmCandidate}
         onClose={onClose}
         onGetReview={onGetReview}
         onUpdate={onUpdateCandidate}

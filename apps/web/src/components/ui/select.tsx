@@ -26,6 +26,8 @@ export interface SelectOption {
 type SelectVariant = "default" | "soft" | "compact";
 
 interface SelectProps {
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   ariaLabel: string;
   className?: string;
   disabled?: boolean;
@@ -70,6 +72,8 @@ export function findNextEnabledOptionIndex(
 }
 
 export function Select({
+  ariaDescribedBy,
+  ariaInvalid,
   ariaLabel,
   className,
   disabled = false,
@@ -290,12 +294,16 @@ export function Select({
             : undefined
         }
         aria-controls={listboxId}
+        aria-describedby={ariaDescribedBy}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
+        aria-invalid={ariaInvalid}
         aria-label={ariaLabel}
         className={cn(
           "flex w-full items-center justify-between gap-3 rounded-xl text-left text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
           variantClasses[variant],
+          ariaInvalid &&
+            "border-finhand-expense focus-visible:ring-finhand-expense/20",
           isOpen &&
             "border-2 border-finhand-focus bg-finhand-accent-soft shadow-finhand-card",
         )}

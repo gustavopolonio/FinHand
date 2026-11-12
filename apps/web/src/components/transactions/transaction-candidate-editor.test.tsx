@@ -52,6 +52,8 @@ describe("TransactionCandidateEditor", () => {
         candidate={candidate}
         categories={[category]}
         error={null}
+        onConfirm={vi.fn()}
+        onConfirmed={vi.fn()}
         onClose={vi.fn()}
         onSave={vi.fn()}
         onSaved={vi.fn()}
@@ -65,6 +67,6 @@ describe("TransactionCandidateEditor", () => {
     expect(markup).toContain('aria-label="Candidate account"');
     expect(markup).toContain("does not create a transaction");
     expect(markup).toContain("Save draft");
-    expect(markup).not.toContain("Confirm transaction");
+    expect(markup).toContain("Hold to confirm");
   });
 });
