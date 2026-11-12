@@ -126,6 +126,11 @@ export function TransactionDrawer({
       isBusy={isBusy}
       onClose={onClose}
       title={transaction ? "Edit Transaction" : "Add Transaction"}
+      widthClassName={
+        !transaction && creationMode !== "manual"
+          ? "max-w-[1040px]"
+          : undefined
+      }
     >
       {!transaction ? (
         <div className="border-b border-finhand-divider px-6 py-4">

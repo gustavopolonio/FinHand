@@ -19,6 +19,7 @@ import type {
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { DocumentSourcePreview } from "./document-source-preview";
 import { TransactionCandidateEditor } from "./transaction-candidate-editor";
 
 interface TransactionCandidateReviewPanelProps {
@@ -158,16 +159,22 @@ export function TransactionCandidateReviewPanel({
             </div>
           ) : null}
         </div>
-        <TransactionCandidateEditor
-          accounts={accounts}
-          candidate={candidate}
-          categories={categories}
-          error={error}
-          key={candidate.id}
-          onClose={onClose}
-          onSave={onUpdate}
-          onSaved={replaceCandidate}
-        />
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <DocumentSourcePreview
+            fileName={review.upload.originalFileName}
+            uploadId={review.upload.id}
+          />
+          <TransactionCandidateEditor
+            accounts={accounts}
+            candidate={candidate}
+            categories={categories}
+            error={error}
+            key={candidate.id}
+            onClose={onClose}
+            onSave={onUpdate}
+            onSaved={replaceCandidate}
+          />
+        </div>
       </div>
     );
   }

@@ -200,6 +200,12 @@ export interface DocumentReview {
   updatedAt: string;
 }
 
+export interface DocumentPreview {
+  url: string;
+  contentType: string;
+  expiresAt: string;
+}
+
 export interface UpdateTransactionCandidateInput {
   accountId?: string | null;
   categoryId?: string | null;
@@ -540,6 +546,12 @@ export async function getDocumentReviews() {
   );
 
   return response.reviews;
+}
+
+export function getDocumentPreview(uploadId: string) {
+  return request<DocumentPreview>(
+    `/api/uploads/documents/${uploadId}/preview`,
+  );
 }
 
 export function getTransactionCandidateReview(uploadId: string) {

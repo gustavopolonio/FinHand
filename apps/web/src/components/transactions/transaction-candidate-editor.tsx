@@ -114,7 +114,7 @@ export function TransactionCandidateEditor({
   return (
     <form
       aria-busy={isSaving}
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       onSubmit={(event) => void submit(event)}
     >
       <div className="flex-1 space-y-5 overflow-y-auto p-6">

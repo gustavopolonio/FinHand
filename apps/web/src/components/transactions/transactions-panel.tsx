@@ -550,6 +550,7 @@ export function TransactionsPanel() {
             setDocumentReviewRefreshKey((key) => key + 1);
           }}
           title="Review Document"
+          widthClassName="max-w-[1040px]"
         >
           <TransactionCandidateReviewPanel
             accounts={accounts.filter((account) => !account.archivedAt)}
