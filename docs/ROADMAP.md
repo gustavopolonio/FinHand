@@ -56,7 +56,6 @@
 - [x] Let users discard pending transaction candidates by marking them as `rejected`
 - [x] Implement manual retry for retryable failed document processing
 - [x] Recover uploads stuck after interrupted worker processing
-- [ ] Define and implement retention cleanup for abandoned database records and S3 objects
 - [ ] Build a document-processing History tab for successful and failed imports
 - [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
 
@@ -100,6 +99,7 @@
 - [ ] Configure structured logging
 - [ ] Implement application and AI observability
 - [ ] Replace document-status polling with server-pushed updates using SSE or WebSockets
+- [ ] Define and implement retention cleanup for abandoned database records and S3 objects
 - [ ] Replace user-ID-based S3 object key prefixes with opaque random storage namespaces and migrate existing objects
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish UI styles, interaction details, and visual consistency across the application
