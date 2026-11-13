@@ -27,6 +27,7 @@ import {
   getTransactions,
   renameCategory,
   rejectTransactionCandidate,
+  retryDocumentProcessing,
   restoreAccount,
   restoreCategory,
   updateAccount,
@@ -540,6 +541,8 @@ describe("transaction candidates API", () => {
         originalFileName: "receipt.pdf",
         status: "processed" as const,
         failureCode: null,
+        processingAttempts: 1,
+        failure: null,
       },
       candidates: [candidate],
     };
@@ -666,6 +669,25 @@ describe("document reviews API", () => {
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/uploads/documents/${uploadId}/preview`,
       expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("requests another processing attempt for a retryable failure", async () => {
+    const uploadId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const upload = {
+      id: uploadId,
+      status: "uploaded" as const,
+      failureCode: null,
+      processingAttempts: 1,
+      updatedAt: "2026-11-13T12:00:00.000Z",
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse({ upload }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(retryDocumentProcessing(uploadId)).resolves.toEqual(upload);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/uploads/documents/${uploadId}/retry`,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
     );
   });
 });

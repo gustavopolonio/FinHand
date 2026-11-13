@@ -1,24 +1,31 @@
 "use client";
 
-import { CircleAlert, Upload, X } from "lucide-react";
+import { CircleAlert, LoaderCircle, RotateCcw, Upload, X } from "lucide-react";
+
+import type { DocumentProcessingFailure } from "@/lib/api";
 
 import { Button } from "../ui/button";
 
 export interface DocumentFailureNotice {
   uploadId: string;
   originalFileName: string;
+  failure: DocumentProcessingFailure;
 }
 
 interface DocumentFailureToastsProps {
   notices: DocumentFailureNotice[];
   onDismiss: (uploadId: string) => void;
+  onRetry: (uploadId: string) => void;
   onUploadAnother: (uploadId: string) => void;
+  retryingUploadId: string | null;
 }
 
 export function DocumentFailureToasts({
   notices,
   onDismiss,
+  onRetry,
   onUploadAnother,
+  retryingUploadId,
 }: DocumentFailureToastsProps) {
   if (notices.length === 0) return null;
 
@@ -43,10 +50,10 @@ export function DocumentFailureToasts({
                 Document processing failed
               </p>
               <p className="mt-1 text-xs leading-5 text-finhand-muted">
-                <span className="font-semibold text-finhand-neutral">
+                <span className="block font-semibold text-finhand-neutral">
                   {notice.originalFileName}
-                </span>{" "}
-                could not be analyzed.
+                </span>
+                <span className="block">{notice.failure.message}</span>
               </p>
             </div>
             <button
@@ -67,14 +74,35 @@ export function DocumentFailureToasts({
             >
               Dismiss
             </Button>
-            <Button
-              onClick={() => onUploadAnother(notice.uploadId)}
-              size="sm"
-              variant="secondary"
-            >
-              <Upload aria-hidden="true" className="size-4" />
-              Upload another
-            </Button>
+            {notice.failure.canRetry ? (
+              <Button
+                disabled={retryingUploadId !== null}
+                onClick={() => onRetry(notice.uploadId)}
+                size="sm"
+                variant="secondary"
+              >
+                {retryingUploadId === notice.uploadId ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
+                ) : (
+                  <RotateCcw aria-hidden="true" className="size-4" />
+                )}
+                {retryingUploadId === notice.uploadId
+                  ? "Retrying"
+                  : "Retry processing"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => onUploadAnother(notice.uploadId)}
+                size="sm"
+                variant="secondary"
+              >
+                <Upload aria-hidden="true" className="size-4" />
+                Upload another
+              </Button>
+            )}
           </div>
         </div>
       ))}

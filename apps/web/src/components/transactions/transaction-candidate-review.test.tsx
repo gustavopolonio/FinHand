@@ -17,6 +17,15 @@ function reviewWithStatus(
       originalFileName: "receipt.pdf",
       status,
       failureCode: status === "failed" ? "document_extraction_failed" : null,
+      processingAttempts: 1,
+      failure:
+        status === "failed"
+          ? {
+              code: "document_extraction_failed",
+              canRetry: false,
+              message: "This document could not be analyzed.",
+            }
+          : null,
     },
     candidates: [],
   };

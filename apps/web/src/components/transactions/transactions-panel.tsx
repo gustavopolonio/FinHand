@@ -31,6 +31,7 @@ import {
   getTransactions,
   getTransactionCandidateReview,
   rejectTransactionCandidate,
+  retryDocumentProcessing,
   uploadDocument,
   updateTransaction,
   updateTransactionCandidate,
@@ -85,6 +86,9 @@ export function TransactionsPanel() {
   const [documentFailureNotices, setDocumentFailureNotices] = useState<
     DocumentFailureNotice[]
   >([]);
+  const [retryingDocumentUploadId, setRetryingDocumentUploadId] = useState<
+    string | null
+  >(null);
   const [transactionToDelete, setTransactionToDelete] =
     useState<Transaction | null>(null);
   const [busyTransactionId, setBusyTransactionId] = useState<string | null>(
@@ -347,10 +351,11 @@ export function TransactionsPanel() {
         const review = await getTransactionCandidateReview(uploadId);
         setError(null);
 
-        if (review.upload.status === "failed") {
+        if (review.upload.status === "failed" && review.upload.failure) {
           showDocumentFailure({
             uploadId: review.upload.id,
             originalFileName: review.upload.originalFileName,
+            failure: review.upload.failure,
           });
         }
 
@@ -382,6 +387,27 @@ export function TransactionsPanel() {
       return null;
     }
   }, [reportError]);
+
+  const retryFailedDocument = useCallback(
+    async (uploadId: string): Promise<void> => {
+      setRetryingDocumentUploadId(uploadId);
+      setError(null);
+
+      try {
+        await retryDocumentProcessing(uploadId);
+        setDocumentFailureNotices((notices) =>
+          notices.filter((notice) => notice.uploadId !== uploadId),
+        );
+        setReviewUploadId(null);
+        setDocumentReviewRefreshKey((key) => key + 1);
+      } catch (cause) {
+        reportError(cause);
+      } finally {
+        setRetryingDocumentUploadId(null);
+      }
+    },
+    [reportError],
+  );
 
   const saveCandidate = useCallback(
     async (
@@ -655,6 +681,7 @@ export function TransactionsPanel() {
             notices.filter((notice) => notice.uploadId !== uploadId),
           )
         }
+        onRetry={(uploadId) => void retryFailedDocument(uploadId)}
         onUploadAnother={(uploadId) => {
           setDocumentFailureNotices((notices) =>
             notices.filter((notice) => notice.uploadId !== uploadId),
@@ -662,6 +689,7 @@ export function TransactionsPanel() {
           setReviewUploadId(null);
           setEditor({ kind: "create", initialMode: "document" });
         }}
+        retryingUploadId={retryingDocumentUploadId}
       />
       <TransactionConfirmationToast
         description={confirmedTransactionDescription}

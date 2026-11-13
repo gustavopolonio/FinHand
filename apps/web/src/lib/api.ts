@@ -186,8 +186,16 @@ export interface TransactionCandidateReview {
     originalFileName: string;
     status: DocumentProcessingStatus;
     failureCode: string | null;
+    processingAttempts: number;
+    failure: DocumentProcessingFailure | null;
   };
   candidates: TransactionCandidate[];
+}
+
+export interface DocumentProcessingFailure {
+  code: string;
+  canRetry: boolean;
+  message: string;
 }
 
 export interface DocumentReview {
@@ -575,6 +583,20 @@ export function getDocumentPreview(uploadId: string) {
   return request<DocumentPreview>(
     `/api/uploads/documents/${uploadId}/preview`,
   );
+}
+
+export async function retryDocumentProcessing(uploadId: string) {
+  const response = await request<{
+    upload: {
+      id: string;
+      status: DocumentProcessingStatus;
+      failureCode: string | null;
+      processingAttempts: number;
+      updatedAt: string;
+    };
+  }>(`/api/uploads/documents/${uploadId}/retry`, { method: "POST" });
+
+  return response.upload;
 }
 
 export function getTransactionCandidateReview(uploadId: string) {
