@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 
 import { InputError } from "../../errors/application-errors.js";
 import { getDocumentPreviewForUser } from "../../services/document-previews.js";
+import { retryFailedDocumentUploadForUser } from "../../services/document-retries.js";
 import {
   maximumDocumentUploadBytes,
   uploadDocumentForUser,
@@ -43,6 +44,20 @@ export async function documentUploadRoutes(
       });
 
       return reply.header("Cache-Control", "private, no-store").send(preview);
+    },
+  );
+
+  uploadsApplication.post(
+    "/api/uploads/documents/:id/retry",
+    { schema: { params: documentUploadParamsSchema } },
+    async (request) => {
+      const upload = await retryFailedDocumentUploadForUser(
+        application.database,
+        request.authenticatedUserId,
+        request.params.id,
+      );
+
+      return { upload };
     },
   );
 

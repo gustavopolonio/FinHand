@@ -93,11 +93,13 @@ function createApplication(options: {
   documentStorage?: DocumentStorage;
   findFirst?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
+  update?: ReturnType<typeof vi.fn>;
   userId: string | null;
 }) {
   const application = Fastify();
   const database = {
     insert: options.insert ?? vi.fn(),
+    update: options.update ?? vi.fn(),
     query: {
       uploads: { findFirst: options.findFirst ?? vi.fn() },
     },
@@ -115,6 +117,23 @@ function createApplication(options: {
   applications.push(application);
 
   return application;
+}
+
+function createRetryUpdate() {
+  const returning = vi.fn().mockResolvedValue([
+    {
+      id: "44444444-4444-4444-8444-444444444444",
+      status: "uploaded",
+      failureCode: null,
+      processingAttempts: 1,
+      updatedAt: new Date("2026-11-13T12:00:00.000Z"),
+    },
+  ]);
+  const where = vi.fn().mockReturnValue({ returning });
+  const set = vi.fn().mockReturnValue({ where });
+  const update = vi.fn().mockReturnValue({ set });
+
+  return { returning, set, update, where };
 }
 
 function createInsert() {
@@ -445,5 +464,87 @@ describe("GET /api/uploads/documents/:id/preview", () => {
     expect(response.statusCode).toBe(500);
     expect(response.json()).toEqual({ error: "Internal server error" });
     expect(response.body).not.toContain("AWS credential secret");
+  });
+});
+
+describe("POST /api/uploads/documents/:id/retry", () => {
+  const uploadId = "44444444-4444-4444-8444-444444444444";
+
+  it("returns a retryable failed document to the processing queue", async () => {
+    const retryFixture = createRetryUpdate();
+    const application = createApplication({
+      findFirst: vi.fn().mockResolvedValue({
+        id: uploadId,
+        status: "failed",
+        failureCode: "ai_timeout",
+        processingAttempts: 1,
+      }),
+      update: retryFixture.update,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/uploads/documents/${uploadId}/retry`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      upload: {
+        id: uploadId,
+        status: "uploaded",
+        failureCode: null,
+        processingAttempts: 1,
+        updatedAt: "2026-11-13T12:00:00.000Z",
+      },
+    });
+  });
+
+  it("rejects a non-retryable content failure", async () => {
+    const application = createApplication({
+      findFirst: vi.fn().mockResolvedValue({
+        id: uploadId,
+        status: "failed",
+        failureCode: "no_transaction_candidates",
+        processingAttempts: 1,
+      }),
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/uploads/documents/${uploadId}/retry`,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: "No financial transaction was found in this document.",
+    });
+  });
+
+  it("requires authentication", async () => {
+    const update = vi.fn();
+    const application = createApplication({ update, userId: null });
+
+    const response = await application.inject({
+      method: "POST",
+      url: `/api/uploads/documents/${uploadId}/retry`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("validates the upload identifier", async () => {
+    const update = vi.fn();
+    const application = createApplication({ update, userId });
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/uploads/documents/not-a-uuid/retry",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(update).not.toHaveBeenCalled();
   });
 });

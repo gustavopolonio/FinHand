@@ -35,7 +35,7 @@ const extractedCandidateSchema = z.strictObject({
 });
 
 const extractionSchema = z.strictObject({
-  candidates: z.array(extractedCandidateSchema).min(1).max(25),
+  candidates: z.array(extractedCandidateSchema).max(25),
 });
 
 export type ExtractedTransactionCandidate = z.infer<
@@ -63,6 +63,8 @@ interface CreateOpenAiDocumentTransactionExtractorOptions {
 const extractionInstructions = `You extract proposed financial transactions from receipts and invoices.
 
 Return one candidate for each distinct financial transaction represented by the document. A normal itemized receipt is one transaction using its final paid total, not one transaction per line item. A document containing multiple independent receipts or invoices may produce multiple candidates.
+
+Return an empty candidates array when the document does not represent a financial transaction. Do not invent a candidate merely because a document was provided.
 
 Do not invent missing values. Use null and add a short warning when a field is missing or uncertain.
 

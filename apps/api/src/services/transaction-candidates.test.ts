@@ -86,6 +86,7 @@ interface FixtureOptions {
         originalFileName: string;
         status: "processed" | "processing" | "failed";
         failureCode: string | null;
+        processingAttempts: number;
       }
     | undefined;
 }
@@ -98,6 +99,7 @@ function createDatabaseFixture(options: FixtureOptions = {}) {
           originalFileName: "receipt.pdf",
           status: "processed",
           failureCode: null,
+          processingAttempts: 1,
         }
       : options.upload,
   );
@@ -165,6 +167,8 @@ describe("getTransactionCandidateReviewForUser", () => {
         originalFileName: "receipt.pdf",
         status: "processed",
         failureCode: null,
+        processingAttempts: 1,
+        failure: null,
       },
       candidates: [
         {
@@ -177,6 +181,35 @@ describe("getTransactionCandidateReviewForUser", () => {
     });
     expect(fixture.findUpload).toHaveBeenCalledOnce();
     expect(fixture.findCandidates).toHaveBeenCalledOnce();
+  });
+
+  it("exposes only the safe retry policy for a failed upload", async () => {
+    const fixture = createDatabaseFixture({
+      upload: {
+        id: uploadId,
+        originalFileName: "receipt.pdf",
+        status: "failed",
+        failureCode: "ai_timeout",
+        processingAttempts: 1,
+      },
+      candidates: [],
+    });
+
+    await expect(
+      getTransactionCandidateReviewForUser(
+        fixture.database,
+        userId,
+        uploadId,
+      ),
+    ).resolves.toMatchObject({
+      upload: {
+        failure: {
+          code: "ai_timeout",
+          canRetry: true,
+          message: "Document analysis timed out. You can try processing it again.",
+        },
+      },
+    });
   });
 
   it("does not expose another user's upload", async () => {

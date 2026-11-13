@@ -139,7 +139,7 @@ function createDatabaseFixture({
   };
 }
 
-function createStorage(options: { error?: Error; value?: Buffer } = {}) {
+function createStorage(options: { error?: unknown; value?: Buffer } = {}) {
   const readDocument = options.error
     ? vi.fn().mockRejectedValue(options.error)
     : vi.fn().mockResolvedValue(options.value ?? content);
@@ -156,7 +156,7 @@ function createStorage(options: { error?: Error; value?: Buffer } = {}) {
 function createExtractor(
   options: {
     candidates?: ExtractedTransactionCandidate[];
-    error?: Error;
+    error?: unknown;
   } = {},
 ) {
   const extractDocument = options.error
@@ -190,6 +190,9 @@ describe("document extraction service", () => {
       '"uploads"."status" = \'uploaded\'',
     );
     expect(query.sql.toLowerCase()).toContain("status = 'processing'");
+    expect(query.sql.toLowerCase()).toContain(
+      "processing_attempts = claimed_upload.processing_attempts + 1",
+    );
     expect(query.sql.toLowerCase()).toContain(
       'order by "uploads"."created_at" asc, "uploads"."id" asc',
     );
@@ -305,6 +308,40 @@ describe("document extraction service", () => {
         failureCode: fixture.failureCode,
       }),
     );
+  });
+
+  it.each([
+    {
+      name: "storage timeout",
+      storage: createStorage({ error: { code: "ETIMEDOUT" } }),
+      extractor: createExtractor(),
+      failureCode: "document_download_timeout",
+    },
+    {
+      name: "OpenAI rate limit",
+      storage: createStorage(),
+      extractor: createExtractor({ error: { status: 429 } }),
+      failureCode: "ai_rate_limited",
+    },
+    {
+      name: "OpenAI outage",
+      storage: createStorage(),
+      extractor: createExtractor({ error: { status: 503 } }),
+      failureCode: "ai_service_unavailable",
+    },
+  ])("persists the classified code after a $name", async (fixture) => {
+    const databaseFixture = createDatabaseFixture();
+
+    await expect(
+      processNextDocumentUpload({
+        database: databaseFixture.database,
+        documentStorage: fixture.storage,
+        extractor: fixture.extractor,
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      failureCode: fixture.failureCode,
+    });
   });
 
   it("rejects a stored document whose checksum changed", async () => {

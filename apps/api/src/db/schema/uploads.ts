@@ -3,6 +3,7 @@ import {
   bigint,
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -44,6 +45,7 @@ export const uploads = pgTable(
     checksumSha256: varchar("checksum_sha256", { length: 64 }),
     status: text("status").$type<UploadStatus>().default("pending").notNull(),
     failureCode: text("failure_code"),
+    processingAttempts: integer("processing_attempts").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -66,6 +68,10 @@ export const uploads = pgTable(
       sql`${table.status} in ('pending', 'uploaded', 'processing', 'processed', 'failed')`,
     ),
     check("uploads_byte_size_positive_check", sql`${table.byteSize} > 0`),
+    check(
+      "uploads_processing_attempts_non_negative_check",
+      sql`${table.processingAttempts} >= 0`,
+    ),
     check(
       "uploads_checksum_sha256_format_check",
       sql`${table.checksumSha256} is null or ${table.checksumSha256} ~ '^[0-9a-f]{64}$'`,

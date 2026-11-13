@@ -103,6 +103,8 @@ beforeEach(() => {
       originalFileName: "receipt.pdf",
       status: "processed",
       failureCode: null,
+      processingAttempts: 1,
+      failure: null,
     },
     candidates: [candidate],
   });

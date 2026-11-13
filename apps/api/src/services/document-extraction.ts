@@ -17,6 +17,11 @@ import {
   normalizeExtractedTransactionCandidates,
   type NormalizedTransactionCandidate,
 } from "./transaction-candidate-normalization.js";
+import {
+  classifyCandidatePersistenceFailure,
+  classifyDocumentDownloadFailure,
+  classifyDocumentExtractionFailure,
+} from "./document-processing-failures.js";
 import { markUploadAsFailed } from "./upload-state.js";
 
 const supportedDocumentMimeTypes = new Set<SupportedDocumentMimeType>([
@@ -64,6 +69,7 @@ export async function claimNextDocumentUpload(
     set
       status = 'processing',
       failure_code = null,
+      processing_attempts = claimed_upload.processing_attempts + 1,
       updated_at = now()
     from next_upload
     where claimed_upload.id = next_upload.id
@@ -185,7 +191,7 @@ export async function processNextDocumentUpload({
     return failClaimedUpload(
       database,
       upload,
-      "document_download_failed",
+      classifyDocumentDownloadFailure(error),
       error,
     );
   }
@@ -220,7 +226,7 @@ export async function processNextDocumentUpload({
     return failClaimedUpload(
       database,
       upload,
-      "document_extraction_failed",
+      classifyDocumentExtractionFailure(error),
       error,
     );
   }
@@ -259,7 +265,7 @@ export async function processNextDocumentUpload({
     return failClaimedUpload(
       database,
       upload,
-      "candidate_persistence_failed",
+      classifyCandidatePersistenceFailure(error),
       error,
     );
   }

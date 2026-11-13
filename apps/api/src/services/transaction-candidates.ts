@@ -15,6 +15,10 @@ import {
   InputError,
   NotFoundError,
 } from "../errors/application-errors.js";
+import {
+  getDocumentProcessingFailure,
+  type DocumentProcessingFailure,
+} from "./document-processing-failures.js";
 import type {
   ConfirmTransactionCandidateInput,
   UpdateTransactionCandidateInput,
@@ -83,6 +87,8 @@ export interface TransactionCandidateReview {
     originalFileName: string;
     status: UploadStatus;
     failureCode: string | null;
+    processingAttempts: number;
+    failure: DocumentProcessingFailure | null;
   };
   candidates: TransactionCandidateListItem[];
 }
@@ -192,6 +198,7 @@ export async function getTransactionCandidateReviewForUser(
       originalFileName: true,
       status: true,
       failureCode: true,
+      processingAttempts: true,
     },
     where: (candidateUpload, { and, eq }) =>
       and(
@@ -237,7 +244,13 @@ export async function getTransactionCandidateReviewForUser(
     });
 
   return {
-    upload,
+    upload: {
+      ...upload,
+      failure: getDocumentProcessingFailure(
+        upload.failureCode,
+        upload.processingAttempts,
+      ),
+    },
     candidates: candidates.map(serializeCandidate),
   };
 }

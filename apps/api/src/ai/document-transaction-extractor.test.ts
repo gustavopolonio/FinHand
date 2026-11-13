@@ -108,6 +108,23 @@ describe("OpenAI document transaction extractor", () => {
     );
   });
 
+  it("allows an empty candidate list for a non-financial document", async () => {
+    const { client } = createClient({ candidates: [] });
+    const extractor = createOpenAiDocumentTransactionExtractor({
+      apiKey: "test-api-key",
+      client,
+      model: "test-vision-model",
+    });
+
+    await expect(
+      extractor.extractDocument({
+        content: Buffer.from("%PDF-curriculum-vitae"),
+        fileName: "resume.pdf",
+        mimeType: "application/pdf",
+      }),
+    ).resolves.toEqual([]);
+  });
+
   it.each([
     { apiKey: "", model: "test-model", message: "An OpenAI API key is required." },
     { apiKey: "test-key", model: "", message: "An OpenAI document model is required." },

@@ -1,0 +1,2 @@
+ALTER TABLE "uploads" ADD COLUMN "processing_attempts" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "uploads" ADD CONSTRAINT "uploads_processing_attempts_non_negative_check" CHECK ("uploads"."processing_attempts" >= 0);

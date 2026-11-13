@@ -53,12 +53,14 @@ describe("Milestone 3 document-processing schema", () => {
         "uploads_byte_size_positive_check",
         "uploads_checksum_sha256_format_check",
         "uploads_failure_state_check",
+        "uploads_processing_attempts_non_negative_check",
       ]),
       columns: expect.arrayContaining([
         "user_id",
         "s3_object_key",
         "checksum_sha256",
         "failure_code",
+        "processing_attempts",
       ]),
       foreignKeys: expect.arrayContaining(["uploads_user_id_users_id_fk"]),
       indexes: expect.arrayContaining([
