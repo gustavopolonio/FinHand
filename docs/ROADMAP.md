@@ -56,7 +56,8 @@
 - [x] Let users discard pending transaction candidates by marking them as `rejected`
 - [x] Implement manual retry for retryable failed document processing
 - [x] Recover uploads stuck after interrupted worker processing
-- [ ] Build a document-processing History tab for successful and failed imports
+- [x] Show original source documents on document-origin transaction details
+- [ ] Build a persistent, dismissible import-issues section for unresolved failures
 - [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
 
 ### Acceptance Criteria
