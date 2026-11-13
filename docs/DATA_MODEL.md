@@ -231,6 +231,7 @@ QR capture session enter the same processing pipeline.
 | `checksum_sha256` | `varchar(64)` | Yes | Lowercase hexadecimal SHA-256 checksum when available |
 | `status` | `text` | No | `pending`, `uploaded`, `processing`, `processed`, or `failed` |
 | `failure_code` | `text` | Yes | Sanitized machine-readable failure code; present only for failed uploads |
+| `processing_attempts` | `integer` | No | Number of times a worker has claimed the upload; defaults to zero |
 | `created_at` | `timestamptz` | No | Creation time |
 | `updated_at` | `timestamptz` | No | Last state change |
 
@@ -241,6 +242,7 @@ Constraints and indexes:
 - Positive byte size and lowercase SHA-256 format when a checksum is present.
 - QR capture is restricted to document uploads.
 - Failure state and failure code must be consistent.
+- Processing attempts cannot be negative.
 - Unique constraint on `(user_id, id)` for ownership-safe references.
 - Indexes on `(user_id, created_at DESC)`, `(user_id, status)`, and
   `(status, created_at, id)`. The final index lets concurrent workers claim the
@@ -259,15 +261,24 @@ private.
 Allowed upload state transitions are:
 
 - `pending → uploaded` after the object is completely stored.
-- `uploaded → processing` when one worker atomically claims the upload.
+- `uploaded → processing` when one worker atomically claims the upload and
+  increments `processing_attempts`.
 - `processing → processed` after processing completes successfully.
 - `pending`, `uploaded`, or `processing → failed` with a sanitized
   machine-readable failure code.
+- `failed → uploaded` only when the stored failure code is classified as
+  retryable and fewer than three processing attempts have occurred. This
+  transition clears `failure_code` so the existing worker queue can claim the
+  upload again.
 
-`processed` and `failed` are terminal states. A later retry flow may introduce
-an explicit `failed → uploaded` transition that clears the failure code. State
-changes must be atomic and ownership-scoped so two workers cannot claim the
-same upload and one user cannot transition another user's upload.
+`processed` is terminal. A `failed` upload is terminal when its failure is
+caused by unusable document content, unsupported or corrupted input,
+configuration errors, or an exhausted attempt limit. Timeouts, rate limits,
+temporary provider outages, network failures, and transient persistence
+failures may be retried. Retryability is derived by the backend from a
+centralized failure policy and is never supplied by the client. State changes
+must be atomic and ownership-scoped so two workers cannot claim the same upload
+and one user cannot transition another user's upload.
 
 ### `document_capture_sessions`
 
