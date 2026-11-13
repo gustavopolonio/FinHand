@@ -7,6 +7,9 @@ import {
 import { createDatabase } from "./db/index.js";
 import { expirePendingDocumentCaptureSessions } from "./services/document-capture-session-cleanup.js";
 import { processNextDocumentUpload } from "./services/document-extraction.js";
+import {
+  recoverExpiredDocumentProcessingLeases,
+} from "./services/document-processing-recovery.js";
 import { createS3DocumentStorage } from "./storage/document-storage.js";
 import {
   type CleanupWorkerLogger,
@@ -16,6 +19,10 @@ import {
   type DocumentExtractionWorkerLogger,
   startDocumentExtractionWorker,
 } from "./workers/document-extraction-worker.js";
+import {
+  type DocumentProcessingRecoveryWorkerLogger,
+  startDocumentProcessingRecoveryWorker,
+} from "./workers/document-processing-recovery-worker.js";
 
 const databaseConnection = createDatabase(environment.databaseUrl);
 const documentStorage = createS3DocumentStorage(
@@ -56,7 +63,24 @@ const extractionWorker = startDocumentExtractionWorker({
       database: databaseConnection.database,
       documentStorage,
       extractor,
+      leaseDurationMilliseconds:
+        documentExtractionEnvironment.leaseDurationMilliseconds,
     }),
+});
+const recoveryLogger: DocumentProcessingRecoveryWorkerLogger = {
+  error(error, message) {
+    console.error(message, error);
+  },
+  info(context, message) {
+    console.info(message, context);
+  },
+};
+const recoveryWorker = startDocumentProcessingRecoveryWorker({
+  intervalMilliseconds:
+    documentExtractionEnvironment.recoveryIntervalMilliseconds,
+  logger: recoveryLogger,
+  recover: () =>
+    recoverExpiredDocumentProcessingLeases(databaseConnection.database),
 });
 
 let isShuttingDown = false;
@@ -70,7 +94,11 @@ async function shutdown(signal: NodeJS.Signals) {
   console.info("Shutting down worker", { signal });
 
   try {
-    await Promise.all([cleanupWorker.stop(), extractionWorker.stop()]);
+    await Promise.all([
+      cleanupWorker.stop(),
+      extractionWorker.stop(),
+      recoveryWorker.stop(),
+    ]);
     documentStorage.close();
     await databaseConnection.pool.end();
   } catch (error) {

@@ -28,6 +28,8 @@ const upload: ClaimedDocumentUpload = {
   originalFileName: "receipt.pdf",
   mimeType: "application/pdf",
   checksumSha256: createHash("sha256").update(content).digest("hex"),
+  processingLeaseId: "55555555-5555-4555-8555-555555555555",
+  processingLeaseExpiresAt: new Date("2026-11-10T12:10:00.000Z"),
 };
 const candidate = {
   type: "expense" as const,
@@ -50,6 +52,7 @@ const candidate = {
 
 interface DatabaseFixtureOptions {
   claimedUpload?: ClaimedDocumentUpload | null;
+  failedUploadExists?: boolean;
   insertError?: Error;
   markFailedError?: Error;
   processedUploadExists?: boolean;
@@ -57,6 +60,7 @@ interface DatabaseFixtureOptions {
 
 function createDatabaseFixture({
   claimedUpload = upload,
+  failedUploadExists = true,
   insertError,
   markFailedError,
   processedUploadExists = true,
@@ -92,19 +96,23 @@ function createDatabaseFixture({
 
   const failedReturning = markFailedError
     ? vi.fn().mockRejectedValue(markFailedError)
-    : vi.fn().mockResolvedValue([
-        {
-          id: upload.id,
-          status: "failed",
-          failureCode: "failure_code_is_set_by_assertion",
-          updatedAt: now,
-        },
-      ]);
+    : vi.fn().mockResolvedValue(
+        failedUploadExists
+          ? [
+              {
+                id: upload.id,
+                status: "failed",
+                failureCode: "failure_code_is_set_by_assertion",
+                updatedAt: now,
+              },
+            ]
+          : [],
+      );
   const failedWhere = vi.fn().mockReturnValue({
     returning: failedReturning,
   });
   const failedSet = vi.fn((values: Record<string, unknown>) => {
-    if (!markFailedError) {
+    if (!markFailedError && failedUploadExists) {
       failedReturning.mockResolvedValueOnce([
         {
           id: upload.id,
@@ -133,6 +141,8 @@ function createDatabaseFixture({
     execute,
     failedSet,
     failedUpdate,
+    failedWhere,
+    processedWhere,
     processedSet,
     processedUpdate,
     transaction,
@@ -192,6 +202,10 @@ describe("document extraction service", () => {
     expect(query.sql.toLowerCase()).toContain("status = 'processing'");
     expect(query.sql.toLowerCase()).toContain(
       "processing_attempts = claimed_upload.processing_attempts + 1",
+    );
+    expect(query.sql.toLowerCase()).toContain("processing_lease_id =");
+    expect(query.sql.toLowerCase()).toContain(
+      "processing_lease_expires_at = now()",
     );
     expect(query.sql.toLowerCase()).toContain(
       'order by "uploads"."created_at" asc, "uploads"."id" asc',
@@ -269,8 +283,18 @@ describe("document extraction service", () => {
     expect(databaseFixture.processedSet).toHaveBeenCalledWith({
       status: "processed",
       failureCode: null,
+      processingLeaseId: null,
+      processingLeaseExpiresAt: null,
       updatedAt: now,
     });
+    expect(
+      compileSql(databaseFixture.processedWhere.mock.calls[0]?.[0]).params,
+    ).toEqual([
+      upload.id,
+      upload.userId,
+      "processing",
+      upload.processingLeaseId,
+    ]);
     expect(databaseFixture.failedUpdate).not.toHaveBeenCalled();
   });
 
@@ -306,8 +330,18 @@ describe("document extraction service", () => {
       expect.objectContaining({
         status: "failed",
         failureCode: fixture.failureCode,
+        processingLeaseId: null,
+        processingLeaseExpiresAt: null,
       }),
     );
+    expect(
+      compileSql(databaseFixture.failedWhere.mock.calls[0]?.[0]).params,
+    ).toEqual([
+      upload.id,
+      upload.userId,
+      "processing",
+      upload.processingLeaseId,
+    ]);
   });
 
   it.each([
@@ -496,35 +530,45 @@ describe("document extraction service", () => {
     expect(extractor.extractDocument).not.toHaveBeenCalled();
   });
 
-  it.each([
-    {
+  it("marks the upload failed when candidate persistence cannot complete", async () => {
+    const databaseFixture = createDatabaseFixture({
       insertError: new Error("insert failed"),
-      processedUploadExists: true,
-    },
-    {
-      insertError: undefined,
-      processedUploadExists: false,
-    },
-  ])(
-    "marks the upload failed when candidate persistence cannot complete",
-    async ({ insertError, processedUploadExists }) => {
-      const databaseFixture = createDatabaseFixture({
-        insertError,
-        processedUploadExists,
-      });
+    });
 
-      await expect(
-        processNextDocumentUpload({
-          database: databaseFixture.database,
-          documentStorage: createStorage(),
-          extractor: createExtractor(),
-        }),
-      ).resolves.toMatchObject({
-        status: "failed",
-        failureCode: "candidate_persistence_failed",
-      });
-    },
-  );
+    await expect(
+      processNextDocumentUpload({
+        database: databaseFixture.database,
+        documentStorage: createStorage(),
+        extractor: createExtractor(),
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      failureCode: "candidate_persistence_failed",
+    });
+  });
+
+  it("does not let a stale worker complete or fail a newer lease", async () => {
+    const databaseFixture = createDatabaseFixture({
+      failedUploadExists: false,
+      processedUploadExists: false,
+    });
+
+    await expect(
+      processNextDocumentUpload({
+        database: databaseFixture.database,
+        documentStorage: createStorage(),
+        extractor: createExtractor(),
+      }),
+    ).rejects.toThrow(
+      "Document extraction failed and the upload could not be marked as failed.",
+    );
+    expect(
+      compileSql(databaseFixture.processedWhere.mock.calls[0]?.[0]).params,
+    ).toContain(upload.processingLeaseId);
+    expect(
+      compileSql(databaseFixture.failedWhere.mock.calls[0]?.[0]).params,
+    ).toContain(upload.processingLeaseId);
+  });
 
   it("surfaces both errors when a failed extraction cannot update the upload state", async () => {
     const databaseFixture = createDatabaseFixture({
@@ -540,5 +584,16 @@ describe("document extraction service", () => {
     ).rejects.toThrow(
       "Document extraction failed and the upload could not be marked as failed.",
     );
+  });
+
+  it("rejects an invalid processing lease duration", async () => {
+    const databaseFixture = createDatabaseFixture();
+
+    await expect(
+      claimNextDocumentUpload(databaseFixture.database, 0),
+    ).rejects.toThrow(
+      "Document processing lease duration must be a positive integer.",
+    );
+    expect(databaseFixture.execute).not.toHaveBeenCalled();
   });
 });

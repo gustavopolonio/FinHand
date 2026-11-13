@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 
@@ -21,8 +21,10 @@ import {
   classifyCandidatePersistenceFailure,
   classifyDocumentDownloadFailure,
   classifyDocumentExtractionFailure,
+  maximumDocumentProcessingAttempts,
 } from "./document-processing-failures.js";
-import { markUploadAsFailed } from "./upload-state.js";
+
+export const documentProcessingLeaseDurationMilliseconds = 10 * 60 * 1_000;
 
 const supportedDocumentMimeTypes = new Set<SupportedDocumentMimeType>([
   "application/pdf",
@@ -37,6 +39,8 @@ export interface ClaimedDocumentUpload extends Record<string, unknown> {
   originalFileName: string;
   mimeType: string;
   checksumSha256: string | null;
+  processingLeaseId: string;
+  processingLeaseExpiresAt: Date;
 }
 
 export interface DocumentExtractionResult {
@@ -50,17 +54,30 @@ interface ProcessNextDocumentUploadOptions {
   database: Database;
   documentStorage: DocumentStorage;
   extractor: DocumentTransactionExtractor;
+  leaseDurationMilliseconds?: number;
 }
 
 export async function claimNextDocumentUpload(
   database: Database,
+  leaseDurationMilliseconds = documentProcessingLeaseDurationMilliseconds,
 ): Promise<ClaimedDocumentUpload | null> {
+  if (
+    !Number.isInteger(leaseDurationMilliseconds) ||
+    leaseDurationMilliseconds < 1
+  ) {
+    throw new Error(
+      "Document processing lease duration must be a positive integer.",
+    );
+  }
+
+  const processingLeaseId = randomUUID();
   const result = await database.execute<ClaimedDocumentUpload>(sql`
     with next_upload as (
       select ${uploads.id}
       from ${uploads}
       where ${uploads.kind} = 'document'
         and ${uploads.status} = 'uploaded'
+        and ${uploads.processingAttempts} < ${maximumDocumentProcessingAttempts}
       order by ${uploads.createdAt} asc, ${uploads.id} asc
       for update skip locked
       limit 1
@@ -70,6 +87,8 @@ export async function claimNextDocumentUpload(
       status = 'processing',
       failure_code = null,
       processing_attempts = claimed_upload.processing_attempts + 1,
+      processing_lease_id = ${processingLeaseId},
+      processing_lease_expires_at = now() + (${leaseDurationMilliseconds} * interval '1 millisecond'),
       updated_at = now()
     from next_upload
     where claimed_upload.id = next_upload.id
@@ -79,7 +98,9 @@ export async function claimNextDocumentUpload(
       claimed_upload.s3_object_key as "objectKey",
       claimed_upload.original_file_name as "originalFileName",
       claimed_upload.mime_type as "mimeType",
-      claimed_upload.checksum_sha256 as "checksumSha256"
+      claimed_upload.checksum_sha256 as "checksumSha256",
+      claimed_upload.processing_lease_id as "processingLeaseId",
+      claimed_upload.processing_lease_expires_at as "processingLeaseExpiresAt"
   `);
 
   return result.rows[0] ?? null;
@@ -113,6 +134,8 @@ async function persistExtractedCandidates(
       .set({
         status: "processed",
         failureCode: null,
+        processingLeaseId: null,
+        processingLeaseExpiresAt: null,
         updatedAt: new Date(),
       })
       .where(
@@ -120,6 +143,7 @@ async function persistExtractedCandidates(
           eq(uploads.id, upload.id),
           eq(uploads.userId, upload.userId),
           eq(uploads.status, "processing"),
+          eq(uploads.processingLeaseId, upload.processingLeaseId),
         ),
       )
       .returning({ id: uploads.id });
@@ -152,12 +176,28 @@ async function failClaimedUpload(
   processingError: unknown,
 ): Promise<DocumentExtractionResult> {
   try {
-    await markUploadAsFailed(
-      database,
-      upload.userId,
-      upload.id,
-      failureCode,
-    );
+    const [failedUpload] = await database
+      .update(uploads)
+      .set({
+        status: "failed",
+        failureCode,
+        processingLeaseId: null,
+        processingLeaseExpiresAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(uploads.id, upload.id),
+          eq(uploads.userId, upload.userId),
+          eq(uploads.status, "processing"),
+          eq(uploads.processingLeaseId, upload.processingLeaseId),
+        ),
+      )
+      .returning({ id: uploads.id });
+
+    if (!failedUpload) {
+      throw new Error("Claimed document processing lease is no longer current.");
+    }
   } catch (failureTransitionError) {
     throw new AggregateError(
       [processingError, failureTransitionError],
@@ -176,8 +216,12 @@ export async function processNextDocumentUpload({
   database,
   documentStorage,
   extractor,
+  leaseDurationMilliseconds,
 }: ProcessNextDocumentUploadOptions): Promise<DocumentExtractionResult | null> {
-  const upload = await claimNextDocumentUpload(database);
+  const upload = await claimNextDocumentUpload(
+    database,
+    leaseDurationMilliseconds,
+  );
 
   if (!upload) {
     return null;

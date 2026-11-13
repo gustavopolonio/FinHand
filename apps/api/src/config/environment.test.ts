@@ -25,6 +25,8 @@ function stubValidEnvironment() {
   vi.stubEnv("LOG_LEVEL", "");
   vi.stubEnv("NODE_ENV", "");
   vi.stubEnv("DOCUMENT_EXTRACTION_POLL_INTERVAL_MS", "");
+  vi.stubEnv("DOCUMENT_PROCESSING_LEASE_DURATION_MS", "");
+  vi.stubEnv("DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS", "");
 }
 
 async function importEnvironment() {
@@ -91,8 +93,10 @@ describe("environment configuration", () => {
 
     expect(getDocumentExtractionEnvironment()).toEqual({
       apiKey: "openai-test-api-key",
+      leaseDurationMilliseconds: 600_000,
       model: "test-vision-model",
       pollIntervalMilliseconds: 2_000,
+      recoveryIntervalMilliseconds: 60_000,
     });
   });
 
@@ -103,6 +107,17 @@ describe("environment configuration", () => {
     expect(
       getDocumentExtractionEnvironment().pollIntervalMilliseconds,
     ).toBe(5_000);
+  });
+
+  it("accepts explicit document processing lease and recovery intervals", async () => {
+    vi.stubEnv("DOCUMENT_PROCESSING_LEASE_DURATION_MS", "900000");
+    vi.stubEnv("DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS", "30000");
+    const { getDocumentExtractionEnvironment } = await importEnvironment();
+
+    expect(getDocumentExtractionEnvironment()).toMatchObject({
+      leaseDurationMilliseconds: 900_000,
+      recoveryIntervalMilliseconds: 30_000,
+    });
   });
 
   it.each([
@@ -181,6 +196,16 @@ describe("environment configuration", () => {
       "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",
       "0",
       "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS must be a positive integer.",
+    ],
+    [
+      "DOCUMENT_PROCESSING_LEASE_DURATION_MS",
+      "0",
+      "DOCUMENT_PROCESSING_LEASE_DURATION_MS must be a positive integer.",
+    ],
+    [
+      "DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS",
+      "1.5",
+      "DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS must be a positive integer.",
     ],
     [
       "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",

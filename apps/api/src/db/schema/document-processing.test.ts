@@ -54,6 +54,7 @@ describe("Milestone 3 document-processing schema", () => {
         "uploads_checksum_sha256_format_check",
         "uploads_failure_state_check",
         "uploads_processing_attempts_non_negative_check",
+        "uploads_processing_lease_state_check",
       ]),
       columns: expect.arrayContaining([
         "user_id",
@@ -61,6 +62,8 @@ describe("Milestone 3 document-processing schema", () => {
         "checksum_sha256",
         "failure_code",
         "processing_attempts",
+        "processing_lease_id",
+        "processing_lease_expires_at",
       ]),
       foreignKeys: expect.arrayContaining(["uploads_user_id_users_id_fk"]),
       indexes: expect.arrayContaining([
@@ -68,6 +71,7 @@ describe("Milestone 3 document-processing schema", () => {
         "uploads_user_id_created_at_index",
         "uploads_user_id_status_index",
         "uploads_status_created_at_id_index",
+        "uploads_processing_lease_expiration_index",
       ]),
       table: "uploads",
       uniqueConstraints: expect.arrayContaining(["uploads_user_id_id_unique"]),

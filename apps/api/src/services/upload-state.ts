@@ -16,7 +16,6 @@ const failureCodePattern = /^[a-z][a-z0-9_]*$/;
 const failableUploadStatuses = [
   "pending",
   "uploaded",
-  "processing",
 ] as const satisfies readonly UploadStatus[];
 
 interface UploadStateRecord {
@@ -141,34 +140,6 @@ export async function markUploadAsUploaded(
     database,
     fromStatuses: ["pending"],
     toStatus: "uploaded",
-    uploadId,
-    userId,
-  });
-}
-
-export async function claimUploadForProcessing(
-  database: Database,
-  userId: string,
-  uploadId: string,
-): Promise<UploadState> {
-  return transitionUploadForUser({
-    database,
-    fromStatuses: ["uploaded"],
-    toStatus: "processing",
-    uploadId,
-    userId,
-  });
-}
-
-export async function markUploadAsProcessed(
-  database: Database,
-  userId: string,
-  uploadId: string,
-): Promise<UploadState> {
-  return transitionUploadForUser({
-    database,
-    fromStatuses: ["processing"],
-    toStatus: "processed",
     uploadId,
     userId,
   });

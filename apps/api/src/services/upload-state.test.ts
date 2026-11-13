@@ -13,9 +13,7 @@ import {
   NotFoundError,
 } from "../errors/application-errors.js";
 import {
-  claimUploadForProcessing,
   markUploadAsFailed,
-  markUploadAsProcessed,
   markUploadAsUploaded,
 } from "./upload-state.js";
 
@@ -66,37 +64,18 @@ afterEach(() => {
 });
 
 describe("upload state transitions", () => {
-  it.each([
-    {
-      name: "pending to uploaded",
-      operation: markUploadAsUploaded,
-      fromStatus: "pending",
-      toStatus: "uploaded",
-    },
-    {
-      name: "uploaded to processing",
-      operation: claimUploadForProcessing,
-      fromStatus: "uploaded",
-      toStatus: "processing",
-    },
-    {
-      name: "processing to processed",
-      operation: markUploadAsProcessed,
-      fromStatus: "processing",
-      toStatus: "processed",
-    },
-  ] as const)("transitions $name atomically", async (fixture) => {
+  it("transitions pending uploads to uploaded atomically", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     const updatedUpload = {
       id: uploadId,
-      status: fixture.toStatus,
+      status: "uploaded" as const,
       failureCode: null,
       updatedAt: now,
     };
     const databaseFixture = createDatabaseFixture({ updatedUpload });
 
-    const result = await fixture.operation(
+    const result = await markUploadAsUploaded(
       databaseFixture.database,
       userId,
       uploadId,
@@ -104,23 +83,23 @@ describe("upload state transitions", () => {
 
     expect(result).toEqual({
       id: uploadId,
-      status: fixture.toStatus,
+      status: "uploaded",
       failureCode: null,
       updatedAt: now.toISOString(),
     });
     expect(databaseFixture.update).toHaveBeenCalledWith(uploads);
     expect(databaseFixture.set).toHaveBeenCalledWith({
-      status: fixture.toStatus,
+      status: "uploaded",
       failureCode: null,
       updatedAt: now,
     });
     expect(
       getSqlParameters(databaseFixture.where.mock.calls[0]?.[0]),
-    ).toEqual([uploadId, userId, fixture.fromStatus]);
+    ).toEqual([uploadId, userId, "pending"]);
     expect(databaseFixture.findFirst).not.toHaveBeenCalled();
   });
 
-  it("transitions any nonterminal state to failed with a sanitized failure code", async () => {
+  it("transitions a pre-processing state to failed with a sanitized failure code", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     const databaseFixture = createDatabaseFixture({
@@ -152,56 +131,32 @@ describe("upload state transitions", () => {
     });
     expect(
       getSqlParameters(databaseFixture.where.mock.calls[0]?.[0]),
-    ).toEqual([
-      uploadId,
-      userId,
-      "pending",
-      "uploaded",
-      "processing",
-    ]);
+    ).toEqual([uploadId, userId, "pending", "uploaded"]);
   });
 
-  it.each([
-    {
-      operation: markUploadAsUploaded,
-      currentStatus: "processing",
-      targetStatus: "uploaded",
-    },
-    {
-      operation: claimUploadForProcessing,
-      currentStatus: "pending",
-      targetStatus: "processing",
-    },
-    {
-      operation: markUploadAsProcessed,
-      currentStatus: "uploaded",
-      targetStatus: "processed",
-    },
-  ] as const)(
-    "rejects an invalid $currentStatus to $targetStatus transition",
-    async ({ currentStatus, operation, targetStatus }) => {
-      const databaseFixture = createDatabaseFixture({
-        existingUpload: {
-          id: uploadId,
-          status: currentStatus,
-          failureCode: null,
-          updatedAt: now,
-        },
-      });
+  it("rejects an invalid processing to uploaded transition", async () => {
+    const currentStatus = "processing";
+    const databaseFixture = createDatabaseFixture({
+      existingUpload: {
+        id: uploadId,
+        status: currentStatus,
+        failureCode: null,
+        updatedAt: now,
+      },
+    });
 
-      await expect(
-        operation(databaseFixture.database, userId, uploadId),
-      ).rejects.toEqual(
-        new ConflictError(
-          `Upload cannot transition from "${currentStatus}" to "${targetStatus}".`,
-        ),
-      );
-      expect(databaseFixture.findFirst).toHaveBeenCalledOnce();
-    },
-  );
+    await expect(
+      markUploadAsUploaded(databaseFixture.database, userId, uploadId),
+    ).rejects.toEqual(
+      new ConflictError(
+        `Upload cannot transition from "${currentStatus}" to "uploaded".`,
+      ),
+    );
+    expect(databaseFixture.findFirst).toHaveBeenCalledOnce();
+  });
 
-  it.each(["failed", "processed"] as const)(
-    "does not allow the terminal %s state to fail again",
+  it.each(["processing", "failed", "processed"] as const)(
+    "does not allow the protected %s state to fail without a lease",
     async (currentStatus) => {
       const databaseFixture = createDatabaseFixture({
         existingUpload: {
@@ -228,45 +183,11 @@ describe("upload state transitions", () => {
     },
   );
 
-  it("allows only one processor to claim an uploaded document", async () => {
-    const firstClaim = createDatabaseFixture({
-      updatedUpload: {
-        id: uploadId,
-        status: "processing",
-        failureCode: null,
-        updatedAt: now,
-      },
-    });
-    const secondClaim = createDatabaseFixture({
-      existingUpload: {
-        id: uploadId,
-        status: "processing",
-        failureCode: null,
-        updatedAt: now,
-      },
-    });
-
-    await expect(
-      claimUploadForProcessing(firstClaim.database, userId, uploadId),
-    ).resolves.toMatchObject({ status: "processing" });
-    await expect(
-      claimUploadForProcessing(secondClaim.database, userId, uploadId),
-    ).rejects.toEqual(
-      new ConflictError(
-        'Upload cannot transition from "processing" to "processing".',
-      ),
-    );
-  });
-
   it("returns not found without revealing another user's upload", async () => {
     const databaseFixture = createDatabaseFixture();
 
     await expect(
-      claimUploadForProcessing(
-        databaseFixture.database,
-        userId,
-        uploadId,
-      ),
+      markUploadAsUploaded(databaseFixture.database, userId, uploadId),
     ).rejects.toEqual(new NotFoundError("Upload not found"));
 
     const queryConfiguration = databaseFixture.findFirst.mock.calls[0]?.[0] as {
@@ -330,7 +251,7 @@ describe("upload state transitions", () => {
     });
 
     await expect(
-      markUploadAsProcessed(databaseFixture.database, userId, uploadId),
+      markUploadAsUploaded(databaseFixture.database, userId, uploadId),
     ).rejects.toThrow("database unavailable");
     expect(databaseFixture.findFirst).not.toHaveBeenCalled();
   });

@@ -30,6 +30,10 @@ export const documentProcessingFailurePolicies = {
     message:
       "The extracted transaction could not be saved temporarily. You can try again.",
   },
+  processing_interrupted: {
+    retryable: true,
+    message: "Document processing was interrupted. You can try again.",
+  },
   document_not_found: {
     retryable: false,
     message: "The uploaded document could not be found. Upload it again.",

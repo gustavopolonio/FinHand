@@ -130,10 +130,18 @@ export function getDocumentStorageEnvironment() {
 export function getDocumentExtractionEnvironment() {
   return Object.freeze({
     apiKey: required("OPENAI_API_KEY"),
+    leaseDurationMilliseconds: positiveInteger(
+      "DOCUMENT_PROCESSING_LEASE_DURATION_MS",
+      10 * 60 * 1_000,
+    ),
     model: required("OPENAI_DOCUMENT_MODEL"),
     pollIntervalMilliseconds: positiveInteger(
       "DOCUMENT_EXTRACTION_POLL_INTERVAL_MS",
       2_000,
+    ),
+    recoveryIntervalMilliseconds: positiveInteger(
+      "DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS",
+      60_000,
     ),
   });
 }

@@ -46,6 +46,10 @@ export const uploads = pgTable(
     status: text("status").$type<UploadStatus>().default("pending").notNull(),
     failureCode: text("failure_code"),
     processingAttempts: integer("processing_attempts").default(0).notNull(),
+    processingLeaseId: uuid("processing_lease_id"),
+    processingLeaseExpiresAt: timestamp("processing_lease_expires_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -80,6 +84,10 @@ export const uploads = pgTable(
       "uploads_failure_state_check",
       sql`(${table.status} = 'failed' and ${table.failureCode} is not null) or (${table.status} <> 'failed' and ${table.failureCode} is null)`,
     ),
+    check(
+      "uploads_processing_lease_state_check",
+      sql`(${table.status} = 'processing' and ${table.processingLeaseId} is not null and ${table.processingLeaseExpiresAt} is not null and ${table.processingAttempts} > 0) or (${table.status} <> 'processing' and ${table.processingLeaseId} is null and ${table.processingLeaseExpiresAt} is null)`,
+    ),
     unique("uploads_user_id_id_unique").on(table.userId, table.id),
     uniqueIndex("uploads_s3_object_key_unique").on(table.s3ObjectKey),
     index("uploads_user_id_created_at_index").on(
@@ -90,6 +98,11 @@ export const uploads = pgTable(
     index("uploads_status_created_at_id_index").on(
       table.status,
       table.createdAt,
+      table.id,
+    ),
+    index("uploads_processing_lease_expiration_index").on(
+      table.status,
+      table.processingLeaseExpiresAt,
       table.id,
     ),
   ],

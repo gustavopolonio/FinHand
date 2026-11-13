@@ -36,6 +36,13 @@
       "when": 1794590167568,
       "tag": "0004_nifty_ben_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794592364679,
+      "tag": "0005_talented_luckman",
+      "breakpoints": true
     }
   ]
 }
