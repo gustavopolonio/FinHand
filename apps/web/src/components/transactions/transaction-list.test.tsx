@@ -77,4 +77,21 @@ describe("TransactionList", () => {
 
     expect(markup).toContain("No transactions found");
   });
+
+  it("identifies transactions created from uploaded documents", () => {
+    const markup = renderToStaticMarkup(
+      <TransactionList
+        accounts={[account]}
+        busyTransactionId={null}
+        categories={[category]}
+        isLoading={false}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+        transactions={[{ ...transaction, origin: "document" }]}
+      />,
+    );
+
+    expect(markup).toContain("Imported");
+    expect(markup).toContain("Created from an uploaded document");
+  });
 });

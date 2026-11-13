@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Eye, FileText } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import type {
@@ -14,13 +14,16 @@ import type {
   Transaction,
   TransactionCandidate,
   TransactionCandidateReview,
+  TransactionDocumentSource,
   RejectTransactionCandidateResult,
   UpdateTransactionCandidateInput,
 } from "@/lib/api";
+import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import { DocumentUploadForm } from "./document-upload-form";
+import { DocumentSourcePreview } from "./document-source-preview";
 import { QrCaptureForm } from "./qr-capture-form";
 import { ReceiptCameraForm } from "./receipt-camera-form";
 import { TransactionFields } from "./transaction-fields";
@@ -57,6 +60,9 @@ interface TransactionDrawerProps {
   onGetCandidateReview: (
     uploadId: string,
   ) => Promise<TransactionCandidateReview | null>;
+  onGetTransactionDocumentSource: (
+    transactionId: string,
+  ) => Promise<TransactionDocumentSource>;
   onRejectCandidate: (
     candidateId: string,
   ) => Promise<RejectTransactionCandidateResult | null>;
@@ -84,6 +90,7 @@ export function TransactionDrawer({
   onCreateCaptureSession,
   onGetCaptureSessionProgress,
   onGetCandidateReview,
+  onGetTransactionDocumentSource,
   onRejectCandidate,
   onSubmit,
   onUploadDocument,
@@ -92,6 +99,8 @@ export function TransactionDrawer({
 }: TransactionDrawerProps) {
   const [creationMode, setCreationMode] =
     useState<TransactionCreationMode>(initialCreationMode);
+  const [isShowingSourceDocument, setIsShowingSourceDocument] =
+    useState(false);
   const [values, setValues] = useState(() =>
     transaction
       ? formValuesFromTransaction(transaction)
@@ -111,6 +120,7 @@ export function TransactionDrawer({
         availableAccounts,
         availableCategories,
       );
+  const isDocumentTransaction = transaction?.origin === "document";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -139,9 +149,11 @@ export function TransactionDrawer({
       onClose={onClose}
       title={transaction ? "Edit Transaction" : "Add Transaction"}
       widthClassName={
-        !transaction && creationMode !== "manual"
+        isDocumentTransaction && isShowingSourceDocument
           ? "max-w-[1040px]"
-          : undefined
+          : !transaction && creationMode !== "manual"
+            ? "max-w-[1040px]"
+            : undefined
       }
     >
       {!transaction ? (
@@ -202,63 +214,109 @@ export function TransactionDrawer({
           onUpdateCandidate={onUpdateCandidate}
         />
       ) : (
-        <form
-          aria-labelledby={
-            transaction ? undefined : "transaction-manual-tab"
-          }
-          className="flex min-h-0 flex-1 flex-col"
-          id={transaction ? undefined : "transaction-manual-panel"}
-          onSubmit={(event) => void submit(event)}
+        <div
+          className={cn(
+            "min-h-0 flex-1",
+            isDocumentTransaction && isShowingSourceDocument
+              ? "grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+              : "flex flex-col",
+          )}
         >
-          <div className="flex-1 overflow-y-auto p-6">
-            <TransactionFields
-              accounts={availableAccounts}
-              categories={availableCategories}
-              onChange={setValues}
-              values={resolvedValues}
+          {transaction && isDocumentTransaction && isShowingSourceDocument ? (
+            <DocumentSourcePreview
+              onHide={() => setIsShowingSourceDocument(false)}
+              onLoad={onGetTransactionDocumentSource}
+              sourceId={transaction.id}
             />
+          ) : null}
 
-            {error ? (
-              <p
-                className="mt-4 rounded-lg border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
-                role="alert"
-              >
-                {error}
-              </p>
-            ) : null}
+          <form
+            aria-labelledby={
+              transaction ? undefined : "transaction-manual-tab"
+            }
+            className="flex min-h-0 flex-1 flex-col"
+            id={transaction ? undefined : "transaction-manual-panel"}
+            key="transaction-form"
+            onSubmit={(event) => void submit(event)}
+          >
+            <div className="flex-1 overflow-y-auto p-6">
+              <TransactionFields
+                accounts={availableAccounts}
+                categories={availableCategories}
+                onChange={setValues}
+                values={resolvedValues}
+              />
 
-            {!transaction && availableAccounts.length === 0 ? (
-              <p className="mt-4 rounded-lg bg-finhand-warning-soft px-4 py-3 text-sm text-finhand-warning">
-                Create or restore an account before adding a transaction.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-            <Button
-              className="rounded-xl!"
-              disabled={isSubmitting}
-              onClick={onClose}
-              variant="ghost"
-            >
-              Cancel
-            </Button>
-            <Button
-              className="rounded-xl!"
-              disabled={isSubmitting || availableAccounts.length === 0}
-              type="submit"
-            >
-              {!isSubmitting ? (
-                <Check aria-hidden="true" className="size-4" />
+              {transaction &&
+                isDocumentTransaction &&
+                !isShowingSourceDocument ? (
+                <section className="mt-5 flex items-center gap-4 rounded-xl border border-finhand-accent-border bg-finhand-accent-soft p-4">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive">
+                    <FileText aria-hidden="true" className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-finhand-ink">
+                      Imported from a document
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-finhand-muted">
+                      View the receipt or invoice used to create this
+                      transaction.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsShowingSourceDocument(true)}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Eye aria-hidden="true" className="size-4" />
+                    View original
+                  </Button>
+                </section>
               ) : null}
-              {isSubmitting
-                ? "Saving…"
-                : transaction
-                  ? "Save Changes"
-                  : "Save Transaction"}
-            </Button>
-          </div>
-        </form>
+
+              {error ? (
+                <p
+                  className="mt-4 rounded-lg border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
+
+              {!transaction && availableAccounts.length === 0 ? (
+                <p className="mt-4 rounded-lg bg-finhand-warning-soft px-4 py-3 text-sm text-finhand-warning">
+                  Create or restore an account before adding a transaction.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+              <Button
+                className="rounded-xl!"
+                disabled={isSubmitting}
+                onClick={onClose}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="rounded-xl!"
+                disabled={isSubmitting || availableAccounts.length === 0}
+                type="submit"
+              >
+                {!isSubmitting ? (
+                  <Check aria-hidden="true" className="size-4" />
+                ) : null}
+                {isSubmitting
+                  ? "Saving…"
+                  : transaction
+                    ? "Save Changes"
+                    : "Save Transaction"}
+              </Button>
+            </div>
+          </form>
+        </div>
       )}
     </WorkspaceModal>
   );

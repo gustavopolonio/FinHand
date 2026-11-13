@@ -214,6 +214,10 @@ export interface DocumentPreview {
   expiresAt: string;
 }
 
+export interface TransactionDocumentSource extends DocumentPreview {
+  fileName: string;
+}
+
 export interface UpdateTransactionCandidateInput {
   accountId?: string | null;
   categoryId?: string | null;
@@ -582,6 +586,12 @@ export async function getDocumentReviews() {
 export function getDocumentPreview(uploadId: string) {
   return request<DocumentPreview>(
     `/api/uploads/documents/${uploadId}/preview`,
+  );
+}
+
+export function getTransactionDocumentSource(transactionId: string) {
+  return request<TransactionDocumentSource>(
+    `/api/transactions/${transactionId}/source-document`,
   );
 }
 

@@ -192,7 +192,7 @@ export function TransactionCandidateReviewPanel({
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <DocumentSourcePreview
             fileName={review.upload.originalFileName}
-            uploadId={review.upload.id}
+            sourceId={review.upload.id}
           />
           <TransactionCandidateEditor
             accounts={accounts}

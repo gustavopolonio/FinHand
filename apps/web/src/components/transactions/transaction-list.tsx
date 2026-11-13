@@ -3,6 +3,7 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  FileText,
   Pencil,
   ReceiptText,
   Trash2,
@@ -137,6 +138,15 @@ export function TransactionList({
                           <p className="mt-0.5 truncate text-xs text-finhand-muted">
                             {transaction.counterparty ?? "No counterparty"}
                           </p>
+                          {transaction.origin === "document" ? (
+                            <span
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-finhand-interactive"
+                              title="Created from an uploaded document"
+                            >
+                              <FileText aria-hidden="true" className="size-3" />
+                              Imported
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     </td>

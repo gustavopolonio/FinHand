@@ -24,6 +24,7 @@ import {
   getDocumentReviews,
   getFinancialSummary,
   getTransactionCandidateReview,
+  getTransactionDocumentSource,
   getTransactions,
   renameCategory,
   rejectTransactionCandidate,
@@ -688,6 +689,27 @@ describe("document reviews API", () => {
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/uploads/documents/${uploadId}/retry`,
       expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+  });
+});
+
+describe("transaction source document API", () => {
+  it("gets a private source preview through its authoritative transaction", async () => {
+    const source = {
+      contentType: "application/pdf",
+      expiresAt: "2026-11-13T12:05:00.000Z",
+      fileName: "receipt.pdf",
+      url: "https://signed.example/receipt",
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(source));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getTransactionDocumentSource(transaction.id),
+    ).resolves.toEqual(source);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/transactions/${transaction.id}/source-document`,
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 });

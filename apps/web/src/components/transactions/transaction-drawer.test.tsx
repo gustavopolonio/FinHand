@@ -55,6 +55,7 @@ const commonProps = {
   onCreateCaptureSession: vi.fn(),
   onGetCaptureSessionProgress: vi.fn(),
   onGetCandidateReview: vi.fn(),
+  onGetTransactionDocumentSource: vi.fn(),
   onRejectCandidate: vi.fn(),
   onSubmit: vi.fn(),
   onUploadDocument: vi.fn(),
@@ -89,6 +90,18 @@ describe("TransactionDrawer", () => {
       'aria-label="Transaction creation method"',
     );
     expect(markup).toContain("Save Changes");
+  });
+
+  it("offers the original file for a document-origin transaction", () => {
+    const markup = renderToStaticMarkup(
+      <TransactionDrawer
+        {...commonProps}
+        transaction={{ ...transaction, origin: "document" }}
+      />,
+    );
+
+    expect(markup).toContain("Imported from a document");
+    expect(markup).toContain("View original");
   });
 
   it("can reopen directly in document upload mode", () => {

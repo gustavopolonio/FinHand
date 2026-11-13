@@ -63,11 +63,22 @@ describe("document source preview", () => {
     const markup = renderToStaticMarkup(
       <DocumentSourcePreview
         fileName="receipt.pdf"
-        uploadId="11111111-1111-4111-8111-111111111111"
+        sourceId="11111111-1111-4111-8111-111111111111"
       />,
     );
 
     expect(markup).toContain("Original document");
     expect(markup).toContain("Loading original document");
+  });
+
+  it("offers an inline hide action when embedded in transaction details", () => {
+    const markup = renderToStaticMarkup(
+      <DocumentSourcePreview
+        onHide={() => undefined}
+        sourceId="11111111-1111-4111-8111-111111111111"
+      />,
+    );
+
+    expect(markup).toContain("Hide original");
   });
 });

@@ -16,9 +16,12 @@ import {
 import { Button } from "../ui/button";
 
 interface DocumentSourcePreviewProps {
-  fileName: string;
-  onLoad?: (uploadId: string) => Promise<DocumentPreview>;
-  uploadId: string;
+  fileName?: string;
+  onHide?: () => void;
+  onLoad?: (
+    sourceId: string,
+  ) => Promise<DocumentPreview & { fileName?: string }>;
+  sourceId: string;
 }
 
 interface DocumentPreviewContentProps {
@@ -86,10 +89,13 @@ export function DocumentPreviewContent({
 
 export function DocumentSourcePreview({
   fileName,
+  onHide,
   onLoad = getDocumentPreview,
-  uploadId,
+  sourceId,
 }: DocumentSourcePreviewProps) {
-  const [preview, setPreview] = useState<DocumentPreview | null>(null);
+  const [preview, setPreview] = useState<
+    (DocumentPreview & { fileName?: string }) | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
 
@@ -98,7 +104,7 @@ export function DocumentSourcePreview({
 
     async function loadPreview() {
       try {
-        const nextPreview = await onLoad(uploadId);
+        const nextPreview = await onLoad(sourceId);
         if (!active) return;
 
         setPreview(nextPreview);
@@ -116,7 +122,9 @@ export function DocumentSourcePreview({
     return () => {
       active = false;
     };
-  }, [onLoad, requestVersion, uploadId]);
+  }, [onLoad, requestVersion, sourceId]);
+
+  const resolvedFileName = preview?.fileName ?? fileName ?? "Source document";
 
   return (
     <section className="flex min-h-0 min-w-0 flex-col border-b border-finhand-divider bg-finhand-canvas-muted lg:border-r lg:border-b-0">
@@ -126,21 +134,28 @@ export function DocumentSourcePreview({
             Original document
           </p>
           <p className="mt-0.5 truncate text-xs text-finhand-muted">
-            Private preview · expires after 5 minutes
+            {resolvedFileName} · private preview expires after 5 minutes
           </p>
         </div>
-        {preview ? (
-          <a
-            aria-label="Open original document in a new tab"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-finhand-muted transition hover:bg-finhand-accent-soft hover:text-finhand-interactive"
-            href={preview.url}
-            referrerPolicy="no-referrer"
-            rel="noreferrer"
-            target="_blank"
-          >
-            <ExternalLink aria-hidden="true" className="size-4" />
-          </a>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {onHide ? (
+            <Button onClick={onHide} size="sm" variant="ghost">
+              Hide original
+            </Button>
+          ) : null}
+          {preview ? (
+            <a
+              aria-label="Open original document in a new tab"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-finhand-muted transition hover:bg-finhand-accent-soft hover:text-finhand-interactive"
+              href={preview.url}
+              referrerPolicy="no-referrer"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ExternalLink aria-hidden="true" className="size-4" />
+            </a>
+          ) : null}
+        </div>
       </header>
 
       <div className="flex min-h-80 flex-1 items-center justify-center overflow-hidden p-4 lg:min-h-0">
@@ -167,7 +182,10 @@ export function DocumentSourcePreview({
             </Button>
           </div>
         ) : preview ? (
-          <DocumentPreviewContent fileName={fileName} preview={preview} />
+          <DocumentPreviewContent
+            fileName={resolvedFileName}
+            preview={preview}
+          />
         ) : (
           <div className="text-center" role="status">
             <LoaderCircle

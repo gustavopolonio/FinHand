@@ -30,6 +30,7 @@ import {
   getDocumentReviews,
   getTransactions,
   getTransactionCandidateReview,
+  getTransactionDocumentSource,
   rejectTransactionCandidate,
   retryDocumentProcessing,
   uploadDocument,
@@ -614,6 +615,7 @@ export function TransactionsPanel() {
           onConfirmCandidate={confirmCandidate}
           onGetCaptureSessionProgress={readCaptureSessionProgress}
           onGetCandidateReview={readCandidateReview}
+          onGetTransactionDocumentSource={getTransactionDocumentSource}
           onRejectCandidate={rejectCandidate}
           onSubmit={submitEditor}
           onUploadDocument={submitDocumentUpload}
