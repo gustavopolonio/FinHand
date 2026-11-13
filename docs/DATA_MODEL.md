@@ -232,6 +232,8 @@ QR capture session enter the same processing pipeline.
 | `status` | `text` | No | `pending`, `uploaded`, `processing`, `processed`, or `failed` |
 | `failure_code` | `text` | Yes | Sanitized machine-readable failure code; present only for failed uploads |
 | `processing_attempts` | `integer` | No | Number of times a worker has claimed the upload; defaults to zero |
+| `processing_lease_id` | `uuid` | Yes | Random ownership token for the current processing attempt |
+| `processing_lease_expires_at` | `timestamptz` | Yes | Time after which an interrupted processing attempt may be recovered |
 | `created_at` | `timestamptz` | No | Creation time |
 | `updated_at` | `timestamptz` | No | Last state change |
 
@@ -243,10 +245,14 @@ Constraints and indexes:
 - QR capture is restricted to document uploads.
 - Failure state and failure code must be consistent.
 - Processing attempts cannot be negative.
+- Processing uploads require both lease fields and at least one processing
+  attempt. Every other status requires both lease fields to be null.
 - Unique constraint on `(user_id, id)` for ownership-safe references.
 - Indexes on `(user_id, created_at DESC)`, `(user_id, status)`, and
   `(status, created_at, id)`. The final index lets concurrent workers claim the
   oldest available upload efficiently.
+- Index on `(status, processing_lease_expires_at, id)` for expired-lease
+  recovery.
 
 The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application
@@ -262,7 +268,8 @@ Allowed upload state transitions are:
 
 - `pending → uploaded` after the object is completely stored.
 - `uploaded → processing` when one worker atomically claims the upload and
-  increments `processing_attempts`.
+  increments `processing_attempts`. Every claim creates a new random lease ID
+  with a fixed expiration time.
 - `processing → processed` after processing completes successfully.
 - `pending`, `uploaded`, or `processing → failed` with a sanitized
   machine-readable failure code.
@@ -279,6 +286,14 @@ failures may be retried. Retryability is derived by the backend from a
 centralized failure policy and is never supplied by the client. State changes
 must be atomic and ownership-scoped so two workers cannot claim the same upload
 and one user cannot transition another user's upload.
+
+Processing completion and failure updates must match the lease ID returned by
+the claim. After a lease expires, a periodic recovery worker atomically clears
+the lease and returns the upload to `uploaded` when fewer than three attempts
+have occurred. At the attempt limit, recovery marks the upload `failed` with
+`processing_interrupted`. A stale worker holding an older lease cannot persist
+candidates or change the upload state after a newer attempt claims it. The
+initial implementation uses a fixed lease duration without heartbeat renewal.
 
 ### `document_capture_sessions`
 
