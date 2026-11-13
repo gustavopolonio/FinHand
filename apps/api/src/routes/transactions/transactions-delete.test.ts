@@ -8,6 +8,7 @@ import { registerAuthenticationGuard } from "../../auth/require-authentication.j
 import type { Database } from "../../db/index.js";
 import { transactions } from "../../db/schema/index.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
+import { createTestDocumentStorage } from "../../test/document-storage.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { transactionRoutes } from "./transactions.js";
 
@@ -57,7 +58,9 @@ function createApplication(options: {
     application,
     createAuthentication(options.userId),
   );
-  application.register(transactionRoutes);
+  application.register(transactionRoutes, {
+    documentStorage: createTestDocumentStorage(),
+  });
   applications.push(application);
 
   return application;

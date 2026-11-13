@@ -7,6 +7,8 @@ import {
   listTransactionsForUser,
   updateTransactionForUser,
 } from "../../services/transactions.js";
+import { getTransactionDocumentSourceForUser } from "../../services/transaction-document-sources.js";
+import type { DocumentStorage } from "../../storage/document-storage.js";
 import {
   createTransactionBodySchema,
   listTransactionsQuerySchema,
@@ -14,7 +16,14 @@ import {
   updateTransactionBodySchema,
 } from "../../validation/transaction-schemas.js";
 
-export async function transactionRoutes(application: FastifyInstance) {
+interface TransactionRoutesOptions {
+  documentStorage: DocumentStorage;
+}
+
+export async function transactionRoutes(
+  application: FastifyInstance,
+  { documentStorage }: TransactionRoutesOptions,
+) {
   application.addHook("preHandler", application.requireAuthentication);
   const transactionsApplication =
     application.withTypeProvider<ZodTypeProvider>();
@@ -49,6 +58,25 @@ export async function transactionRoutes(application: FastifyInstance) {
       );
 
       return reply.status(201).send({ transaction });
+    },
+  );
+
+  transactionsApplication.get(
+    "/api/transactions/:id/source-document",
+    {
+      schema: {
+        params: transactionParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const source = await getTransactionDocumentSourceForUser({
+        database: application.database,
+        documentStorage,
+        transactionId: request.params.id,
+        userId: request.authenticatedUserId,
+      });
+
+      return reply.header("Cache-Control", "private, no-store").send(source);
     },
   );
 

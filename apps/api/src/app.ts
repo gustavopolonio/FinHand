@@ -64,7 +64,7 @@ export function buildApplication({
   application.register(healthRoutes);
   application.register(accountRoutes);
   application.register(categoryRoutes);
-  application.register(transactionRoutes);
+  application.register(transactionRoutes, { documentStorage });
   application.register(transactionCandidateRoutes);
   application.register(financialSummaryRoutes);
   application.register(documentUploadRoutes, { documentStorage });

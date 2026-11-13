@@ -10,6 +10,8 @@ import {
   transactions,
 } from "../../db/schema/index.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
+import type { DocumentStorage } from "../../storage/document-storage.js";
+import { createTestDocumentStorage } from "../../test/document-storage.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { transactionRoutes } from "./transactions.js";
 
@@ -45,6 +47,8 @@ function createApplication(options: {
   findAccount?: ReturnType<typeof vi.fn>;
   findCategory?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
+  select?: ReturnType<typeof vi.fn>;
+  documentStorage?: DocumentStorage;
 }) {
   const application = Fastify();
   const database = {
@@ -60,6 +64,7 @@ function createApplication(options: {
       },
     },
     insert: options.insert ?? vi.fn(),
+    select: options.select ?? vi.fn(),
   } as unknown as Database;
 
   registerSchemaCompilers(application);
@@ -69,10 +74,24 @@ function createApplication(options: {
     application,
     createAuthentication(options.userId),
   );
-  application.register(transactionRoutes);
+  application.register(transactionRoutes, {
+    documentStorage:
+      options.documentStorage ?? createTestDocumentStorage(),
+  });
   applications.push(application);
 
   return application;
+}
+
+function createSourceSelect(source: Record<string, unknown> | undefined) {
+  const limit = vi.fn().mockResolvedValue(source ? [source] : []);
+  const where = vi.fn().mockReturnValue({ limit });
+  const secondInnerJoin = vi.fn().mockReturnValue({ where });
+  const firstInnerJoin = vi.fn().mockReturnValue({ innerJoin: secondInnerJoin });
+  const from = vi.fn().mockReturnValue({ innerJoin: firstInnerJoin });
+  const select = vi.fn().mockReturnValue({ from });
+
+  return { limit, select, where };
 }
 
 function createTransactionRecord(id: string) {
@@ -288,6 +307,85 @@ describe("GET /api/transactions", () => {
     expect(response.statusCode).toBe(500);
     expect(response.json()).toEqual({ error: "Internal server error" });
     expect(response.body).not.toContain("Sensitive database failure");
+  });
+});
+
+describe("GET /api/transactions/:id/source-document", () => {
+  const transactionId = "44444444-4444-4444-8444-444444444444";
+
+  it("returns a non-cacheable private preview for a document transaction", async () => {
+    const selectFixture = createSourceSelect({
+      contentType: "application/pdf",
+      fileName: "receipt.pdf",
+      objectKey: `${userId}/documents/upload-id`,
+    });
+    const documentStorage = createTestDocumentStorage();
+    vi.mocked(documentStorage.createDocumentPreviewUrl).mockResolvedValue(
+      "https://signed.example/receipt",
+    );
+    const application = createApplication({
+      documentStorage,
+      select: selectFixture.select,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/transactions/${transactionId}/source-document`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(response.json()).toEqual({
+      contentType: "application/pdf",
+      expiresAt: expect.any(String),
+      fileName: "receipt.pdf",
+      url: "https://signed.example/receipt",
+    });
+  });
+
+  it("does not expose a missing or unowned source document", async () => {
+    const selectFixture = createSourceSelect(undefined);
+    const application = createApplication({
+      select: selectFixture.select,
+      userId,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/transactions/${transactionId}/source-document`,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      error: "Transaction source document not found",
+    });
+  });
+
+  it("requires authentication before reading source metadata", async () => {
+    const select = vi.fn();
+    const application = createApplication({ select, userId: null });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/transactions/${transactionId}/source-document`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it("validates the transaction identifier", async () => {
+    const select = vi.fn();
+    const application = createApplication({ select, userId });
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/transactions/not-a-uuid/source-document",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(select).not.toHaveBeenCalled();
   });
 });
 
