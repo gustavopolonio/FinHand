@@ -283,6 +283,7 @@ describe("document extraction service", () => {
     expect(databaseFixture.processedSet).toHaveBeenCalledWith({
       status: "processed",
       failureCode: null,
+      failureDismissedAt: null,
       processingLeaseId: null,
       processingLeaseExpiresAt: null,
       updatedAt: now,

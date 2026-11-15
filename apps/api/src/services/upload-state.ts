@@ -96,6 +96,7 @@ async function transitionUploadForUser({
     .set({
       status: toStatus,
       failureCode: failureCode ?? null,
+      failureDismissedAt: null,
       updatedAt,
     })
     .where(

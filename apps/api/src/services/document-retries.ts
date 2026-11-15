@@ -72,6 +72,7 @@ export async function retryFailedDocumentUploadForUser(
     .set({
       status: "uploaded",
       failureCode: null,
+      failureDismissedAt: null,
       updatedAt,
     })
     .where(

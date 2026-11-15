@@ -9,6 +9,7 @@ import { accountRoutes } from "./routes/accounts/accounts.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
 import { documentCaptureSessionRoutes } from "./routes/document-capture-sessions/document-capture-sessions.js";
+import { documentImportIssueRoutes } from "./routes/document-import-issues/document-import-issues.js";
 import { documentReviewRoutes } from "./routes/document-reviews/document-reviews.js";
 import { documentUploadRoutes } from "./routes/document-uploads/document-uploads.js";
 import { financialSummaryRoutes } from "./routes/financial-summary/financial-summary.js";
@@ -69,6 +70,7 @@ export function buildApplication({
   application.register(financialSummaryRoutes);
   application.register(documentUploadRoutes, { documentStorage });
   application.register(documentReviewRoutes);
+  application.register(documentImportIssueRoutes);
   application.register(documentCaptureSessionRoutes, {
     captureBaseUrl: corsOrigin,
     documentStorage,

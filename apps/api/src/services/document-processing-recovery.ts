@@ -49,6 +49,7 @@ export async function recoverExpiredDocumentProcessingLeases(
           then null
         else 'processing_interrupted'
       end,
+      failure_dismissed_at = null,
       processing_lease_id = null,
       processing_lease_expires_at = null,
       updated_at = now()

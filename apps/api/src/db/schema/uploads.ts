@@ -45,6 +45,9 @@ export const uploads = pgTable(
     checksumSha256: varchar("checksum_sha256", { length: 64 }),
     status: text("status").$type<UploadStatus>().default("pending").notNull(),
     failureCode: text("failure_code"),
+    failureDismissedAt: timestamp("failure_dismissed_at", {
+      withTimezone: true,
+    }),
     processingAttempts: integer("processing_attempts").default(0).notNull(),
     processingLeaseId: uuid("processing_lease_id"),
     processingLeaseExpiresAt: timestamp("processing_lease_expires_at", {
@@ -85,6 +88,10 @@ export const uploads = pgTable(
       sql`(${table.status} = 'failed' and ${table.failureCode} is not null) or (${table.status} <> 'failed' and ${table.failureCode} is null)`,
     ),
     check(
+      "uploads_failure_dismissal_state_check",
+      sql`${table.failureDismissedAt} is null or ${table.status} = 'failed'`,
+    ),
+    check(
       "uploads_processing_lease_state_check",
       sql`(${table.status} = 'processing' and ${table.processingLeaseId} is not null and ${table.processingLeaseExpiresAt} is not null and ${table.processingAttempts} > 0) or (${table.status} <> 'processing' and ${table.processingLeaseId} is null and ${table.processingLeaseExpiresAt} is null)`,
     ),
@@ -95,6 +102,12 @@ export const uploads = pgTable(
       table.createdAt.desc(),
     ),
     index("uploads_user_id_status_index").on(table.userId, table.status),
+    index("uploads_user_id_open_failure_index").on(
+      table.userId,
+      table.status,
+      table.failureDismissedAt,
+      table.updatedAt.desc(),
+    ),
     index("uploads_status_created_at_id_index").on(
       table.status,
       table.createdAt,

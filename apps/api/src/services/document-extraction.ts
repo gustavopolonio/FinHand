@@ -86,6 +86,7 @@ export async function claimNextDocumentUpload(
     set
       status = 'processing',
       failure_code = null,
+      failure_dismissed_at = null,
       processing_attempts = claimed_upload.processing_attempts + 1,
       processing_lease_id = ${processingLeaseId},
       processing_lease_expires_at = now() + (${leaseDurationMilliseconds} * interval '1 millisecond'),
@@ -134,6 +135,7 @@ async function persistExtractedCandidates(
       .set({
         status: "processed",
         failureCode: null,
+        failureDismissedAt: null,
         processingLeaseId: null,
         processingLeaseExpiresAt: null,
         updatedAt: new Date(),
@@ -181,6 +183,7 @@ async function failClaimedUpload(
       .set({
         status: "failed",
         failureCode,
+        failureDismissedAt: null,
         processingLeaseId: null,
         processingLeaseExpiresAt: null,
         updatedAt: new Date(),

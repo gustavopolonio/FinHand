@@ -43,6 +43,13 @@
       "when": 1794592364679,
       "tag": "0005_talented_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794759677460,
+      "tag": "0006_optimal_master_chief",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,3 @@
+ALTER TABLE "uploads" ADD COLUMN "failure_dismissed_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "uploads_user_id_open_failure_index" ON "uploads" USING btree ("user_id","status","failure_dismissed_at","updated_at" DESC NULLS LAST);--> statement-breakpoint
+ALTER TABLE "uploads" ADD CONSTRAINT "uploads_failure_dismissal_state_check" CHECK ("uploads"."failure_dismissed_at" is null or "uploads"."status" = 'failed');

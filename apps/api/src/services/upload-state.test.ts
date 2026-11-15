@@ -91,6 +91,7 @@ describe("upload state transitions", () => {
     expect(databaseFixture.set).toHaveBeenCalledWith({
       status: "uploaded",
       failureCode: null,
+      failureDismissedAt: null,
       updatedAt: now,
     });
     expect(
@@ -127,6 +128,7 @@ describe("upload state transitions", () => {
     expect(databaseFixture.set).toHaveBeenCalledWith({
       status: "failed",
       failureCode: "extraction_failed",
+      failureDismissedAt: null,
       updatedAt: now,
     });
     expect(

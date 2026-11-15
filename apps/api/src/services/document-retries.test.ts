@@ -54,6 +54,7 @@ describe("retryFailedDocumentUploadForUser", () => {
     expect(fixture.set).toHaveBeenCalledWith({
       status: "uploaded",
       failureCode: null,
+      failureDismissedAt: null,
       updatedAt: expect.any(Date),
     });
   });
