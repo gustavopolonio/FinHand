@@ -197,9 +197,16 @@ describe("document extraction service", () => {
     const query = compileSql(databaseFixture.execute.mock.calls[0]?.[0]);
     expect(query.sql.toLowerCase()).toContain("for update skip locked");
     expect(query.sql.toLowerCase()).toContain(
+      '"uploads"."kind" = \'document\'',
+    );
+    expect(query.sql.toLowerCase()).toContain(
       '"uploads"."status" = \'uploaded\'',
     );
+    expect(query.sql.toLowerCase()).toContain(
+      '"uploads"."processing_attempts" <',
+    );
     expect(query.sql.toLowerCase()).toContain("status = 'processing'");
+    expect(query.sql.toLowerCase()).toContain("failure_dismissed_at = null");
     expect(query.sql.toLowerCase()).toContain(
       "processing_attempts = claimed_upload.processing_attempts + 1",
     );
@@ -210,6 +217,7 @@ describe("document extraction service", () => {
     expect(query.sql.toLowerCase()).toContain(
       'order by "uploads"."created_at" asc, "uploads"."id" asc',
     );
+    expect(query.params).toContain(3);
   });
 
   it("returns null when no uploaded document is available", async () => {

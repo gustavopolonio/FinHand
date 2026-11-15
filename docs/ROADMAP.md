@@ -58,7 +58,7 @@
 - [x] Recover uploads stuck after interrupted worker processing
 - [x] Show original source documents on document-origin transaction details
 - [x] Build a persistent, dismissible import-issues section for unresolved failures
-- [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
+- [x] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
 
 ### Acceptance Criteria
 - Users can upload supported receipt images and PDF files directly from desktop or mobile.

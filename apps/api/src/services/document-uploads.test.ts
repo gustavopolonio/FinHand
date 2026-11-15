@@ -284,6 +284,26 @@ describe("uploadDocumentForUser", () => {
     expect(storageFixture.deleteDocument).toHaveBeenCalledOnce();
   });
 
+  it("accepts a document at the exact 10 MB limit", async () => {
+    const databaseFixture = createDatabaseFixture();
+    const storageFixture = createStorageFixture();
+    const content = Buffer.alloc(maximumDocumentUploadBytes, 0);
+    Buffer.from("%PDF-").copy(content);
+
+    await expect(
+      upload({
+        content,
+        database: databaseFixture.database,
+        storage: storageFixture.storage,
+      }),
+    ).resolves.toMatchObject({
+      byteSize: maximumDocumentUploadBytes.toString(),
+      status: "uploaded",
+    });
+    expect(databaseFixture.insert).toHaveBeenCalledOnce();
+    expect(storageFixture.deleteDocument).not.toHaveBeenCalled();
+  });
+
   it("rejects a stream truncated by the multipart parser", async () => {
     const databaseFixture = createDatabaseFixture();
     const storageFixture = createStorageFixture();

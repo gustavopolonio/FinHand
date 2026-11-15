@@ -450,6 +450,30 @@ function createConcurrentDatabaseFixture(): ConcurrentDatabaseFixture {
 describe("uploadDocumentForCaptureSession", () => {
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 
+  it("rejects a replayed token before storing another document", async () => {
+    const databaseFixture = createSelectDatabase({
+      id: sessionId,
+      userId,
+      status: "consumed",
+      expiresAt,
+    });
+    const storageFixture = createStorage();
+
+    await expect(
+      uploadDocumentForCaptureSession({
+        database: databaseFixture.database,
+        documentStorage: storageFixture.storage,
+        fileName: "receipt.jpg",
+        mimeType: "image/jpeg",
+        now: () => now,
+        source: Readable.from([jpeg]),
+        token,
+      }),
+    ).rejects.toThrow(ConflictError);
+    expect(storageFixture.storage.storeDocument).not.toHaveBeenCalled();
+    expect(storageFixture.storage.deleteDocument).not.toHaveBeenCalled();
+  });
+
   it("stores an upload for the session owner and consumes the session", async () => {
     const databaseFixture = createConcurrentDatabaseFixture();
     const storageFixture = createStorage();

@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
@@ -28,6 +30,11 @@ const categoryId = "55555555-5555-4555-8555-555555555555";
 const transactionId = "66666666-6666-4666-8666-666666666666";
 const createdAt = new Date("2026-11-10T12:00:00.000Z");
 const updatedAt = new Date("2026-11-10T13:00:00.000Z");
+const postgresDialect = new PgDialect();
+
+function getSqlParameters(expression: unknown) {
+  return postgresDialect.sqlToQuery(expression as SQL).params;
+}
 
 interface TestCandidateRecord {
   id: string;
@@ -181,6 +188,39 @@ describe("getTransactionCandidateReviewForUser", () => {
     });
     expect(fixture.findUpload).toHaveBeenCalledOnce();
     expect(fixture.findCandidates).toHaveBeenCalledOnce();
+
+    const uploadQuery = fixture.findUpload.mock.calls[0]?.[0];
+    expect(
+      uploadQuery.where(
+        { id: "upload.id", userId: "upload.userId" },
+        {
+          and: (...values: unknown[]) => values,
+          eq: (column: unknown, value: unknown) => ({ column, value }),
+        },
+      ),
+    ).toEqual([
+      { column: "upload.id", value: uploadId },
+      { column: "upload.userId", value: userId },
+    ]);
+
+    const candidateQuery = fixture.findCandidates.mock.calls[0]?.[0];
+    expect(
+      candidateQuery.where(
+        {
+          uploadId: "candidate.uploadId",
+          userId: "candidate.userId",
+          status: "candidate.status",
+        },
+        {
+          and: (...values: unknown[]) => values,
+          eq: (column: unknown, value: unknown) => ({ column, value }),
+        },
+      ),
+    ).toEqual([
+      { column: "candidate.uploadId", value: uploadId },
+      { column: "candidate.userId", value: userId },
+      { column: "candidate.status", value: "pending" },
+    ]);
   });
 
   it("exposes only the safe retry policy for a failed upload", async () => {
@@ -470,6 +510,11 @@ const authoritativeTransaction = {
   updatedAt: new Date("2026-11-11T14:00:00.000Z"),
 };
 
+type TestAuthoritativeTransaction = Omit<
+  typeof authoritativeTransaction,
+  "categoryId"
+> & { categoryId: string | null };
+
 interface ConfirmationFixtureOptions {
   account?:
     | { id: string; currencyCode: string; archivedAt: Date | null }
@@ -477,12 +522,12 @@ interface ConfirmationFixtureOptions {
   category?:
     | { id: string; type: "income" | "expense"; archivedAt: Date | null }
     | undefined;
-  existingTransaction?: typeof authoritativeTransaction | undefined;
+  existingTransaction?: TestAuthoritativeTransaction | undefined;
   lockedCandidate?:
     | (TestCandidateRecord & { transactionId: string | null })
     | undefined;
   returnedCandidate?: TestCandidateRecord | undefined;
-  returnedTransaction?: typeof authoritativeTransaction | undefined;
+  returnedTransaction?: TestAuthoritativeTransaction | undefined;
 }
 
 function createConfirmationFixture(
@@ -571,6 +616,7 @@ function createConfirmationFixture(
     insert,
     insertValues,
     lockFor,
+    lockWhere,
     runTransaction,
     update,
     updateSet,
@@ -606,6 +652,10 @@ describe("confirmTransactionCandidateForUser", () => {
 
     expect(fixture.runTransaction).toHaveBeenCalledOnce();
     expect(fixture.lockFor).toHaveBeenCalledWith("update");
+    expect(getSqlParameters(fixture.lockWhere.mock.calls[0]?.[0])).toEqual([
+      candidateId,
+      userId,
+    ]);
     expect(fixture.insert).toHaveBeenCalledWith(transactions);
     expect(fixture.insertValues).toHaveBeenCalledWith({
       userId,
@@ -664,6 +714,44 @@ describe("confirmTransactionCandidateForUser", () => {
     expect(fixture.insert).not.toHaveBeenCalled();
     expect(fixture.update).not.toHaveBeenCalled();
     expect(fixture.findTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("confirms a transaction without an optional category", async () => {
+    const returnedTransaction = {
+      ...authoritativeTransaction,
+      categoryId: null,
+    };
+    const returnedCandidate = {
+      ...candidateRecord,
+      accountId,
+      categoryId: null,
+      amountMinor: 5500n,
+      description: "Corrected groceries",
+      counterparty: "Corner market",
+      status: "confirmed" as const,
+      updatedAt: returnedTransaction.updatedAt,
+    };
+    const fixture = createConfirmationFixture({
+      returnedCandidate,
+      returnedTransaction,
+    });
+
+    await expect(
+      confirmTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+        { ...confirmationInput, categoryId: null },
+      ),
+    ).resolves.toMatchObject({
+      candidate: { categoryId: null, status: "confirmed" },
+      transaction: { categoryId: null, origin: "document" },
+      created: true,
+    });
+    expect(fixture.findCategory).not.toHaveBeenCalled();
+    expect(fixture.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ categoryId: null }),
+    );
   });
 
   it("does not expose a candidate outside the user's ownership", async () => {

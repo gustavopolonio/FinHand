@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
@@ -7,6 +9,7 @@ import { retryFailedDocumentUploadForUser } from "./document-retries.js";
 const userId = "11111111-1111-4111-8111-111111111111";
 const uploadId = "22222222-2222-4222-8222-222222222222";
 const updatedAt = new Date("2026-11-13T12:00:00.000Z");
+const postgresDialect = new PgDialect();
 
 function createDatabaseFixture(
   upload: Record<string, unknown> | undefined,
@@ -57,6 +60,29 @@ describe("retryFailedDocumentUploadForUser", () => {
       failureDismissedAt: null,
       updatedAt: expect.any(Date),
     });
+
+    const findConfiguration = fixture.findFirst.mock.calls[0]?.[0];
+    const findConditions = findConfiguration.where(
+      {
+        id: "upload.id",
+        userId: "upload.userId",
+        kind: "upload.kind",
+      },
+      {
+        and: (...values: unknown[]) => values,
+        eq: (column: unknown, value: unknown) => ({ column, value }),
+      },
+    );
+    expect(findConditions).toEqual([
+      { column: "upload.id", value: uploadId },
+      { column: "upload.userId", value: userId },
+      { column: "upload.kind", value: "document" },
+    ]);
+
+    expect(
+      postgresDialect.sqlToQuery(fixture.where.mock.calls[0]?.[0] as SQL)
+        .params,
+    ).toEqual([uploadId, userId, "document", "failed", "ai_timeout", 3]);
   });
 
   it("does not expose an upload outside the authenticated user's ownership", async () => {
