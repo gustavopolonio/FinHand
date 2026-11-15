@@ -35,7 +35,7 @@
 
 ## Milestone 3 — AI Document Processing
 
-**Status:** In Progress
+**Status:** Completed
 
 ### Tasks
 - [x] Design and migrate the data model for uploads, document capture sessions, and transaction candidates
@@ -73,13 +73,24 @@
 
 ## Milestone 4 — Voice Input
 
-**Status:** Not Started
+**Status:** In Progress
 
 ### Tasks
-- [ ] Implement audio upload or recording
-- [ ] Transcribe audio using OpenAI API
-- [ ] Extract structured transaction data
-- [ ] Implement transaction confirmation workflow
+- [x] Build authenticated browser microphone recording for desktop and mobile with pause, resume, live input-level feedback, playback, discard-and-restart, and an automatic 30-second active-recording limit; do not expose an audio-file picker
+- [ ] Validate recorded audio format, byte size, actual duration, checksum, and ownership before storing it privately as an `audio` upload
+- [ ] Transcribe completed recordings asynchronously using the OpenAI file transcription API
+- [ ] Extract and normalize one or more transaction candidates from each audio transcript
+- [ ] Reuse the candidate review and editing interface and require explicit confirmation or rejection of every candidate
+- [ ] Add automated tests for recording validation, ownership, transcription failures, multiple candidates, and replay-safe confirmation
+
+### Acceptance Criteria
+- Users can record microphone audio from supported desktop and mobile browsers without selecting an existing audio file.
+- Users can pause and resume without paused time consuming the 30-second allowance, and a live input meter makes silence and captured speech visibly distinguishable.
+- Recording stops automatically after 30 seconds of captured audio, and the backend independently rejects recordings that exceed the duration or size limits.
+- Audio is stored privately in the shared uploads bucket and is scoped to its authenticated owner.
+- A completed recording is transcribed without exposing the OpenAI API key to the browser.
+- One recording may produce multiple ordered transaction candidates.
+- No extracted candidate affects balances until the user explicitly confirms it; candidates from the same recording can be confirmed or rejected independently.
 
 ## Milestone 5 — RAG Financial Assistant
 
@@ -101,6 +112,7 @@
 - [ ] Implement application and AI observability
 - [ ] Replace document-status polling with server-pushed updates using SSE or WebSockets
 - [ ] Define and implement retention cleanup for abandoned database records and S3 objects
+- [ ] Migrate private objects, IAM permissions, and configuration from the document-specific development bucket to a shared `finhand-dev-uploads` bucket
 - [ ] Replace user-ID-based S3 object key prefixes with opaque random storage namespaces and migrate existing objects
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish UI styles, interaction details, and visual consistency across the application

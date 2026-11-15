@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, FileUp, PenLine, QrCode } from "lucide-react";
+import { Camera, FileUp, Mic, PenLine, QrCode } from "lucide-react";
 
 import { cn } from "@/lib/class-names";
 
@@ -8,7 +8,8 @@ export type TransactionCreationMode =
   | "manual"
   | "document"
   | "camera"
-  | "qr";
+  | "qr"
+  | "voice";
 
 interface TransactionMethodSelectorProps {
   disabled: boolean;
@@ -21,6 +22,7 @@ const modes = [
   { value: "document", label: "Upload document", icon: FileUp },
   { value: "camera", label: "Take photo", icon: Camera },
   { value: "qr", label: "Use phone", icon: QrCode },
+  { value: "voice", label: "Voice", icon: Mic },
 ] as const;
 
 export function TransactionMethodSelector({
@@ -31,7 +33,7 @@ export function TransactionMethodSelector({
   return (
     <div
       aria-label="Transaction creation method"
-      className="grid grid-cols-3 gap-1 rounded-xl bg-finhand-canvas-muted p-1 md:grid-cols-3"
+      className="grid grid-cols-4 gap-1 rounded-xl bg-finhand-canvas-muted p-1"
       role="group"
     >
       {modes.map((mode) => {

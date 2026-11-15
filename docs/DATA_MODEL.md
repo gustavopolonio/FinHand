@@ -215,8 +215,9 @@ Transactions initially use the account's currency. Foreign exchange, exchange ra
 ### `uploads`
 
 Stores metadata for a private user-owned object in Amazon S3. The table never
-stores a public URL. A document uploaded directly and one submitted through a
-QR capture session enter the same processing pipeline.
+stores a public URL. Milestone 3 uses it for documents, and Milestone 4 reuses
+it for browser-recorded audio. A document uploaded directly and one submitted
+through a QR capture session enter the same document-processing pipeline.
 
 | Column | Type | Null | Description |
 | --- | --- | --- | --- |
@@ -260,7 +261,9 @@ Constraints and indexes:
 
 The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application
-logs must not contain document bytes or public object URLs.
+logs must not contain document or audio bytes or public object URLs. Documents
+and audio recordings may share the existing private bucket because ownership is
+enforced through application data and storage keys, not the bucket name.
 
 During candidate review, the authenticated API may issue a five-minute S3
 presigned `GET` URL after verifying the upload belongs to the requesting user.
@@ -446,9 +449,30 @@ The following entities are part of the planned architecture but not the first mi
 
 ### Milestone 4 — voice extraction
 
+Milestone 4 accepts microphone recordings created inside supported desktop and
+mobile browsers. It does not accept an existing audio file selected from the
+device. The frontend automatically stops recording at 30 seconds, while the
+backend independently validates the actual duration, media type, byte size,
+checksum, and authenticated ownership before creating an `uploads` record with
+`kind = 'audio'` and `source = 'direct'`.
+
+Audio recordings use the same existing private S3 bucket as documents,
+separated by storage keys rather than public folders or access rules. Renaming
+and migrating to a general-purpose uploads bucket is deferred to Production
+Readiness and is not required for the Milestone 4 V1.
+
+One audio upload may describe multiple financial events. It therefore has a
+one-to-many relationship with `transaction_candidates`, preserving candidate
+order with the existing `position` column. Every candidate remains independent:
+the user may edit, confirm, or reject each one, and no authoritative transaction
+is created without explicit confirmation.
+
 #### `audio_transcripts`
 
-If transcript retention is approved, stores the transcription and processing metadata for an audio upload. Retention requirements should be decided before implementation to avoid storing sensitive speech unnecessarily.
+If transcript retention is approved, stores the transcription and processing
+metadata for an audio upload. Retention requirements should be decided before
+implementation to avoid storing sensitive speech unnecessarily. The transcript
+belongs to one audio upload even when extraction produces multiple candidates.
 
 ### Milestone 5 — RAG
 

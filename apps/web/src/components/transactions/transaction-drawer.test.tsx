@@ -63,7 +63,7 @@ const commonProps = {
 };
 
 describe("TransactionDrawer", () => {
-  it("defaults to manual entry with document, camera, and phone options", () => {
+  it("defaults to manual entry with document, camera, phone, and voice options", () => {
     const markup = renderToStaticMarkup(
       <TransactionDrawer {...commonProps} transaction={null} />,
     );
@@ -76,6 +76,7 @@ describe("TransactionDrawer", () => {
     expect(markup).toContain("Upload document");
     expect(markup).toContain("Take photo");
     expect(markup).toContain("Use phone");
+    expect(markup).toContain("Voice");
     expect(markup).toContain('id="transaction-manual-panel"');
     expect(markup).toContain("Save Transaction");
   });
@@ -115,5 +116,22 @@ describe("TransactionDrawer", () => {
 
     expect(markup).toContain("Select a receipt or invoice");
     expect(markup).toContain('id="transaction-document-panel"');
+  });
+
+  it("can open directly in voice recording mode", () => {
+    const markup = renderToStaticMarkup(
+      <TransactionDrawer
+        {...commonProps}
+        initialCreationMode="voice"
+        transaction={null}
+      />,
+    );
+
+    expect(markup).toContain("Describe your transactions");
+    expect(markup).toContain("Start recording");
+    expect(markup).toContain("00:00");
+    expect(markup).toContain("00:30");
+    expect(markup).toContain('id="transaction-voice-panel"');
+    expect(markup).not.toContain('type="file"');
   });
 });

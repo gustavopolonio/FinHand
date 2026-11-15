@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TransactionMethodSelector } from "./transaction-method-selector";
 
 describe("TransactionMethodSelector", () => {
-  it("shows separate manual, document, camera, and phone modes", () => {
+  it("shows separate manual, document, camera, phone, and voice modes", () => {
     const markup = renderToStaticMarkup(
       <TransactionMethodSelector
         disabled={false}
@@ -18,6 +18,7 @@ describe("TransactionMethodSelector", () => {
     expect(markup).toContain("Upload document");
     expect(markup).toContain("Take photo");
     expect(markup).toContain("Use phone");
+    expect(markup).toContain("Voice");
     expect(markup).toContain('id="transaction-manual-tab"');
     expect(markup).toContain(
       'aria-controls="transaction-manual-panel" aria-pressed="true"',
@@ -33,6 +34,10 @@ describe("TransactionMethodSelector", () => {
     expect(markup).toContain('id="transaction-qr-tab"');
     expect(markup).toContain(
       'aria-controls="transaction-qr-panel" aria-pressed="false"',
+    );
+    expect(markup).toContain('id="transaction-voice-tab"');
+    expect(markup).toContain(
+      'aria-controls="transaction-voice-panel" aria-pressed="false"',
     );
   });
 });

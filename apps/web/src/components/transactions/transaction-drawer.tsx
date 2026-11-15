@@ -27,6 +27,7 @@ import { DocumentSourcePreview } from "./document-source-preview";
 import { QrCaptureForm } from "./qr-capture-form";
 import { ReceiptCameraForm } from "./receipt-camera-form";
 import { TransactionFields } from "./transaction-fields";
+import { VoiceRecordingForm } from "./voice-recording-form";
 import {
   emptyTransactionForm,
   formValuesFromTransaction,
@@ -140,7 +141,9 @@ export function TransactionDrawer({
         ? "Upload a receipt or invoice securely from this device."
         : creationMode === "camera"
           ? "Photograph and securely upload a receipt from this device."
-          : "Securely continue receipt capture on your phone.";
+          : creationMode === "voice"
+            ? "Record up to 30 seconds describing one or more transactions."
+            : "Securely continue receipt capture on your phone.";
 
   return (
     <WorkspaceModal
@@ -213,6 +216,8 @@ export function TransactionDrawer({
           onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
         />
+      ) : !transaction && creationMode === "voice" ? (
+        <VoiceRecordingForm onClose={onClose} />
       ) : (
         <div
           className={cn(
