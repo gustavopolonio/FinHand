@@ -145,3 +145,24 @@ export function getDocumentExtractionEnvironment() {
     ),
   });
 }
+
+export function getAudioTranscriptionEnvironment() {
+  return Object.freeze({
+    apiKey: required("OPENAI_API_KEY"),
+    leaseDurationMilliseconds: positiveInteger(
+      "AUDIO_TRANSCRIPTION_LEASE_DURATION_MS",
+      10 * 60 * 1_000,
+    ),
+    model:
+      process.env.OPENAI_AUDIO_TRANSCRIPTION_MODEL?.trim() ||
+      "gpt-transcribe",
+    pollIntervalMilliseconds: positiveInteger(
+      "AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS",
+      2_000,
+    ),
+    recoveryIntervalMilliseconds: positiveInteger(
+      "AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS",
+      60_000,
+    ),
+  });
+}

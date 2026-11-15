@@ -27,6 +27,10 @@ function stubValidEnvironment() {
   vi.stubEnv("DOCUMENT_EXTRACTION_POLL_INTERVAL_MS", "");
   vi.stubEnv("DOCUMENT_PROCESSING_LEASE_DURATION_MS", "");
   vi.stubEnv("DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS", "");
+  vi.stubEnv("OPENAI_AUDIO_TRANSCRIPTION_MODEL", "");
+  vi.stubEnv("AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS", "");
+  vi.stubEnv("AUDIO_TRANSCRIPTION_LEASE_DURATION_MS", "");
+  vi.stubEnv("AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS", "");
 }
 
 async function importEnvironment() {
@@ -97,6 +101,34 @@ describe("environment configuration", () => {
       model: "test-vision-model",
       pollIntervalMilliseconds: 2_000,
       recoveryIntervalMilliseconds: 60_000,
+    });
+  });
+
+  it("returns the asynchronous audio transcription configuration", async () => {
+    const { getAudioTranscriptionEnvironment } = await importEnvironment();
+
+    expect(getAudioTranscriptionEnvironment()).toEqual({
+      apiKey: "openai-test-api-key",
+      leaseDurationMilliseconds: 600_000,
+      model: "gpt-transcribe",
+      pollIntervalMilliseconds: 2_000,
+      recoveryIntervalMilliseconds: 60_000,
+    });
+  });
+
+  it("accepts explicit audio transcription settings", async () => {
+    vi.stubEnv("OPENAI_AUDIO_TRANSCRIPTION_MODEL", " custom-transcriber ");
+    vi.stubEnv("AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS", "3000");
+    vi.stubEnv("AUDIO_TRANSCRIPTION_LEASE_DURATION_MS", "900000");
+    vi.stubEnv("AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS", "30000");
+    const { getAudioTranscriptionEnvironment } = await importEnvironment();
+
+    expect(getAudioTranscriptionEnvironment()).toEqual({
+      apiKey: "openai-test-api-key",
+      leaseDurationMilliseconds: 900_000,
+      model: "custom-transcriber",
+      pollIntervalMilliseconds: 3_000,
+      recoveryIntervalMilliseconds: 30_000,
     });
   });
 
@@ -219,6 +251,32 @@ describe("environment configuration", () => {
       vi.stubEnv(name, value);
 
       expect(() => getDocumentExtractionEnvironment()).toThrow(message);
+    },
+  );
+
+  it.each([
+    [
+      "AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS",
+      "0",
+      "AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS must be a positive integer.",
+    ],
+    [
+      "AUDIO_TRANSCRIPTION_LEASE_DURATION_MS",
+      "1.5",
+      "AUDIO_TRANSCRIPTION_LEASE_DURATION_MS must be a positive integer.",
+    ],
+    [
+      "AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS",
+      "-1",
+      "AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS must be a positive integer.",
+    ],
+  ])(
+    "rejects invalid audio transcription setting %s",
+    async (name, value, message) => {
+      const { getAudioTranscriptionEnvironment } = await importEnvironment();
+      vi.stubEnv(name, value);
+
+      expect(() => getAudioTranscriptionEnvironment()).toThrow(message);
     },
   );
 });
