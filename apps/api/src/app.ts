@@ -6,6 +6,7 @@ import { registerAuthenticationGuard } from "./auth/require-authentication.js";
 import type { Database, DatabaseConnection } from "./db/index.js";
 import { registerApplicationErrorHandler } from "./errors/error-handler.js";
 import { accountRoutes } from "./routes/accounts/accounts.js";
+import { audioUploadRoutes } from "./routes/audio-uploads/audio-uploads.js";
 import { authenticationRoutes } from "./routes/authentication/authentication.js";
 import { categoryRoutes } from "./routes/categories/categories.js";
 import { documentCaptureSessionRoutes } from "./routes/document-capture-sessions/document-capture-sessions.js";
@@ -64,6 +65,7 @@ export function buildApplication({
 
   application.register(healthRoutes);
   application.register(accountRoutes);
+  application.register(audioUploadRoutes, { documentStorage });
   application.register(categoryRoutes);
   application.register(transactionRoutes, { documentStorage });
   application.register(transactionCandidateRoutes);
