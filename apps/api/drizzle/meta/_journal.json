@@ -50,6 +50,13 @@
       "when": 1794759677460,
       "tag": "0006_optimal_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794779642168,
+      "tag": "0007_flawless_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

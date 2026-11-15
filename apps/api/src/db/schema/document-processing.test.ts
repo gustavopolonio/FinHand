@@ -1,6 +1,7 @@
 import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
+import { audioTranscripts } from "./audio-transcripts.js";
 import {
   documentCaptureSessions,
   documentCaptureSessionStatuses,
@@ -169,5 +170,36 @@ describe("Milestone 3 document-processing schema", () => {
     expect(names(transactions).uniqueConstraints).toContain(
       "transactions_user_id_id_unique",
     );
+  });
+});
+
+describe("Milestone 4 audio-processing schema", () => {
+  it("stores one ownership-safe transcript per audio upload", () => {
+    expect(names(audioTranscripts)).toEqual({
+      checks: expect.arrayContaining([
+        "audio_transcripts_text_not_blank_check",
+        "audio_transcripts_model_not_blank_check",
+      ]),
+      columns: expect.arrayContaining([
+        "upload_id",
+        "user_id",
+        "text",
+        "model",
+        "metadata",
+        "created_at",
+        "updated_at",
+      ]),
+      foreignKeys: expect.arrayContaining([
+        "audio_transcripts_user_id_users_id_fk",
+        "audio_transcripts_upload_owner_fk",
+      ]),
+      indexes: expect.arrayContaining([
+        "audio_transcripts_user_id_created_at_index",
+      ]),
+      table: "audio_transcripts",
+      uniqueConstraints: [],
+    });
+
+    expect(audioTranscripts.uploadId.primary).toBe(true);
   });
 });
