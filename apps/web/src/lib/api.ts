@@ -208,6 +208,20 @@ export interface DocumentReview {
   updatedAt: string;
 }
 
+export interface DocumentImportIssue {
+  uploadId: string;
+  originalFileName: string;
+  failure: DocumentProcessingFailure;
+  createdAt: string;
+  failedAt: string;
+}
+
+export interface DismissedDocumentImportIssue {
+  uploadId: string;
+  dismissedAt: string;
+  changed: boolean;
+}
+
 export interface DocumentPreview {
   url: string;
   contentType: string;
@@ -581,6 +595,23 @@ export async function getDocumentReviews() {
   );
 
   return response.reviews;
+}
+
+export async function getDocumentImportIssues() {
+  const response = await request<{ issues: DocumentImportIssue[] }>(
+    "/api/document-import-issues",
+  );
+
+  return response.issues;
+}
+
+export async function dismissDocumentImportIssue(uploadId: string) {
+  const response = await request<{ issue: DismissedDocumentImportIssue }>(
+    `/api/uploads/documents/${uploadId}/dismiss-failure`,
+    { method: "POST" },
+  );
+
+  return response.issue;
 }
 
 export function getDocumentPreview(uploadId: string) {

@@ -4,6 +4,7 @@ import {
   type Account,
   type Category,
   type DocumentUpload,
+  type DocumentImportIssue,
   type DocumentReview,
   type TransactionCandidate,
   cancelDocumentCaptureSession,
@@ -16,10 +17,12 @@ import {
   createCategory,
   createTransaction,
   deleteTransaction,
+  dismissDocumentImportIssue,
   getAccounts,
   getCategories,
   getDocumentCaptureSession,
   getDocumentCaptureSessionProgress,
+  getDocumentImportIssues,
   getDocumentPreview,
   getDocumentReviews,
   getFinancialSummary,
@@ -688,6 +691,53 @@ describe("document reviews API", () => {
     await expect(retryDocumentProcessing(uploadId)).resolves.toEqual(upload);
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/uploads/documents/${uploadId}/retry`,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+  });
+});
+
+describe("document import issues API", () => {
+  const issue: DocumentImportIssue = {
+    uploadId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    originalFileName: "receipt.pdf",
+    failure: {
+      code: "provider_unavailable",
+      canRetry: true,
+      message: "The document service is temporarily unavailable.",
+    },
+    createdAt: "2026-11-10T12:00:00.000Z",
+    failedAt: "2026-11-10T12:01:00.000Z",
+  };
+
+  it("lists unresolved document import failures", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ issues: [issue] }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getDocumentImportIssues()).resolves.toEqual([issue]);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/document-import-issues",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("dismisses a document import failure without deleting its upload", async () => {
+    const dismissedIssue = {
+      uploadId: issue.uploadId,
+      dismissedAt: "2026-11-10T12:02:00.000Z",
+      changed: true,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(successfulResponse({ issue: dismissedIssue }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(dismissDocumentImportIssue(issue.uploadId)).resolves.toEqual(
+      dismissedIssue,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/uploads/documents/${issue.uploadId}/dismiss-failure`,
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
   });

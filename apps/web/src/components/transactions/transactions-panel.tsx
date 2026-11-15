@@ -12,6 +12,7 @@ import {
   type ConfirmTransactionCandidateResult,
   type DocumentCaptureSession,
   type DocumentCaptureSessionProgress,
+  type DocumentImportIssue,
   type DocumentReview,
   type DocumentUpload,
   type Transaction,
@@ -24,9 +25,11 @@ import {
   createDocumentCaptureSession,
   createTransaction,
   deleteTransaction,
+  dismissDocumentImportIssue,
   getAccounts,
   getCategories,
   getDocumentCaptureSessionProgress,
+  getDocumentImportIssues,
   getDocumentReviews,
   getTransactions,
   getTransactionCandidateReview,
@@ -45,6 +48,7 @@ import {
   DocumentFailureToasts,
   type DocumentFailureNotice,
 } from "./document-failure-toasts";
+import { DocumentImportIssuesSection } from "./document-import-issues-section";
 import { DocumentReviewsSection } from "./document-reviews-section";
 import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 import { TransactionConfirmationToast } from "./transaction-confirmation-toast";
@@ -84,10 +88,14 @@ export function TransactionsPanel() {
   const [editor, setEditor] = useState<TransactionEditor | null>(null);
   const [reviewUploadId, setReviewUploadId] = useState<string | null>(null);
   const [documentReviewRefreshKey, setDocumentReviewRefreshKey] = useState(0);
+  const [documentIssueRefreshKey, setDocumentIssueRefreshKey] = useState(0);
   const [documentFailureNotices, setDocumentFailureNotices] = useState<
     DocumentFailureNotice[]
   >([]);
   const [retryingDocumentUploadId, setRetryingDocumentUploadId] = useState<
+    string | null
+  >(null);
+  const [dismissingDocumentUploadId, setDismissingDocumentUploadId] = useState<
     string | null
   >(null);
   const [transactionToDelete, setTransactionToDelete] =
@@ -358,6 +366,7 @@ export function TransactionsPanel() {
             originalFileName: review.upload.originalFileName,
             failure: review.upload.failure,
           });
+          setDocumentIssueRefreshKey((key) => key + 1);
         }
 
         return review;
@@ -389,8 +398,21 @@ export function TransactionsPanel() {
     }
   }, [reportError]);
 
+  const readDocumentImportIssues = useCallback(async (): Promise<
+    DocumentImportIssue[] | null
+  > => {
+    try {
+      const issues = await getDocumentImportIssues();
+      setError(null);
+      return issues;
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    }
+  }, [reportError]);
+
   const retryFailedDocument = useCallback(
-    async (uploadId: string): Promise<void> => {
+    async (uploadId: string): Promise<boolean> => {
       setRetryingDocumentUploadId(uploadId);
       setError(null);
 
@@ -401,10 +423,34 @@ export function TransactionsPanel() {
         );
         setReviewUploadId(null);
         setDocumentReviewRefreshKey((key) => key + 1);
+        setDocumentIssueRefreshKey((key) => key + 1);
+        return true;
       } catch (cause) {
         reportError(cause);
+        return false;
       } finally {
         setRetryingDocumentUploadId(null);
+      }
+    },
+    [reportError],
+  );
+
+  const dismissFailedDocument = useCallback(
+    async (uploadId: string): Promise<boolean> => {
+      setDismissingDocumentUploadId(uploadId);
+      setError(null);
+
+      try {
+        await dismissDocumentImportIssue(uploadId);
+        setDocumentFailureNotices((notices) =>
+          notices.filter((notice) => notice.uploadId !== uploadId),
+        );
+        return true;
+      } catch (cause) {
+        reportError(cause);
+        return false;
+      } finally {
+        setDismissingDocumentUploadId(null);
       }
     },
     [reportError],
@@ -508,6 +554,7 @@ export function TransactionsPanel() {
               setIsLoadingReferences(true);
               setIsLoadingTransactions(true);
               setDocumentReviewRefreshKey((key) => key + 1);
+              setDocumentIssueRefreshKey((key) => key + 1);
               void Promise.all([loadReferences(), loadTransactions(query)]);
             }}
             variant="secondary"
@@ -534,6 +581,20 @@ export function TransactionsPanel() {
           </Button>
         </div>
       </header>
+
+      <DocumentImportIssuesSection
+        dismissingUploadId={dismissingDocumentUploadId}
+        onDismiss={dismissFailedDocument}
+        onLoad={readDocumentImportIssues}
+        onRetry={retryFailedDocument}
+        onUploadAnother={() => {
+          setError(null);
+          setReviewUploadId(null);
+          setEditor({ kind: "create", initialMode: "document" });
+        }}
+        refreshKey={documentIssueRefreshKey}
+        retryingUploadId={retryingDocumentUploadId}
+      />
 
       <DocumentReviewsSection
         onLoad={readDocumentReviews}
