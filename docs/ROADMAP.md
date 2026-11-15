@@ -57,7 +57,7 @@
 - [x] Implement manual retry for retryable failed document processing
 - [x] Recover uploads stuck after interrupted worker processing
 - [x] Show original source documents on document-origin transaction details
-- [ ] Build a persistent, dismissible import-issues section for unresolved failures
+- [x] Build a persistent, dismissible import-issues section for unresolved failures
 - [ ] Add automated tests for uploads, ownership, QR expiration and replay prevention, extraction, and confirmation
 
 ### Acceptance Criteria

@@ -231,6 +231,7 @@ QR capture session enter the same processing pipeline.
 | `checksum_sha256` | `varchar(64)` | Yes | Lowercase hexadecimal SHA-256 checksum when available |
 | `status` | `text` | No | `pending`, `uploaded`, `processing`, `processed`, or `failed` |
 | `failure_code` | `text` | Yes | Sanitized machine-readable failure code; present only for failed uploads |
+| `failure_dismissed_at` | `timestamptz` | Yes | When the user dismissed this failed import from their unresolved issues list |
 | `processing_attempts` | `integer` | No | Number of times a worker has claimed the upload; defaults to zero |
 | `processing_lease_id` | `uuid` | Yes | Random ownership token for the current processing attempt |
 | `processing_lease_expires_at` | `timestamptz` | Yes | Time after which an interrupted processing attempt may be recovered |
@@ -244,6 +245,7 @@ Constraints and indexes:
 - Positive byte size and lowercase SHA-256 format when a checksum is present.
 - QR capture is restricted to document uploads.
 - Failure state and failure code must be consistent.
+- A failure dismissal timestamp is allowed only while the upload is failed.
 - Processing attempts cannot be negative.
 - Processing uploads require both lease fields and at least one processing
   attempt. Every other status requires both lease fields to be null.
@@ -253,6 +255,8 @@ Constraints and indexes:
   oldest available upload efficiently.
 - Index on `(status, processing_lease_expires_at, id)` for expired-lease
   recovery.
+- Index on `(user_id, status, failure_dismissed_at, updated_at DESC)` for the
+  user's unresolved import-issues list.
 
 The `pending` state represents metadata created before the object is completely
 stored. File contents remain in private S3 storage; database and application
@@ -275,8 +279,8 @@ Allowed upload state transitions are:
   machine-readable failure code.
 - `failed → uploaded` only when the stored failure code is classified as
   retryable and fewer than three processing attempts have occurred. This
-  transition clears `failure_code` so the existing worker queue can claim the
-  upload again.
+  transition clears `failure_code` and `failure_dismissed_at` so the existing
+  worker queue can claim the upload again.
 
 `processed` is terminal. A `failed` upload is terminal when its failure is
 caused by unusable document content, unsupported or corrupted input,
@@ -286,6 +290,12 @@ failures may be retried. Retryability is derived by the backend from a
 centralized failure policy and is never supplied by the client. State changes
 must be atomic and ownership-scoped so two workers cannot claim the same upload
 and one user cannot transition another user's upload.
+
+Failed imports remain visible in a persistent import-issues list until the user
+retries them or explicitly dismisses them. Dismissal records presentation state
+only: it does not delete the upload row or its private S3 object. A later
+processing attempt clears the dismissal timestamp, and any new failure becomes
+visible again.
 
 Processing completion and failure updates must match the lease ID returned by
 the claim. After a lease expires, a periodic recovery worker atomically clears
