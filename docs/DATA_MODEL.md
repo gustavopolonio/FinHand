@@ -443,11 +443,9 @@ nonterminal, but ready items alone do not require continuous polling.
 - Deleting a user and all related financial data must be an explicit account-deletion workflow, not an incidental cascade from normal application operations.
 - `updated_at` is maintained by application persistence logic unless a database trigger is intentionally introduced later.
 
-## Planned extensions
+## Milestone 4 entities
 
-The following entities are part of the planned architecture but not the first migration.
-
-### Milestone 4 — voice extraction
+### Voice extraction
 
 Milestone 4 accepts microphone recordings created inside supported desktop and
 mobile browsers. It does not accept an existing audio file selected from the
@@ -470,10 +468,35 @@ is created without explicit confirmation.
 
 #### `audio_transcripts`
 
-If transcript retention is approved, stores the transcription and processing
-metadata for an audio upload. Retention requirements should be decided before
-implementation to avoid storing sensitive speech unnecessarily. The transcript
-belongs to one audio upload even when extraction produces multiple candidates.
+Stores the normalized text returned by the transcription provider and minimal
+processing metadata. It never stores audio bytes: the private S3 object remains
+the source recording. Each audio upload has at most one transcript, while that
+transcript may later produce multiple ordered transaction candidates.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `upload_id` | `uuid` | No | Primary key and ownership-safe reference to the audio upload |
+| `user_id` | `uuid` | No | Owning user; must match the upload owner |
+| `text` | `text` | No | Non-blank normalized transcript text |
+| `model` | `varchar(100)` | No | Transcription model identifier |
+| `metadata` | `jsonb` | Yes | Detected language codes and non-content usage measurements |
+| `created_at` | `timestamptz` | No | Creation time |
+| `updated_at` | `timestamptz` | No | Last update time |
+
+An audio upload with `status = 'uploaded'` and no transcript is ready for the
+transcription worker. The worker uses the existing processing lease fields and
+`FOR UPDATE SKIP LOCKED`. After it inserts a transcript, it returns the upload
+to `uploaded`, resets the stage attempt counter, and clears the lease. The later
+candidate-extraction stage distinguishes this state by the transcript's
+existence. `processed` remains reserved for uploads whose transaction candidates
+were created.
+
+Transcript and recording retention will be defined with the broader cleanup
+policy in Milestone 6 rather than as part of the Milestone 4 V1.
+
+## Planned extensions
+
+The following entities are part of the planned architecture but not the first migration.
 
 ### Milestone 5 — RAG
 
