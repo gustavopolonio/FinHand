@@ -14,7 +14,7 @@
 
 - Ensure secure storage and access to users' financial data.
 - Require user confirmation before registering AI-extracted transactions.
-- Store financial documents and voice recordings privately in the shared Amazon S3 uploads bucket. Validate document type and size, and validate audio type, size, and the 30-second duration limit before processing.
+- Store financial documents and voice recordings privately in the shared Amazon S3 uploads bucket. Validate document type and size, and accept only WebM, MP4, or Ogg browser recordings up to 5 MB and 30 seconds before processing.
 - Make QR capture sessions short-lived, single-use, unguessable, and limited to uploading into the initiating user's session. QR tokens must not grant access to financial data or appear in application logs.
 - Monitor application errors and AI usage.
 

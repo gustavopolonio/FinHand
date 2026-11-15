@@ -454,7 +454,8 @@ mobile browsers. It does not accept an existing audio file selected from the
 device. The frontend automatically stops recording at 30 seconds, while the
 backend independently validates the actual duration, media type, byte size,
 checksum, and authenticated ownership before creating an `uploads` record with
-`kind = 'audio'` and `source = 'direct'`.
+`kind = 'audio'` and `source = 'direct'`. The V1 upload endpoint accepts WebM,
+MP4, and Ogg browser recordings up to 5 MB and 30 seconds.
 
 Audio recordings use the same existing private S3 bucket as documents,
 separated by storage keys rather than public folders or access rules. Renaming

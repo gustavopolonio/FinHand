@@ -77,7 +77,7 @@
 
 ### Tasks
 - [x] Build authenticated browser microphone recording for desktop and mobile with pause, resume, live input-level feedback, playback, discard-and-restart, and an automatic 30-second active-recording limit; do not expose an audio-file picker
-- [ ] Validate recorded audio format, byte size, actual duration, checksum, and ownership before storing it privately as an `audio` upload
+- [x] Validate recorded audio format, byte size, actual duration, checksum, and ownership before storing it privately as an `audio` upload
 - [ ] Transcribe completed recordings asynchronously using the OpenAI file transcription API
 - [ ] Extract and normalize one or more transaction candidates from each audio transcript
 - [ ] Reuse the candidate review and editing interface and require explicit confirmation or rejection of every candidate
