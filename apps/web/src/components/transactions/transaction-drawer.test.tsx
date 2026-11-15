@@ -47,6 +47,7 @@ const commonProps = {
   error: null,
   isManagingCaptureSession: false,
   isSubmitting: false,
+  isUploadingAudio: false,
   isUploadingDocument: false,
   onCancelCaptureSession: vi.fn(),
   onClearError: vi.fn(),
@@ -58,6 +59,7 @@ const commonProps = {
   onGetTransactionDocumentSource: vi.fn(),
   onRejectCandidate: vi.fn(),
   onSubmit: vi.fn(),
+  onUploadAudio: vi.fn(),
   onUploadDocument: vi.fn(),
   onUpdateCandidate: vi.fn(),
 };

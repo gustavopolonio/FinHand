@@ -6,7 +6,13 @@ import { VoiceRecordingForm } from "./voice-recording-form";
 describe("VoiceRecordingForm", () => {
   it("renders recording controls without an audio file picker", () => {
     const markup = renderToStaticMarkup(
-      <VoiceRecordingForm onClose={vi.fn()} />,
+      <VoiceRecordingForm
+        isUploading={false}
+        onClearError={vi.fn()}
+        onClose={vi.fn()}
+        onUpload={vi.fn()}
+        uploadError={null}
+      />,
     );
 
     expect(markup).toContain('id="transaction-voice-panel"');

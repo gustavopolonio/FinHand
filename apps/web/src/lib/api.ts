@@ -116,6 +116,18 @@ export interface DocumentUpload {
   updatedAt: string;
 }
 
+export interface AudioUpload {
+  id: string;
+  originalFileName: string;
+  mimeType: "audio/webm" | "audio/mp4" | "audio/ogg";
+  byteSize: string;
+  checksumSha256: string;
+  durationSeconds: number;
+  status: "uploaded";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DocumentCaptureSession {
   id: string;
   status: "pending";
@@ -524,6 +536,31 @@ export async function uploadDocument(file: File) {
   formData.append("document", file);
   const response = await request<{ upload: DocumentUpload }>(
     "/api/uploads/documents",
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  return response.upload;
+}
+
+export async function uploadAudioRecording(recording: Blob) {
+  const normalizedMimeType = recording.type.split(";", 1)[0]?.toLowerCase();
+  const extension =
+    normalizedMimeType === "audio/mp4"
+      ? "m4a"
+      : normalizedMimeType === "audio/ogg"
+        ? "ogg"
+        : "webm";
+  const formData = new FormData();
+  formData.append(
+    "recording",
+    recording,
+    `voice-recording.${extension}`,
+  );
+  const response = await request<{ upload: AudioUpload }>(
+    "/api/uploads/audio",
     {
       method: "POST",
       body: formData,

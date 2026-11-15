@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CheckCircle2,
   LoaderCircle,
   LockKeyhole,
   Mic,
@@ -8,8 +9,11 @@ import {
   Play,
   Square,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { AudioUpload } from "@/lib/api";
 
 import { Button } from "../ui/button";
 import {
@@ -28,8 +32,12 @@ export interface VoiceRecording {
 }
 
 interface VoiceRecordingFormProps {
+  isUploading: boolean;
+  onClearError: () => void;
   onClose: () => void;
   onRecordingChange?: (recording: VoiceRecording | null) => void;
+  onUpload: (recording: VoiceRecording) => Promise<AudioUpload | null>;
+  uploadError: string | null;
 }
 
 type RecordingStatus =
@@ -49,13 +57,18 @@ function stopStream(stream: MediaStream | null) {
 }
 
 export function VoiceRecordingForm({
+  isUploading,
+  onClearError,
   onClose,
   onRecordingChange,
+  onUpload,
+  uploadError,
 }: VoiceRecordingFormProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState<LocalVoiceRecording | null>(null);
+  const [uploadedAudio, setUploadedAudio] = useState<AudioUpload | null>(null);
   const [inputLevel, setInputLevel] = useState(0);
   const [isInputMeterAvailable, setIsInputMeterAvailable] = useState(true);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -270,10 +283,12 @@ export function VoiceRecordingForm({
     setInputLevel(0);
     setError(null);
     setStatus("idle");
+    setUploadedAudio(null);
     activeSegmentStartedAtRef.current = null;
     recordedMillisecondsRef.current = 0;
     onRecordingChange?.(null);
-  }, [onRecordingChange]);
+    onClearError();
+  }, [onClearError, onRecordingChange]);
 
   const startRecording = useCallback(async () => {
     discardRecording();
@@ -407,6 +422,21 @@ export function VoiceRecordingForm({
     scheduleActiveRecording,
   ]);
 
+  const submitRecording = useCallback(async () => {
+    if (!recording || isUploading) return;
+
+    onClearError();
+    const upload = await onUpload({
+      blob: recording.blob,
+      durationSeconds: recording.durationSeconds,
+      mimeType: recording.mimeType,
+    });
+
+    if (upload && isMountedRef.current) {
+      setUploadedAudio(upload);
+    }
+  }, [isUploading, onClearError, onUpload, recording]);
+
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -445,6 +475,36 @@ export function VoiceRecordingForm({
         : status === "ready"
           ? "Recording ready"
           : "Microphone level";
+
+  if (uploadedAudio) {
+    return (
+      <section
+        aria-labelledby="transaction-voice-tab"
+        className="flex min-h-0 flex-1 flex-col"
+        id="transaction-voice-panel"
+      >
+        <div className="grid flex-1 place-items-center overflow-y-auto p-8 text-center">
+          <div className="max-w-md">
+            <span className="mx-auto grid size-14 place-items-center rounded-full bg-finhand-income-soft text-finhand-income">
+              <CheckCircle2 aria-hidden="true" className="size-7" />
+            </span>
+            <h3 className="mt-4 text-lg font-bold text-finhand-ink">
+              Recording uploaded
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-finhand-muted">
+              Your recording was stored privately and is ready for the next
+              processing step.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+          <Button onClick={onClose} type="button">
+            Close
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -526,6 +586,7 @@ export function VoiceRecordingForm({
                 />
                 <div className="flex justify-center">
                   <Button
+                    disabled={isUploading}
                     onClick={discardRecording}
                     size="sm"
                     type="button"
@@ -590,12 +651,12 @@ export function VoiceRecordingForm({
             )}
           </div>
 
-          {error ? (
+          {error || uploadError ? (
             <p
               className="mt-4 rounded-xl border border-finhand-expense/20 bg-finhand-expense-soft px-4 py-3 text-sm text-finhand-expense"
               role="alert"
             >
-              {error}
+              {error ?? uploadError}
             </p>
           ) : null}
 
@@ -606,10 +667,32 @@ export function VoiceRecordingForm({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-        <Button onClick={onClose} type="button" variant="ghost">
+      <div className="flex justify-end gap-2 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+        <Button
+          disabled={isUploading}
+          onClick={onClose}
+          type="button"
+          variant="ghost"
+        >
           Cancel
         </Button>
+        {status === "ready" && recording ? (
+          <Button
+            disabled={isUploading}
+            onClick={() => void submitRecording()}
+            type="button"
+          >
+            {isUploading ? (
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
+            ) : (
+              <Upload aria-hidden="true" className="size-4" />
+            )}
+            {isUploading ? "Uploading recording" : "Submit recording"}
+          </Button>
+        ) : null}
       </div>
     </section>
   );

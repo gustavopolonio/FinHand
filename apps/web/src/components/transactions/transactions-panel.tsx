@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   type Account,
+  type AudioUpload,
   type Category,
   type ConfirmTransactionCandidateInput,
   type ConfirmTransactionCandidateResult,
@@ -36,6 +37,7 @@ import {
   getTransactionDocumentSource,
   rejectTransactionCandidate,
   retryDocumentProcessing,
+  uploadAudioRecording,
   uploadDocument,
   updateTransaction,
   updateTransactionCandidate,
@@ -64,6 +66,7 @@ import {
   type TransactionFormValues,
   transactionInputFromForm,
 } from "./transaction-form";
+import type { VoiceRecording } from "./voice-recording-form";
 
 const pageSize = 10;
 
@@ -105,6 +108,7 @@ export function TransactionsPanel() {
   );
   const [isLoadingReferences, setIsLoadingReferences] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [isConfirmingCandidate, setIsConfirmingCandidate] = useState(false);
   const [isRejectingCandidate, setIsRejectingCandidate] = useState(false);
@@ -289,6 +293,22 @@ export function TransactionsPanel() {
       return null;
     } finally {
       setIsUploadingDocument(false);
+    }
+  }
+
+  async function submitAudioUpload(
+    recording: VoiceRecording,
+  ): Promise<AudioUpload | null> {
+    setIsUploadingAudio(true);
+    setError(null);
+
+    try {
+      return await uploadAudioRecording(recording.blob);
+    } catch (cause) {
+      reportError(cause);
+      return null;
+    } finally {
+      setIsUploadingAudio(false);
     }
   }
 
@@ -659,6 +679,7 @@ export function TransactionsPanel() {
             isConfirmingCandidate ||
             isRejectingCandidate
           }
+          isUploadingAudio={isUploadingAudio}
           isUploadingDocument={isUploadingDocument}
           initialCreationMode={
             editor.kind === "create" ? editor.initialMode : undefined
@@ -679,6 +700,7 @@ export function TransactionsPanel() {
           onGetTransactionDocumentSource={getTransactionDocumentSource}
           onRejectCandidate={rejectCandidate}
           onSubmit={submitEditor}
+          onUploadAudio={submitAudioUpload}
           onUploadDocument={submitDocumentUpload}
           onUpdateCandidate={saveCandidate}
           transaction={editedTransaction}

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   type Account,
+  type AudioUpload,
   type Category,
   type DocumentUpload,
   type DocumentImportIssue,
@@ -38,6 +39,7 @@ import {
   updateTransaction,
   updateTransactionCandidate,
   uploadDocument,
+  uploadAudioRecording,
   uploadCaptureDocument,
 } from "./api";
 
@@ -400,6 +402,43 @@ describe("document uploads API", () => {
       status: 413,
       message: "Document must be at most 10 MB.",
     });
+  });
+});
+
+describe("audio uploads API", () => {
+  it("uploads a browser recording as multipart form data", async () => {
+    const upload: AudioUpload = {
+      id: "88888888-8888-4888-8888-888888888888",
+      originalFileName: "voice-recording.webm",
+      mimeType: "audio/webm",
+      byteSize: "8",
+      checksumSha256: "b".repeat(64),
+      durationSeconds: 4.2,
+      status: "uploaded",
+      createdAt: "2026-11-16T12:00:00.000Z",
+      updatedAt: "2026-11-16T12:00:01.000Z",
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse({ upload }));
+    vi.stubGlobal("fetch", fetch);
+    const recording = new Blob(["recording"], {
+      type: "audio/webm;codecs=opus",
+    });
+
+    await expect(uploadAudioRecording(recording)).resolves.toEqual(upload);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/uploads/audio",
+      expect.objectContaining({
+        credentials: "include",
+        method: "POST",
+        body: expect.any(FormData),
+      }),
+    );
+    const request = fetch.mock.calls[0]?.[1] as RequestInit;
+    const body = request.body as FormData;
+    const submittedRecording = body.get("recording") as File;
+    expect(submittedRecording.name).toBe("voice-recording.webm");
+    expect(submittedRecording.type).toBe("audio/webm;codecs=opus");
+    expect(new Headers(request.headers).has("Content-Type")).toBe(false);
   });
 });
 

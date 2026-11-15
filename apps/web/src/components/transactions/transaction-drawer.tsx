@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 
 import type {
   Account,
+  AudioUpload,
   Category,
   ConfirmTransactionCandidateInput,
   ConfirmTransactionCandidateResult,
@@ -28,6 +29,7 @@ import { QrCaptureForm } from "./qr-capture-form";
 import { ReceiptCameraForm } from "./receipt-camera-form";
 import { TransactionFields } from "./transaction-fields";
 import { VoiceRecordingForm } from "./voice-recording-form";
+import type { VoiceRecording } from "./voice-recording-form";
 import {
   emptyTransactionForm,
   formValuesFromTransaction,
@@ -45,6 +47,7 @@ interface TransactionDrawerProps {
   error: string | null;
   isSubmitting: boolean;
   isManagingCaptureSession: boolean;
+  isUploadingAudio: boolean;
   isUploadingDocument: boolean;
   initialCreationMode?: TransactionCreationMode;
   onCancelCaptureSession: (sessionId: string) => Promise<void>;
@@ -68,6 +71,7 @@ interface TransactionDrawerProps {
     candidateId: string,
   ) => Promise<RejectTransactionCandidateResult | null>;
   onSubmit: (values: TransactionFormValues) => Promise<boolean>;
+  onUploadAudio: (recording: VoiceRecording) => Promise<AudioUpload | null>;
   onUploadDocument: (file: File) => Promise<DocumentUpload | null>;
   onUpdateCandidate: (
     candidateId: string,
@@ -82,6 +86,7 @@ export function TransactionDrawer({
   error,
   isSubmitting,
   isManagingCaptureSession,
+  isUploadingAudio,
   isUploadingDocument,
   initialCreationMode = "manual",
   onCancelCaptureSession,
@@ -94,6 +99,7 @@ export function TransactionDrawer({
   onGetTransactionDocumentSource,
   onRejectCandidate,
   onSubmit,
+  onUploadAudio,
   onUploadDocument,
   onUpdateCandidate,
   transaction,
@@ -132,7 +138,10 @@ export function TransactionDrawer({
   }
 
   const isBusy =
-    isSubmitting || isUploadingDocument || isManagingCaptureSession;
+    isSubmitting ||
+    isUploadingAudio ||
+    isUploadingDocument ||
+    isManagingCaptureSession;
   const description = transaction
     ? "Adjust the details saved for this transaction."
     : creationMode === "manual"
@@ -217,7 +226,13 @@ export function TransactionDrawer({
           onUpdateCandidate={onUpdateCandidate}
         />
       ) : !transaction && creationMode === "voice" ? (
-        <VoiceRecordingForm onClose={onClose} />
+        <VoiceRecordingForm
+          isUploading={isUploadingAudio}
+          onClearError={onClearError}
+          onClose={onClose}
+          onUpload={onUploadAudio}
+          uploadError={error}
+        />
       ) : (
         <div
           className={cn(
