@@ -17,12 +17,12 @@ import { Button } from "../ui/button";
 interface DocumentReviewsSectionProps {
   onLoad: () => Promise<DocumentReview[] | null>;
   onMissingReview: (uploadId: string) => Promise<void>;
-  onOpenReview: (uploadId: string) => void;
+  onOpenReview: (review: DocumentReview) => void;
   refreshKey: number;
 }
 
 interface DocumentReviewRowsProps {
-  onOpenReview: (uploadId: string) => void;
+  onOpenReview: (review: DocumentReview) => void;
   reviews: DocumentReview[];
 }
 
@@ -64,7 +64,10 @@ function reviewPresentation(review: DocumentReview) {
     case "processing":
       return {
         Icon: FileSearch,
-        label: "Analyzing document",
+        label:
+          review.kind === "audio"
+            ? "Analyzing recording"
+            : "Analyzing document",
         tone: "processing" as const,
       };
     default:
@@ -129,7 +132,7 @@ export function DocumentReviewRows({
 
             {review.status === "processed" ? (
               <Button
-                onClick={() => onOpenReview(review.uploadId)}
+                onClick={() => onOpenReview(review)}
                 size="sm"
               >
                 Review
@@ -183,8 +186,8 @@ export function DocumentReviewsList({
     });
   }
 
-  function openReview(uploadId: string) {
-    onOpenReview(uploadId);
+  function openReview(review: DocumentReview) {
+    onOpenReview(review);
   }
 
   return (
@@ -238,7 +241,7 @@ export function DocumentReviewsList({
         {nextReview ? (
           <Button
             className="absolute right-5 top-1/2 z-10 -translate-y-1/2"
-            onClick={() => openReview(nextReview.uploadId)}
+            onClick={() => openReview(nextReview)}
             size="sm"
           >
             Review next

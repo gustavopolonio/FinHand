@@ -195,6 +195,7 @@ export interface TransactionCandidate {
 export interface TransactionCandidateReview {
   upload: {
     id: string;
+    kind: UploadKind;
     originalFileName: string;
     status: DocumentProcessingStatus;
     failureCode: string | null;
@@ -212,6 +213,7 @@ export interface DocumentProcessingFailure {
 
 export interface DocumentReview {
   uploadId: string;
+  kind: UploadKind;
   originalFileName: string;
   status: DocumentProcessingStatus;
   failureCode: string | null;
@@ -239,6 +241,8 @@ export interface DocumentPreview {
   contentType: string;
   expiresAt: string;
 }
+
+export type UploadKind = "document" | "audio";
 
 export interface TransactionDocumentSource extends DocumentPreview {
   fileName: string;
@@ -655,6 +659,10 @@ export function getDocumentPreview(uploadId: string) {
   return request<DocumentPreview>(
     `/api/uploads/documents/${uploadId}/preview`,
   );
+}
+
+export function getAudioPreview(uploadId: string) {
+  return request<DocumentPreview>(`/api/uploads/audio/${uploadId}/preview`);
 }
 
 export function getTransactionDocumentSource(transactionId: string) {

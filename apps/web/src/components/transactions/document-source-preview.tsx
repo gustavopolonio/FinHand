@@ -10,7 +10,9 @@ import { useEffect, useState } from "react";
 
 import {
   type DocumentPreview,
+  getAudioPreview,
   getDocumentPreview,
+  type UploadKind,
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
@@ -22,6 +24,7 @@ interface DocumentSourcePreviewProps {
     sourceId: string,
   ) => Promise<DocumentPreview & { fileName?: string }>;
   sourceId: string;
+  sourceKind?: UploadKind;
 }
 
 interface DocumentPreviewContentProps {
@@ -31,7 +34,8 @@ interface DocumentPreviewContentProps {
 
 export function documentPreviewKind(
   contentType: string,
-): "image" | "pdf" | "unsupported" {
+): "audio" | "image" | "pdf" | "unsupported" {
+  if (contentType.startsWith("audio/")) return "audio";
   if (contentType.startsWith("image/")) return "image";
   if (contentType === "application/pdf") return "pdf";
   return "unsupported";
@@ -67,6 +71,20 @@ export function DocumentPreviewContent({
     );
   }
 
+  if (kind === "audio") {
+    return (
+      <div className="flex h-full min-h-64 w-full items-center justify-center p-8">
+        <audio
+          aria-label={`Original recording ${fileName}`}
+          className="w-full max-w-md"
+          controls
+          preload="metadata"
+          src={preview.url}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-64 flex-col items-center justify-center p-8 text-center">
       <FileWarning aria-hidden="true" className="size-10 text-finhand-muted" />
@@ -90,8 +108,9 @@ export function DocumentPreviewContent({
 export function DocumentSourcePreview({
   fileName,
   onHide,
-  onLoad = getDocumentPreview,
+  onLoad,
   sourceId,
+  sourceKind = "document",
 }: DocumentSourcePreviewProps) {
   const [preview, setPreview] = useState<
     (DocumentPreview & { fileName?: string }) | null
@@ -104,7 +123,10 @@ export function DocumentSourcePreview({
 
     async function loadPreview() {
       try {
-        const nextPreview = await onLoad(sourceId);
+        const loadPreview =
+          onLoad ??
+          (sourceKind === "audio" ? getAudioPreview : getDocumentPreview);
+        const nextPreview = await loadPreview(sourceId);
         if (!active) return;
 
         setPreview(nextPreview);
@@ -113,7 +135,11 @@ export function DocumentSourcePreview({
         if (!active) return;
 
         setPreview(null);
-        setError("The original document could not be loaded.");
+        setError(
+          sourceKind === "audio"
+            ? "The original recording could not be loaded."
+            : "The original document could not be loaded.",
+        );
       }
     }
 
@@ -122,16 +148,20 @@ export function DocumentSourcePreview({
     return () => {
       active = false;
     };
-  }, [onLoad, requestVersion, sourceId]);
+  }, [onLoad, requestVersion, sourceId, sourceKind]);
 
-  const resolvedFileName = preview?.fileName ?? fileName ?? "Source document";
+  const resolvedFileName =
+    preview?.fileName ??
+    fileName ??
+    (sourceKind === "audio" ? "Voice recording" : "Source document");
+  const sourceLabel = sourceKind === "audio" ? "recording" : "document";
 
   return (
     <section className="flex min-h-0 min-w-0 flex-col border-b border-finhand-divider bg-finhand-canvas-muted lg:border-r lg:border-b-0">
       <header className="flex items-center justify-between gap-3 border-b border-finhand-divider bg-white px-5 py-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-finhand-ink">
-            Original document
+            Original {sourceLabel}
           </p>
           <p className="mt-0.5 truncate text-xs text-finhand-muted">
             {resolvedFileName} · private preview expires after 5 minutes
@@ -145,7 +175,7 @@ export function DocumentSourcePreview({
           ) : null}
           {preview ? (
             <a
-              aria-label="Open original document in a new tab"
+              aria-label={`Open original ${sourceLabel} in a new tab`}
               className="grid size-8 shrink-0 place-items-center rounded-lg text-finhand-muted transition hover:bg-finhand-accent-soft hover:text-finhand-interactive"
               href={preview.url}
               referrerPolicy="no-referrer"
@@ -193,7 +223,7 @@ export function DocumentSourcePreview({
               className="mx-auto size-8 animate-spin text-finhand-interactive"
             />
             <p className="mt-3 text-xs font-medium text-finhand-muted">
-              Loading original document…
+              Loading original {sourceLabel}…
             </p>
           </div>
         )}

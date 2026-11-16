@@ -10,10 +10,12 @@ import {
 
 function reviewWithStatus(
   status: TransactionCandidateReview["upload"]["status"],
+  kind: TransactionCandidateReview["upload"]["kind"] = "document",
 ): TransactionCandidateReview {
   return {
     upload: {
       id: "11111111-1111-4111-8111-111111111111",
+      kind,
       originalFileName: "receipt.pdf",
       status,
       failureCode: status === "failed" ? "document_extraction_failed" : null,
@@ -63,5 +65,14 @@ describe("transaction candidate review", () => {
     expect(markup).toContain('id="candidate-panel"');
     expect(markup).toContain("Document queued for analysis");
     expect(markup).toContain("appear here automatically");
+  });
+
+  it("polls audio uploads until their candidates are ready", () => {
+    expect(shouldPollCandidateReview(reviewWithStatus("processing", "audio"))).toBe(
+      true,
+    );
+    expect(shouldPollCandidateReview(reviewWithStatus("processed", "audio"))).toBe(
+      false,
+    );
   });
 });

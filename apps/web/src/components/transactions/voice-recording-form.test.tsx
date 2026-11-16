@@ -7,10 +7,17 @@ describe("VoiceRecordingForm", () => {
   it("renders recording controls without an audio file picker", () => {
     const markup = renderToStaticMarkup(
       <VoiceRecordingForm
+        accounts={[]}
+        categories={[]}
+        error={null}
         isUploading={false}
         onClearError={vi.fn()}
         onClose={vi.fn()}
+        onConfirmCandidate={vi.fn()}
+        onGetReview={vi.fn()}
+        onRejectCandidate={vi.fn()}
         onUpload={vi.fn()}
+        onUpdateCandidate={vi.fn()}
         uploadError={null}
       />,
     );

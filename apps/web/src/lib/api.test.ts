@@ -25,6 +25,7 @@ import {
   getDocumentCaptureSessionProgress,
   getDocumentImportIssues,
   getDocumentPreview,
+  getAudioPreview,
   getDocumentReviews,
   getFinancialSummary,
   getTransactionCandidateReview,
@@ -678,6 +679,7 @@ describe("document reviews API", () => {
     const reviews: DocumentReview[] = [
       {
         uploadId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        kind: "document",
         originalFileName: "receipt.pdf",
         status: "processed",
         failureCode: null,
@@ -711,6 +713,23 @@ describe("document reviews API", () => {
     await expect(getDocumentPreview(uploadId)).resolves.toEqual(preview);
     expect(fetch).toHaveBeenCalledWith(
       `http://localhost:3001/api/uploads/documents/${uploadId}/preview`,
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("gets a private audio-recording preview", async () => {
+    const uploadId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const preview = {
+      url: "https://signed.example/recording",
+      contentType: "audio/webm",
+      expiresAt: "2026-11-12T12:05:00.000Z",
+    };
+    const fetch = vi.fn().mockResolvedValue(successfulResponse(preview));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getAudioPreview(uploadId)).resolves.toEqual(preview);
+    expect(fetch).toHaveBeenCalledWith(
+      `http://localhost:3001/api/uploads/audio/${uploadId}/preview`,
       expect.objectContaining({ credentials: "include" }),
     );
   });

@@ -193,6 +193,7 @@ export function TransactionCandidateReviewPanel({
           <DocumentSourcePreview
             fileName={review.upload.originalFileName}
             sourceId={review.upload.id}
+            sourceKind={review.upload.kind}
           />
           <TransactionCandidateEditor
             accounts={accounts}
@@ -246,16 +247,24 @@ export function TransactionCandidateReviewPanel({
         </span>
         <h3 className="mt-5 text-lg font-bold text-finhand-ink">
           {failed
-            ? "Document processing failed"
+            ? review?.upload.kind === "audio"
+              ? "Recording processing failed"
+              : "Document processing failed"
             : processedWithoutCandidates
               ? "No candidates were found"
               : review?.upload.status === "processing"
-                ? "Analyzing your document"
-                : "Document queued for analysis"}
+                ? review.upload.kind === "audio"
+                  ? "Analyzing your recording"
+                  : "Analyzing your document"
+                : review?.upload.kind === "audio"
+                  ? "Recording queued for analysis"
+                  : "Document queued for analysis"}
         </h3>
         <p className="mt-2 max-w-sm text-sm leading-6 text-finhand-muted">
           {failed || processedWithoutCandidates
-            ? "We could not prepare this document for review. You can try another file."
+            ? review?.upload.kind === "audio"
+              ? "We could not prepare this recording for review. You can record another one."
+              : "We could not prepare this document for review. You can try another file."
             : "You can keep this window open. The extracted draft will appear here automatically."}
         </p>
         {error ? (

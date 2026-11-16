@@ -17,6 +17,7 @@ describe("document source preview", () => {
     ["image/jpeg", "image"],
     ["image/png", "image"],
     ["application/pdf", "pdf"],
+    ["audio/webm", "audio"],
     ["text/plain", "unsupported"],
   ] as const)("classifies %s as %s", (contentType, expected) => {
     expect(documentPreviewKind(contentType)).toBe(expected);
@@ -59,6 +60,19 @@ describe("document source preview", () => {
     expect(markup).toContain("Open document");
   });
 
+  it("renders an audio player for a voice recording", () => {
+    const markup = renderToStaticMarkup(
+      <DocumentPreviewContent
+        fileName="voice-recording.webm"
+        preview={{ ...basePreview, contentType: "audio/webm" }}
+      />,
+    );
+
+    expect(markup).toContain("<audio");
+    expect(markup).toContain('controls=""');
+    expect(markup).toContain("Original recording voice-recording.webm");
+  });
+
   it("renders a loading state before the preview URL is available", () => {
     const markup = renderToStaticMarkup(
       <DocumentSourcePreview
@@ -80,5 +94,18 @@ describe("document source preview", () => {
     );
 
     expect(markup).toContain("Hide original");
+  });
+
+  it("uses recording-specific copy for audio sources", () => {
+    const markup = renderToStaticMarkup(
+      <DocumentSourcePreview
+        fileName="voice-recording.webm"
+        sourceId="11111111-1111-4111-8111-111111111111"
+        sourceKind="audio"
+      />,
+    );
+
+    expect(markup).toContain("Original recording");
+    expect(markup).toContain("Loading original recording");
   });
 });

@@ -89,7 +89,7 @@ export function TransactionsPanel() {
     offset: 0,
   });
   const [editor, setEditor] = useState<TransactionEditor | null>(null);
-  const [reviewUploadId, setReviewUploadId] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<DocumentReview | null>(null);
   const [documentReviewRefreshKey, setDocumentReviewRefreshKey] = useState(0);
   const [documentIssueRefreshKey, setDocumentIssueRefreshKey] = useState(0);
   const [documentFailureNotices, setDocumentFailureNotices] = useState<
@@ -441,7 +441,7 @@ export function TransactionsPanel() {
         setDocumentFailureNotices((notices) =>
           notices.filter((notice) => notice.uploadId !== uploadId),
         );
-        setReviewUploadId(null);
+        setReviewTarget(null);
         setDocumentReviewRefreshKey((key) => key + 1);
         setDocumentIssueRefreshKey((key) => key + 1);
         return true;
@@ -609,7 +609,7 @@ export function TransactionsPanel() {
         onRetry={retryFailedDocument}
         onUploadAnother={() => {
           setError(null);
-          setReviewUploadId(null);
+          setReviewTarget(null);
           setEditor({ kind: "create", initialMode: "document" });
         }}
         refreshKey={documentIssueRefreshKey}
@@ -619,10 +619,10 @@ export function TransactionsPanel() {
       <DocumentReviewsSection
         onLoad={readDocumentReviews}
         onMissingReview={inspectMissingDocumentReview}
-        onOpenReview={(uploadId) => {
+        onOpenReview={(review) => {
           setError(null);
           setEditor(null);
-          setReviewUploadId(uploadId);
+          setReviewTarget(review);
         }}
         refreshKey={documentReviewRefreshKey}
       />
@@ -707,15 +707,23 @@ export function TransactionsPanel() {
         />
       ) : null}
 
-      {reviewUploadId ? (
+      {reviewTarget ? (
         <WorkspaceModal
-          description="Review and correct the transaction details extracted from your document."
+          description={
+            reviewTarget.kind === "audio"
+              ? "Review and correct the transaction details extracted from your recording."
+              : "Review and correct the transaction details extracted from your document."
+          }
           isBusy={isConfirmingCandidate || isRejectingCandidate}
           onClose={() => {
-            setReviewUploadId(null);
+            setReviewTarget(null);
             setDocumentReviewRefreshKey((key) => key + 1);
           }}
-          title="Review Document"
+          title={
+            reviewTarget.kind === "audio"
+              ? "Review Recording"
+              : "Review Document"
+          }
           widthClassName="max-w-[1040px]"
         >
           <TransactionCandidateReviewPanel
@@ -724,14 +732,14 @@ export function TransactionsPanel() {
             error={error}
             onConfirm={confirmCandidate}
             onClose={() => {
-              setReviewUploadId(null);
+              setReviewTarget(null);
               setDocumentReviewRefreshKey((key) => key + 1);
             }}
             onGetReview={readCandidateReview}
             onReject={rejectCandidate}
             onUpdate={saveCandidate}
             panelId="pending-document-review-panel"
-            uploadId={reviewUploadId}
+            uploadId={reviewTarget.uploadId}
           />
         </WorkspaceModal>
       ) : null}
@@ -771,7 +779,7 @@ export function TransactionsPanel() {
           setDocumentFailureNotices((notices) =>
             notices.filter((notice) => notice.uploadId !== uploadId),
           );
-          setReviewUploadId(null);
+          setReviewTarget(null);
           setEditor({ kind: "create", initialMode: "document" });
         }}
         retryingUploadId={retryingDocumentUploadId}

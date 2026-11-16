@@ -227,10 +227,17 @@ export function TransactionDrawer({
         />
       ) : !transaction && creationMode === "voice" ? (
         <VoiceRecordingForm
+          accounts={availableAccounts}
+          categories={availableCategories}
+          error={error}
           isUploading={isUploadingAudio}
           onClearError={onClearError}
           onClose={onClose}
+          onConfirmCandidate={onConfirmCandidate}
+          onGetReview={onGetCandidateReview}
+          onRejectCandidate={onRejectCandidate}
           onUpload={onUploadAudio}
+          onUpdateCandidate={onUpdateCandidate}
           uploadError={error}
         />
       ) : (

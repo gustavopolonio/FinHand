@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CheckCircle2,
   LoaderCircle,
   LockKeyhole,
   Mic,
@@ -14,8 +13,19 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AudioUpload } from "@/lib/api";
+import type {
+  Account,
+  Category,
+  ConfirmTransactionCandidateInput,
+  ConfirmTransactionCandidateResult,
+  RejectTransactionCandidateResult,
+  TransactionCandidate,
+  TransactionCandidateReview,
+  UpdateTransactionCandidateInput,
+} from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 import {
   calculateVoiceInputLevel,
   formatVoiceRecordingDuration,
@@ -32,11 +42,28 @@ export interface VoiceRecording {
 }
 
 interface VoiceRecordingFormProps {
+  accounts: Account[];
+  categories: Category[];
+  error: string | null;
   isUploading: boolean;
   onClearError: () => void;
   onClose: () => void;
+  onConfirmCandidate: (
+    candidateId: string,
+    input: ConfirmTransactionCandidateInput,
+  ) => Promise<ConfirmTransactionCandidateResult | null>;
+  onGetReview: (
+    uploadId: string,
+  ) => Promise<TransactionCandidateReview | null>;
+  onRejectCandidate: (
+    candidateId: string,
+  ) => Promise<RejectTransactionCandidateResult | null>;
   onRecordingChange?: (recording: VoiceRecording | null) => void;
   onUpload: (recording: VoiceRecording) => Promise<AudioUpload | null>;
+  onUpdateCandidate: (
+    candidateId: string,
+    input: UpdateTransactionCandidateInput,
+  ) => Promise<TransactionCandidate | null>;
   uploadError: string | null;
 }
 
@@ -57,11 +84,18 @@ function stopStream(stream: MediaStream | null) {
 }
 
 export function VoiceRecordingForm({
+  accounts,
+  categories,
+  error: candidateError,
   isUploading,
   onClearError,
   onClose,
+  onConfirmCandidate,
+  onGetReview,
+  onRejectCandidate,
   onRecordingChange,
   onUpload,
+  onUpdateCandidate,
   uploadError,
 }: VoiceRecordingFormProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
@@ -478,31 +512,24 @@ export function VoiceRecordingForm({
 
   if (uploadedAudio) {
     return (
-      <section
-        aria-labelledby="transaction-voice-tab"
-        className="flex min-h-0 flex-1 flex-col"
-        id="transaction-voice-panel"
-      >
-        <div className="grid flex-1 place-items-center overflow-y-auto p-8 text-center">
-          <div className="max-w-md">
-            <span className="mx-auto grid size-14 place-items-center rounded-full bg-finhand-income-soft text-finhand-income">
-              <CheckCircle2 aria-hidden="true" className="size-7" />
-            </span>
-            <h3 className="mt-4 text-lg font-bold text-finhand-ink">
-              Recording uploaded
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-finhand-muted">
-              Your recording was stored privately and is ready for the next
-              processing step.
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-end border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-          <Button onClick={onClose} type="button">
-            Close
-          </Button>
-        </div>
-      </section>
+      <TransactionCandidateReviewPanel
+        accounts={accounts}
+        categories={categories}
+        error={candidateError}
+        onConfirm={onConfirmCandidate}
+        onClose={onClose}
+        onGetReview={onGetReview}
+        onReject={onRejectCandidate}
+        onReset={() => {
+          setUploadedAudio(null);
+          discardRecording();
+          onClearError();
+        }}
+        onUpdate={onUpdateCandidate}
+        panelId="transaction-voice-panel"
+        tabId="transaction-voice-tab"
+        uploadId={uploadedAudio.id}
+      />
     );
   }
 

@@ -15,6 +15,7 @@ function review(
 ): DocumentReview {
   return {
     uploadId: `${status}-upload`,
+    kind: "document",
     originalFileName: `${status}-receipt.pdf`,
     status,
     failureCode: status === "failed" ? "document_extraction_failed" : null,
@@ -76,5 +77,22 @@ describe("document reviews section", () => {
     expect(markup).toContain('dateTime="2026-11-10T12:00:00.000Z"');
     expect(markup).toContain("Review");
     expect(markup).not.toContain("Document processing failed");
+  });
+
+  it("identifies recordings while they are being analyzed", () => {
+    const markup = renderToStaticMarkup(
+      <DocumentReviewRows
+        onOpenReview={vi.fn()}
+        reviews={[
+          review("processing", {
+            kind: "audio",
+            originalFileName: "voice-recording.webm",
+          }),
+        ]}
+      />,
+    );
+
+    expect(markup).toContain("voice-recording.webm");
+    expect(markup).toContain("Analyzing recording");
   });
 });
