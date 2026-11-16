@@ -1,28 +1,28 @@
-import type { AudioTranscriptionRecoveryResult } from "../services/audio-transcription-recovery.js";
+import type { AudioProcessingRecoveryResult } from "../services/audio-transcription-recovery.js";
 
-export interface AudioTranscriptionRecoveryWorkerLogger {
+export interface AudioProcessingRecoveryWorkerLogger {
   error(error: unknown, message: string): void;
-  info(context: AudioTranscriptionRecoveryResult, message: string): void;
+  info(context: AudioProcessingRecoveryResult, message: string): void;
 }
 
-interface StartAudioTranscriptionRecoveryWorkerOptions {
+interface StartAudioProcessingRecoveryWorkerOptions {
   intervalMilliseconds?: number;
-  logger: AudioTranscriptionRecoveryWorkerLogger;
-  recover: () => Promise<AudioTranscriptionRecoveryResult>;
+  logger: AudioProcessingRecoveryWorkerLogger;
+  recover: () => Promise<AudioProcessingRecoveryResult>;
 }
 
-export interface AudioTranscriptionRecoveryWorker {
+export interface AudioProcessingRecoveryWorker {
   stop(): Promise<void>;
 }
 
-export function startAudioTranscriptionRecoveryWorker({
+export function startAudioProcessingRecoveryWorker({
   intervalMilliseconds = 60_000,
   logger,
   recover,
-}: StartAudioTranscriptionRecoveryWorkerOptions): AudioTranscriptionRecoveryWorker {
+}: StartAudioProcessingRecoveryWorkerOptions): AudioProcessingRecoveryWorker {
   if (!Number.isInteger(intervalMilliseconds) || intervalMilliseconds < 1) {
     throw new Error(
-      "Audio transcription recovery interval must be a positive integer.",
+      "Audio processing recovery interval must be a positive integer.",
     );
   }
 
@@ -33,9 +33,9 @@ export function startAudioTranscriptionRecoveryWorker({
   async function runRecovery(): Promise<void> {
     try {
       const result = await recover();
-      logger.info(result, "Audio transcription recovery completed");
+      logger.info(result, "Audio processing recovery completed");
     } catch (error) {
-      logger.error(error, "Audio transcription recovery failed");
+      logger.error(error, "Audio processing recovery failed");
     } finally {
       if (!isStopped) {
         timer = setTimeout(() => {

@@ -28,6 +28,7 @@ function stubValidEnvironment() {
   vi.stubEnv("DOCUMENT_PROCESSING_LEASE_DURATION_MS", "");
   vi.stubEnv("DOCUMENT_PROCESSING_RECOVERY_INTERVAL_MS", "");
   vi.stubEnv("OPENAI_AUDIO_TRANSCRIPTION_MODEL", "");
+  vi.stubEnv("OPENAI_AUDIO_EXTRACTION_MODEL", "");
   vi.stubEnv("AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS", "");
   vi.stubEnv("AUDIO_TRANSCRIPTION_LEASE_DURATION_MS", "");
   vi.stubEnv("AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS", "");
@@ -109,6 +110,7 @@ describe("environment configuration", () => {
 
     expect(getAudioTranscriptionEnvironment()).toEqual({
       apiKey: "openai-test-api-key",
+      extractionModel: "test-vision-model",
       leaseDurationMilliseconds: 600_000,
       model: "gpt-transcribe",
       pollIntervalMilliseconds: 2_000,
@@ -118,6 +120,7 @@ describe("environment configuration", () => {
 
   it("accepts explicit audio transcription settings", async () => {
     vi.stubEnv("OPENAI_AUDIO_TRANSCRIPTION_MODEL", " custom-transcriber ");
+    vi.stubEnv("OPENAI_AUDIO_EXTRACTION_MODEL", " custom-extractor ");
     vi.stubEnv("AUDIO_TRANSCRIPTION_POLL_INTERVAL_MS", "3000");
     vi.stubEnv("AUDIO_TRANSCRIPTION_LEASE_DURATION_MS", "900000");
     vi.stubEnv("AUDIO_TRANSCRIPTION_RECOVERY_INTERVAL_MS", "30000");
@@ -125,6 +128,7 @@ describe("environment configuration", () => {
 
     expect(getAudioTranscriptionEnvironment()).toEqual({
       apiKey: "openai-test-api-key",
+      extractionModel: "custom-extractor",
       leaseDurationMilliseconds: 900_000,
       model: "custom-transcriber",
       pollIntervalMilliseconds: 3_000,

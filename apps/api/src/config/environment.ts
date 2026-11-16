@@ -149,6 +149,9 @@ export function getDocumentExtractionEnvironment() {
 export function getAudioTranscriptionEnvironment() {
   return Object.freeze({
     apiKey: required("OPENAI_API_KEY"),
+    extractionModel:
+      process.env.OPENAI_AUDIO_EXTRACTION_MODEL?.trim() ||
+      required("OPENAI_DOCUMENT_MODEL"),
     leaseDurationMilliseconds: positiveInteger(
       "AUDIO_TRANSCRIPTION_LEASE_DURATION_MS",
       10 * 60 * 1_000,

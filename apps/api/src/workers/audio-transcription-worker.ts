@@ -1,24 +1,24 @@
-import type { AudioTranscriptionResult } from "../services/audio-transcription.js";
+import type { AudioProcessingResult } from "../services/audio-processing.js";
 
-export interface AudioTranscriptionWorkerLogger {
+export interface AudioProcessingWorkerLogger {
   error(context: { errorName: string }, message: string): void;
   info(
     context: {
       uploadId: string;
-      status: "transcribed" | "failed";
+      status: "transcribed" | "processed" | "failed";
       failureCode?: string;
     },
     message: string,
   ): void;
 }
 
-interface StartAudioTranscriptionWorkerOptions {
-  logger: AudioTranscriptionWorkerLogger;
+interface StartAudioProcessingWorkerOptions {
+  logger: AudioProcessingWorkerLogger;
   pollIntervalMilliseconds?: number;
-  processNext: () => Promise<AudioTranscriptionResult | null>;
+  processNext: () => Promise<AudioProcessingResult | null>;
 }
 
-export interface AudioTranscriptionWorker {
+export interface AudioProcessingWorker {
   stop(): Promise<void>;
 }
 
@@ -26,17 +26,17 @@ function getErrorName(error: unknown): string {
   return error instanceof Error ? error.name : "UnknownError";
 }
 
-export function startAudioTranscriptionWorker({
+export function startAudioProcessingWorker({
   logger,
   pollIntervalMilliseconds = 2_000,
   processNext,
-}: StartAudioTranscriptionWorkerOptions): AudioTranscriptionWorker {
+}: StartAudioProcessingWorkerOptions): AudioProcessingWorker {
   if (
     !Number.isInteger(pollIntervalMilliseconds) ||
     pollIntervalMilliseconds < 1
   ) {
     throw new Error(
-      "Audio transcription poll interval must be a positive integer.",
+      "Audio processing poll interval must be a positive integer.",
     );
   }
 
@@ -52,12 +52,12 @@ export function startAudioTranscriptionWorker({
 
       if (result) {
         didProcessUpload = true;
-        logger.info(result, "Audio transcription completed");
+        logger.info(result, "Audio processing completed");
       }
     } catch (error) {
       logger.error(
         { errorName: getErrorName(error) },
-        "Audio transcription worker failed",
+        "Audio processing worker failed",
       );
     } finally {
       if (!isStopped) {

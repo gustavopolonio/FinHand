@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  type AudioTranscriptionRecoveryWorkerLogger,
-  startAudioTranscriptionRecoveryWorker,
+  type AudioProcessingRecoveryWorkerLogger,
+  startAudioProcessingRecoveryWorker,
 } from "./audio-transcription-recovery-worker.js";
 
-function createLogger(): AudioTranscriptionRecoveryWorkerLogger {
+function createLogger(): AudioProcessingRecoveryWorkerLogger {
   return { error: vi.fn(), info: vi.fn() };
 }
 
@@ -13,13 +13,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("audio transcription recovery worker", () => {
+describe("audio processing recovery worker", () => {
   it("runs immediately and repeats after the configured interval", async () => {
     vi.useFakeTimers();
     const result = { failedCount: 0, requeuedCount: 1 };
     const recover = vi.fn().mockResolvedValue(result);
     const logger = createLogger();
-    const worker = startAudioTranscriptionRecoveryWorker({
+    const worker = startAudioProcessingRecoveryWorker({
       intervalMilliseconds: 1_000,
       logger,
       recover,
@@ -28,7 +28,7 @@ describe("audio transcription recovery worker", () => {
     await vi.waitFor(() => expect(recover).toHaveBeenCalledOnce());
     expect(logger.info).toHaveBeenCalledWith(
       result,
-      "Audio transcription recovery completed",
+      "Audio processing recovery completed",
     );
     await vi.advanceTimersByTimeAsync(1_000);
     expect(recover).toHaveBeenCalledTimes(2);
@@ -44,7 +44,7 @@ describe("audio transcription recovery worker", () => {
       .mockRejectedValueOnce(error)
       .mockResolvedValue({ failedCount: 0, requeuedCount: 0 });
     const logger = createLogger();
-    const worker = startAudioTranscriptionRecoveryWorker({
+    const worker = startAudioProcessingRecoveryWorker({
       intervalMilliseconds: 1_000,
       logger,
       recover,
@@ -53,7 +53,7 @@ describe("audio transcription recovery worker", () => {
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
         error,
-        "Audio transcription recovery failed",
+        "Audio processing recovery failed",
       ),
     );
     await vi.advanceTimersByTimeAsync(1_000);
@@ -64,13 +64,13 @@ describe("audio transcription recovery worker", () => {
 
   it("rejects an invalid interval", () => {
     expect(() =>
-      startAudioTranscriptionRecoveryWorker({
+      startAudioProcessingRecoveryWorker({
         intervalMilliseconds: 0,
         logger: createLogger(),
         recover: vi.fn(),
       }),
     ).toThrow(
-      "Audio transcription recovery interval must be a positive integer.",
+      "Audio processing recovery interval must be a positive integer.",
     );
   });
 });

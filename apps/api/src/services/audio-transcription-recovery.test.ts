@@ -3,7 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
-import { recoverExpiredAudioTranscriptionLeases } from "./audio-transcription-recovery.js";
+import { recoverExpiredAudioProcessingLeases } from "./audio-transcription-recovery.js";
 
 const postgresDialect = new PgDialect();
 
@@ -13,7 +13,7 @@ function createDatabase(rows: Array<Record<string, unknown>>) {
   return { database: { execute } as unknown as Database, execute };
 }
 
-describe("recoverExpiredAudioTranscriptionLeases", () => {
+describe("recoverExpiredAudioProcessingLeases", () => {
   it("requeues recoverable attempts and fails exhausted attempts", async () => {
     const fixture = createDatabase([
       { id: "one", status: "uploaded" },
@@ -21,7 +21,7 @@ describe("recoverExpiredAudioTranscriptionLeases", () => {
     ]);
 
     await expect(
-      recoverExpiredAudioTranscriptionLeases(fixture.database),
+      recoverExpiredAudioProcessingLeases(fixture.database),
     ).resolves.toEqual({ failedCount: 1, requeuedCount: 1 });
 
     const query = postgresDialect.sqlToQuery(
@@ -29,11 +29,14 @@ describe("recoverExpiredAudioTranscriptionLeases", () => {
     );
     const normalizedSql = query.sql.toLowerCase();
     expect(normalizedSql).toContain('"uploads"."kind" = \'audio\'');
-    expect(normalizedSql).toContain("not exists");
+    expect(normalizedSql).toContain("exists");
     expect(normalizedSql).toContain('from "audio_transcripts"');
     expect(normalizedSql).toContain("for update skip locked");
     expect(normalizedSql).toContain("processing_lease_id = null");
     expect(normalizedSql).toContain("'audio_transcription_interrupted'");
+    expect(normalizedSql).toContain(
+      "'audio_candidate_extraction_interrupted'",
+    );
     expect(query.params).toContain(100);
   });
 
@@ -41,7 +44,7 @@ describe("recoverExpiredAudioTranscriptionLeases", () => {
     const fixture = createDatabase([]);
 
     await expect(
-      recoverExpiredAudioTranscriptionLeases(fixture.database),
+      recoverExpiredAudioProcessingLeases(fixture.database),
     ).resolves.toEqual({ failedCount: 0, requeuedCount: 0 });
   });
 
@@ -49,9 +52,9 @@ describe("recoverExpiredAudioTranscriptionLeases", () => {
     const fixture = createDatabase([]);
 
     await expect(
-      recoverExpiredAudioTranscriptionLeases(fixture.database, batchSize),
+      recoverExpiredAudioProcessingLeases(fixture.database, batchSize),
     ).rejects.toThrow(
-      "Audio transcription recovery batch size must be a positive integer.",
+      "Audio processing recovery batch size must be a positive integer.",
     );
     expect(fixture.execute).not.toHaveBeenCalled();
   });

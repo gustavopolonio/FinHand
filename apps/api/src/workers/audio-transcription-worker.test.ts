@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  type AudioTranscriptionWorkerLogger,
-  startAudioTranscriptionWorker,
+  type AudioProcessingWorkerLogger,
+  startAudioProcessingWorker,
 } from "./audio-transcription-worker.js";
 
 const uploadId = "44444444-4444-4444-8444-444444444444";
 
-function createLogger(): AudioTranscriptionWorkerLogger {
+function createLogger(): AudioProcessingWorkerLogger {
   return { error: vi.fn(), info: vi.fn() };
 }
 
@@ -15,11 +15,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("audio transcription worker", () => {
+describe("audio processing worker", () => {
   it("waits for the poll interval when the queue is empty", async () => {
     vi.useFakeTimers();
     const processNext = vi.fn().mockResolvedValue(null);
-    const worker = startAudioTranscriptionWorker({
+    const worker = startAudioProcessingWorker({
       logger: createLogger(),
       pollIntervalMilliseconds: 1_000,
       processNext,
@@ -34,7 +34,7 @@ describe("audio transcription worker", () => {
     await worker.stop();
   });
 
-  it("immediately claims another upload after transcription", async () => {
+  it("immediately claims another upload after completing a stage", async () => {
     vi.useFakeTimers();
     const result = { uploadId, status: "transcribed" as const };
     const processNext = vi
@@ -42,7 +42,7 @@ describe("audio transcription worker", () => {
       .mockResolvedValueOnce(result)
       .mockResolvedValue(null);
     const logger = createLogger();
-    const worker = startAudioTranscriptionWorker({
+    const worker = startAudioProcessingWorker({
       logger,
       pollIntervalMilliseconds: 1_000,
       processNext,
@@ -51,7 +51,7 @@ describe("audio transcription worker", () => {
     await vi.waitFor(() => expect(processNext).toHaveBeenCalledOnce());
     expect(logger.info).toHaveBeenCalledWith(
       result,
-      "Audio transcription completed",
+      "Audio processing completed",
     );
     await vi.advanceTimersByTimeAsync(0);
     expect(processNext).toHaveBeenCalledTimes(2);
@@ -59,14 +59,14 @@ describe("audio transcription worker", () => {
     await worker.stop();
   });
 
-  it("does not overlap transcription runs", async () => {
+  it("does not overlap audio processing runs", async () => {
     vi.useFakeTimers();
     let finish: ((value: null) => void) | undefined;
     const processing = new Promise<null>((resolve) => {
       finish = resolve;
     });
     const processNext = vi.fn().mockReturnValue(processing);
-    const worker = startAudioTranscriptionWorker({
+    const worker = startAudioProcessingWorker({
       logger: createLogger(),
       pollIntervalMilliseconds: 1_000,
       processNext,
@@ -90,7 +90,7 @@ describe("audio transcription worker", () => {
       .mockRejectedValueOnce(new TypeError("private provider detail"))
       .mockResolvedValue(null);
     const logger = createLogger();
-    const worker = startAudioTranscriptionWorker({
+    const worker = startAudioProcessingWorker({
       logger,
       pollIntervalMilliseconds: 1_000,
       processNext,
@@ -99,7 +99,7 @@ describe("audio transcription worker", () => {
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
         { errorName: "TypeError" },
-        "Audio transcription worker failed",
+        "Audio processing worker failed",
       ),
     );
     expect(JSON.stringify(vi.mocked(logger.error).mock.calls)).not.toContain(
@@ -117,7 +117,7 @@ describe("audio transcription worker", () => {
       finish = () => resolve(null);
     });
     const processNext = vi.fn().mockReturnValue(processing);
-    const worker = startAudioTranscriptionWorker({
+    const worker = startAudioProcessingWorker({
       logger: createLogger(),
       processNext,
     });
@@ -135,13 +135,13 @@ describe("audio transcription worker", () => {
 
   it("rejects an invalid poll interval", () => {
     expect(() =>
-      startAudioTranscriptionWorker({
+      startAudioProcessingWorker({
         logger: createLogger(),
         pollIntervalMilliseconds: 0,
         processNext: vi.fn(),
       }),
     ).toThrow(
-      "Audio transcription poll interval must be a positive integer.",
+      "Audio processing poll interval must be a positive integer.",
     );
   });
 });

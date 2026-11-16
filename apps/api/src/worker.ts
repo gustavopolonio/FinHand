@@ -1,4 +1,5 @@
 import { createOpenAiAudioTranscriber } from "./ai/audio-transcriber.js";
+import { createOpenAiAudioTransactionExtractor } from "./ai/audio-transaction-extractor.js";
 import { createOpenAiDocumentTransactionExtractor } from "./ai/document-transaction-extractor.js";
 import {
   environment,
@@ -7,17 +8,17 @@ import {
   getDocumentStorageEnvironment,
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
-import { processNextAudioTranscription } from "./services/audio-transcription.js";
-import { recoverExpiredAudioTranscriptionLeases } from "./services/audio-transcription-recovery.js";
+import { processNextAudioUpload } from "./services/audio-processing.js";
+import { recoverExpiredAudioProcessingLeases } from "./services/audio-transcription-recovery.js";
 import { expirePendingDocumentCaptureSessions } from "./services/document-capture-session-cleanup.js";
 import { processNextDocumentUpload } from "./services/document-extraction.js";
 import {
-  type AudioTranscriptionWorkerLogger,
-  startAudioTranscriptionWorker,
+  type AudioProcessingWorkerLogger,
+  startAudioProcessingWorker,
 } from "./workers/audio-transcription-worker.js";
 import {
-  type AudioTranscriptionRecoveryWorkerLogger,
-  startAudioTranscriptionRecoveryWorker,
+  type AudioProcessingRecoveryWorkerLogger,
+  startAudioProcessingRecoveryWorker,
 } from "./workers/audio-transcription-recovery-worker.js";
 import {
   recoverExpiredDocumentProcessingLeases,
@@ -49,6 +50,10 @@ const extractor = createOpenAiDocumentTransactionExtractor({
 const audioTranscriber = createOpenAiAudioTranscriber({
   apiKey: audioTranscriptionEnvironment.apiKey,
   model: audioTranscriptionEnvironment.model,
+});
+const audioExtractor = createOpenAiAudioTransactionExtractor({
+  apiKey: audioTranscriptionEnvironment.apiKey,
+  model: audioTranscriptionEnvironment.extractionModel,
 });
 const cleanupLogger: CleanupWorkerLogger = {
   error(error, message) {
@@ -84,7 +89,7 @@ const extractionWorker = startDocumentExtractionWorker({
         documentExtractionEnvironment.leaseDurationMilliseconds,
     }),
 });
-const audioTranscriptionLogger: AudioTranscriptionWorkerLogger = {
+const audioProcessingLogger: AudioProcessingWorkerLogger = {
   error(context, message) {
     console.error(message, context);
   },
@@ -92,20 +97,21 @@ const audioTranscriptionLogger: AudioTranscriptionWorkerLogger = {
     console.info(message, context);
   },
 };
-const audioTranscriptionWorker = startAudioTranscriptionWorker({
-  logger: audioTranscriptionLogger,
+const audioProcessingWorker = startAudioProcessingWorker({
+  logger: audioProcessingLogger,
   pollIntervalMilliseconds:
     audioTranscriptionEnvironment.pollIntervalMilliseconds,
   processNext: () =>
-    processNextAudioTranscription({
+    processNextAudioUpload({
       database: databaseConnection.database,
       documentStorage,
+      extractor: audioExtractor,
       leaseDurationMilliseconds:
         audioTranscriptionEnvironment.leaseDurationMilliseconds,
       transcriber: audioTranscriber,
     }),
 });
-const audioTranscriptionRecoveryLogger: AudioTranscriptionRecoveryWorkerLogger = {
+const audioProcessingRecoveryLogger: AudioProcessingRecoveryWorkerLogger = {
   error(error, message) {
     console.error(message, error);
   },
@@ -113,13 +119,13 @@ const audioTranscriptionRecoveryLogger: AudioTranscriptionRecoveryWorkerLogger =
     console.info(message, context);
   },
 };
-const audioTranscriptionRecoveryWorker =
-  startAudioTranscriptionRecoveryWorker({
+const audioProcessingRecoveryWorker =
+  startAudioProcessingRecoveryWorker({
     intervalMilliseconds:
       audioTranscriptionEnvironment.recoveryIntervalMilliseconds,
-    logger: audioTranscriptionRecoveryLogger,
+    logger: audioProcessingRecoveryLogger,
     recover: () =>
-      recoverExpiredAudioTranscriptionLeases(databaseConnection.database),
+      recoverExpiredAudioProcessingLeases(databaseConnection.database),
   });
 const recoveryLogger: DocumentProcessingRecoveryWorkerLogger = {
   error(error, message) {
@@ -149,8 +155,8 @@ async function shutdown(signal: NodeJS.Signals) {
 
   try {
     await Promise.all([
-      audioTranscriptionRecoveryWorker.stop(),
-      audioTranscriptionWorker.stop(),
+      audioProcessingRecoveryWorker.stop(),
+      audioProcessingWorker.stop(),
       cleanupWorker.stop(),
       extractionWorker.stop(),
       recoveryWorker.stop(),

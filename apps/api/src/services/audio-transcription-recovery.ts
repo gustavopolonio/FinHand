@@ -4,40 +4,39 @@ import type { Database } from "../db/index.js";
 import { audioTranscripts, uploads } from "../db/schema/index.js";
 import { maximumAudioTranscriptionAttempts } from "./audio-transcription-failures.js";
 
-export const audioTranscriptionRecoveryBatchSize = 100;
+export const audioProcessingRecoveryBatchSize = 100;
 
 interface RecoveredAudioUpload extends Record<string, unknown> {
   id: string;
   status: "uploaded" | "failed";
 }
 
-export interface AudioTranscriptionRecoveryResult {
+export interface AudioProcessingRecoveryResult {
   failedCount: number;
   requeuedCount: number;
 }
 
-export async function recoverExpiredAudioTranscriptionLeases(
+export async function recoverExpiredAudioProcessingLeases(
   database: Database,
-  batchSize = audioTranscriptionRecoveryBatchSize,
-): Promise<AudioTranscriptionRecoveryResult> {
+  batchSize = audioProcessingRecoveryBatchSize,
+): Promise<AudioProcessingRecoveryResult> {
   if (!Number.isInteger(batchSize) || batchSize < 1) {
     throw new Error(
-      "Audio transcription recovery batch size must be a positive integer.",
+      "Audio processing recovery batch size must be a positive integer.",
     );
   }
 
   const result = await database.execute<RecoveredAudioUpload>(sql`
     with expired_uploads as (
-      select ${uploads.id}
+      select ${uploads.id}, exists (
+        select 1
+        from ${audioTranscripts}
+        where ${audioTranscripts.uploadId} = ${uploads.id}
+      ) as has_transcript
       from ${uploads}
       where ${uploads.kind} = 'audio'
         and ${uploads.status} = 'processing'
         and ${uploads.processingLeaseExpiresAt} <= now()
-        and not exists (
-          select 1
-          from ${audioTranscripts}
-          where ${audioTranscripts.uploadId} = ${uploads.id}
-        )
       order by ${uploads.processingLeaseExpiresAt} asc, ${uploads.id} asc
       for update skip locked
       limit ${batchSize}
@@ -52,7 +51,11 @@ export async function recoverExpiredAudioTranscriptionLeases(
       failure_code = case
         when recovered_upload.processing_attempts < ${maximumAudioTranscriptionAttempts}
           then null
-        else 'audio_transcription_interrupted'
+        else case
+          when expired_uploads.has_transcript
+            then 'audio_candidate_extraction_interrupted'
+          else 'audio_transcription_interrupted'
+        end
       end,
       failure_dismissed_at = null,
       processing_lease_id = null,
@@ -65,7 +68,7 @@ export async function recoverExpiredAudioTranscriptionLeases(
     returning recovered_upload.id, recovered_upload.status
   `);
 
-  return result.rows.reduce<AudioTranscriptionRecoveryResult>(
+  return result.rows.reduce<AudioProcessingRecoveryResult>(
     (counts, recoveredUpload) => {
       if (recoveredUpload.status === "uploaded") {
         counts.requeuedCount += 1;
