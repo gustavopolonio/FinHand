@@ -258,6 +258,48 @@ describe("uploadAudioRecordingForUser", () => {
     );
   });
 
+  it.each([
+    [30, 30],
+    [30.5, 30],
+  ])(
+    "accepts the %s-second validation boundary and stores at most 30 seconds",
+    async (parsedDuration, storedDuration) => {
+      await expect(
+        upload({
+          durationReader: vi.fn().mockResolvedValue(parsedDuration),
+        }),
+      ).resolves.toMatchObject({ durationSeconds: storedDuration });
+    },
+  );
+
+  it.each([
+    ["", "Audio recording file name is required."],
+    [" ", "Audio recording file name is required."],
+    [
+      `${"a".repeat(256)}.webm`,
+      "Audio recording file name must contain at most 255 characters.",
+    ],
+  ])("rejects invalid recording file name %#", async (fileName, message) => {
+    const databaseFixture = createDatabaseFixture();
+    const storageFixture = createStorageFixture();
+
+    await expect(
+      upload({
+        database: databaseFixture.database,
+        fileName,
+        storage: storageFixture.storage,
+      }),
+    ).rejects.toEqual(new InputError(message));
+    expect(storageFixture.storeDocument).not.toHaveBeenCalled();
+    expect(databaseFixture.insert).not.toHaveBeenCalled();
+  });
+
+  it("removes path components from the client-provided file name", async () => {
+    await expect(
+      upload({ fileName: "../../private/voice-recording.webm" }),
+    ).resolves.toMatchObject({ originalFileName: "voice-recording.webm" });
+  });
+
   it("returns a safe error when metadata cannot provide a duration", async () => {
     await expect(
       upload({

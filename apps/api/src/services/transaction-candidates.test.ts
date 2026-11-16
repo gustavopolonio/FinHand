@@ -756,6 +756,39 @@ describe("confirmTransactionCandidateForUser", () => {
     );
   });
 
+  it("returns the same voice transaction when audio confirmation is replayed", async () => {
+    const voiceTransaction = {
+      ...authoritativeTransaction,
+      origin: "voice" as const,
+    };
+    const fixture = createConfirmationFixture({
+      existingTransaction: voiceTransaction,
+      lockedCandidate: {
+        ...candidateRecord,
+        accountId,
+        categoryId,
+        status: "confirmed",
+        transactionId,
+      },
+      uploadKind: "audio",
+    });
+
+    await expect(
+      confirmTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+        confirmationInput,
+      ),
+    ).resolves.toMatchObject({
+      transaction: { id: transactionId, origin: "voice" },
+      created: false,
+    });
+    expect(fixture.insert).not.toHaveBeenCalled();
+    expect(fixture.update).not.toHaveBeenCalled();
+    expect(fixture.findUpload).not.toHaveBeenCalled();
+  });
+
   it("confirms a transaction without an optional category", async () => {
     const returnedTransaction = {
       ...authoritativeTransaction,

@@ -55,7 +55,7 @@ const transaction = {
   description: "Corrected groceries",
   counterparty: "Corner market",
   notes: null,
-  origin: "document",
+  origin: "voice",
   createdAt: "2026-11-11T12:00:00.000Z",
   updatedAt: "2026-11-11T12:00:00.000Z",
 };
@@ -100,7 +100,8 @@ beforeEach(() => {
   candidateMocks.getReview.mockResolvedValue({
     upload: {
       id: uploadId,
-      originalFileName: "receipt.pdf",
+      kind: "audio",
+      originalFileName: "voice-recording.webm",
       status: "processed",
       failureCode: null,
       processingAttempts: 1,
@@ -132,7 +133,7 @@ describe("GET /api/transaction-candidates", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      upload: { id: uploadId, status: "processed" },
+      upload: { id: uploadId, kind: "audio", status: "processed" },
       candidates: [{ id: candidateId, amountMinor: "4290" }],
     });
     expect(candidateMocks.getReview).toHaveBeenCalledWith(
@@ -254,7 +255,7 @@ describe("POST /api/transaction-candidates/:id/confirm", () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({
       candidate: { id: candidateId, status: "confirmed" },
-      transaction: { id: transaction.id, origin: "document" },
+      transaction: { id: transaction.id, origin: "voice" },
       created: true,
     });
     expect(candidateMocks.confirm).toHaveBeenCalledWith(

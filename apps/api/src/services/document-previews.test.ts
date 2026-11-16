@@ -124,4 +124,19 @@ describe("getAudioPreviewForUser", () => {
       { column: "upload.kind", value: "audio" },
     ]);
   });
+
+  it("does not expose another user's recording", async () => {
+    const { database } = createDatabase(undefined);
+    const documentStorage = createTestDocumentStorage();
+
+    await expect(
+      getAudioPreviewForUser({
+        database,
+        documentStorage,
+        uploadId,
+        userId,
+      }),
+    ).rejects.toEqual(new NotFoundError("Audio upload not found"));
+    expect(documentStorage.createDocumentPreviewUrl).not.toHaveBeenCalled();
+  });
 });
