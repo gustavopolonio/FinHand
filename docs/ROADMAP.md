@@ -81,7 +81,7 @@
 - [x] Transcribe completed recordings asynchronously using the OpenAI file transcription API
 - [x] Extract and normalize one or more ordered transaction candidates from each audio transcript in the same asynchronous audio worker
 - [x] Reuse the candidate review and editing interface for voice recordings, provide private recording playback, and require explicit confirmation or rejection of every candidate
-- [ ] Add automated tests for recording validation, ownership, transcription failures, multiple candidates, and replay-safe confirmation
+- [x] Add automated tests for recording validation, ownership, transcription failures, multiple candidates, and replay-safe confirmation
 
 ### Acceptance Criteria
 - Users can record microphone audio from supported desktop and mobile browsers without selecting an existing audio file.
