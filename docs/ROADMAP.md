@@ -80,7 +80,7 @@
 - [x] Validate recorded audio format, byte size, actual duration, checksum, and ownership before storing it privately as an `audio` upload
 - [x] Transcribe completed recordings asynchronously using the OpenAI file transcription API
 - [x] Extract and normalize one or more ordered transaction candidates from each audio transcript in the same asynchronous audio worker
-- [ ] Reuse the candidate review and editing interface and require explicit confirmation or rejection of every candidate
+- [x] Reuse the candidate review and editing interface for voice recordings, provide private recording playback, and require explicit confirmation or rejection of every candidate
 - [ ] Add automated tests for recording validation, ownership, transcription failures, multiple candidates, and replay-safe confirmation
 
 ### Acceptance Criteria

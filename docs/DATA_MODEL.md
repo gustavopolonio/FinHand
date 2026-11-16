@@ -390,10 +390,11 @@ Constraints and indexes:
 One upload may produce multiple candidates, and each candidate is reviewed
 independently. Confirming all candidates creates one authoritative transaction
 per candidate. Confirmation must run in one database transaction: lock and
-validate the pending candidate, create the authoritative transaction with
-`origin = document`, then mark and link the candidate. The unique transaction
-reference and status checks make confirmation idempotent and prevent duplicate
-financial records.
+validate the pending candidate, derive the authoritative transaction origin
+from the owned upload (`document` for document uploads and `voice` for audio
+uploads), create the transaction, then mark and link the candidate. The unique
+transaction reference and status checks make confirmation idempotent and
+prevent duplicate financial records.
 
 Only confidence values and warnings required by the review interface belong in
 `extraction_metadata`. Raw model responses and full extracted document text are
@@ -495,6 +496,14 @@ candidates, and stores them in spoken order. The upload becomes `processed` only
 when those candidates and the status transition commit atomically. Both stages
 use lease ownership checks, and expired leases can be safely requeued without a
 stale worker completing a newer attempt.
+
+The existing candidate review API and interface are shared by document and
+audio uploads. Review responses expose the upload kind so the frontend can show
+the correct source preview and language. Audio reviews use an authenticated,
+five-minute presigned URL to play the private original recording. Editing never
+changes balances; each candidate independently creates a `voice` transaction
+only after explicit confirmation, or becomes `rejected` without creating a
+transaction.
 
 Transcript and recording retention will be defined with the broader cleanup
 policy in Milestone 6 rather than as part of the Milestone 4 V1.
