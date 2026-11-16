@@ -79,7 +79,7 @@
 - [x] Build authenticated browser microphone recording for desktop and mobile with pause, resume, live input-level feedback, playback, discard-and-restart, and an automatic 30-second active-recording limit; do not expose an audio-file picker
 - [x] Validate recorded audio format, byte size, actual duration, checksum, and ownership before storing it privately as an `audio` upload
 - [x] Transcribe completed recordings asynchronously using the OpenAI file transcription API
-- [ ] Extract and normalize one or more transaction candidates from each audio transcript
+- [x] Extract and normalize one or more ordered transaction candidates from each audio transcript in the same asynchronous audio worker
 - [ ] Reuse the candidate review and editing interface and require explicit confirmation or rejection of every candidate
 - [ ] Add automated tests for recording validation, ownership, transcription failures, multiple candidates, and replay-safe confirmation
 

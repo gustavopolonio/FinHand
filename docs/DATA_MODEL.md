@@ -487,9 +487,14 @@ An audio upload with `status = 'uploaded'` and no transcript is ready for the
 transcription worker. The worker uses the existing processing lease fields and
 `FOR UPDATE SKIP LOCKED`. After it inserts a transcript, it returns the upload
 to `uploaded`, resets the stage attempt counter, and clears the lease. The later
-candidate-extraction stage distinguishes this state by the transcript's
-existence. `processed` remains reserved for uploads whose transaction candidates
-were created.
+candidate-extraction stage runs inside the same audio worker and distinguishes
+this state by the transcript's existence. It prioritizes transcript-ready
+uploads, sends the transcript plus the user's default currency, time zone, and
+current local date to the structured extraction model, normalizes the returned
+candidates, and stores them in spoken order. The upload becomes `processed` only
+when those candidates and the status transition commit atomically. Both stages
+use lease ownership checks, and expired leases can be safely requeued without a
+stale worker completing a newer attempt.
 
 Transcript and recording retention will be defined with the broader cleanup
 policy in Milestone 6 rather than as part of the Milestone 4 V1.
