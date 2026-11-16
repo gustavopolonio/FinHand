@@ -1,4 +1,5 @@
 import type { Database } from "../db/index.js";
+import type { UploadKind } from "../db/schema/index.js";
 import { NotFoundError } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
 
@@ -18,13 +19,18 @@ interface GetDocumentPreviewInput {
   userId: string;
 }
 
-export async function getDocumentPreviewForUser({
+interface GetUploadPreviewInput extends GetDocumentPreviewInput {
+  kind: UploadKind;
+}
+
+async function getUploadPreviewForUser({
   database,
   documentStorage,
+  kind,
   now = new Date(),
   uploadId,
   userId,
-}: GetDocumentPreviewInput): Promise<DocumentPreview> {
+}: GetUploadPreviewInput): Promise<DocumentPreview> {
   const upload = await database.query.uploads.findFirst({
     columns: {
       mimeType: true,
@@ -34,12 +40,14 @@ export async function getDocumentPreviewForUser({
       and(
         eq(candidateUpload.id, uploadId),
         eq(candidateUpload.userId, userId),
-        eq(candidateUpload.kind, "document"),
+        eq(candidateUpload.kind, kind),
       ),
   });
 
   if (!upload) {
-    throw new NotFoundError("Document upload not found");
+    throw new NotFoundError(
+      kind === "audio" ? "Audio upload not found" : "Document upload not found",
+    );
   }
 
   const url = await documentStorage.createDocumentPreviewUrl(
@@ -54,4 +62,27 @@ export async function getDocumentPreviewForUser({
       now.getTime() + documentPreviewUrlLifetimeSeconds * 1_000,
     ).toISOString(),
   };
+}
+
+export async function getDocumentPreviewForUser({
+  database,
+  documentStorage,
+  now = new Date(),
+  uploadId,
+  userId,
+}: GetDocumentPreviewInput): Promise<DocumentPreview> {
+  return getUploadPreviewForUser({
+    database,
+    documentStorage,
+    kind: "document",
+    now,
+    uploadId,
+    userId,
+  });
+}
+
+export async function getAudioPreviewForUser(
+  input: GetDocumentPreviewInput,
+): Promise<DocumentPreview> {
+  return getUploadPreviewForUser({ ...input, kind: "audio" });
 }

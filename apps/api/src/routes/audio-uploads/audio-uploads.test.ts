@@ -9,12 +9,20 @@ import type { DocumentStorage } from "../../storage/document-storage.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 
 const serviceMocks = vi.hoisted(() => ({
+  getAudioPreviewForUser: vi.fn(),
   uploadAudioRecordingForUser: vi.fn(),
 }));
 
 vi.mock("../../services/audio-uploads.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../services/audio-uploads.js")>()),
   uploadAudioRecordingForUser: serviceMocks.uploadAudioRecordingForUser,
+}));
+
+vi.mock("../../services/document-previews.js", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../services/document-previews.js")
+  >()),
+  getAudioPreviewForUser: serviceMocks.getAudioPreviewForUser,
 }));
 
 import { audioUploadRoutes } from "./audio-uploads.js";
@@ -105,10 +113,65 @@ function createEmptyMultipartPayload() {
 }
 
 afterEach(async () => {
+  serviceMocks.getAudioPreviewForUser.mockReset();
   serviceMocks.uploadAudioRecordingForUser.mockReset();
   await Promise.all(
     applications.splice(0).map((application) => application.close()),
   );
+});
+
+describe("GET /api/uploads/audio/:id/preview", () => {
+  it("returns a non-cacheable private audio preview", async () => {
+    const { application, documentStorage } = createApplication(userId);
+    serviceMocks.getAudioPreviewForUser.mockResolvedValue({
+      url: "https://signed.example/recording",
+      contentType: "audio/webm",
+      expiresAt: "2026-11-16T12:05:00.000Z",
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/audio/${uploadedAudio.id}/preview`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(response.json()).toEqual({
+      url: "https://signed.example/recording",
+      contentType: "audio/webm",
+      expiresAt: "2026-11-16T12:05:00.000Z",
+    });
+    expect(serviceMocks.getAudioPreviewForUser).toHaveBeenCalledWith({
+      database: application.database,
+      documentStorage,
+      uploadId: uploadedAudio.id,
+      userId,
+    });
+  });
+
+  it("requires authentication", async () => {
+    const { application } = createApplication(null);
+
+    const response = await application.inject({
+      method: "GET",
+      url: `/api/uploads/audio/${uploadedAudio.id}/preview`,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(serviceMocks.getAudioPreviewForUser).not.toHaveBeenCalled();
+  });
+
+  it("validates the upload identifier", async () => {
+    const { application } = createApplication(userId);
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/uploads/audio/not-a-uuid/preview",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(serviceMocks.getAudioPreviewForUser).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/uploads/audio", () => {

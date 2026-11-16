@@ -5,6 +5,7 @@ import { NotFoundError } from "../errors/application-errors.js";
 import { createTestDocumentStorage } from "../test/document-storage.js";
 import {
   documentPreviewUrlLifetimeSeconds,
+  getAudioPreviewForUser,
   getDocumentPreviewForUser,
 } from "./document-previews.js";
 
@@ -80,5 +81,47 @@ describe("getDocumentPreviewForUser", () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
     expect(documentStorage.createDocumentPreviewUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe("getAudioPreviewForUser", () => {
+  it("creates an ownership-scoped preview for an audio recording", async () => {
+    const { database, findFirst } = createDatabase({
+      mimeType: "audio/webm",
+      s3ObjectKey: `${userId}/audio/${uploadId}`,
+    });
+    const documentStorage = createTestDocumentStorage();
+    vi.mocked(documentStorage.createDocumentPreviewUrl).mockResolvedValue(
+      "https://signed.example/recording",
+    );
+
+    await expect(
+      getAudioPreviewForUser({
+        database,
+        documentStorage,
+        now: new Date("2026-11-12T12:00:00.000Z"),
+        uploadId,
+        userId,
+      }),
+    ).resolves.toEqual({
+      url: "https://signed.example/recording",
+      contentType: "audio/webm",
+      expiresAt: "2026-11-12T12:05:00.000Z",
+    });
+
+    const query = findFirst.mock.calls[0]?.[0];
+    expect(
+      query.where(
+        { id: "upload.id", userId: "upload.userId", kind: "upload.kind" },
+        {
+          and: (...values: unknown[]) => values,
+          eq: (column: unknown, value: unknown) => ({ column, value }),
+        },
+      ),
+    ).toEqual([
+      { column: "upload.id", value: uploadId },
+      { column: "upload.userId", value: userId },
+      { column: "upload.kind", value: "audio" },
+    ]);
   });
 });

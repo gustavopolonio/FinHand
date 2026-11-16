@@ -90,6 +90,7 @@ interface FixtureOptions {
   upload?:
     | {
         id: string;
+        kind: "document" | "audio";
         originalFileName: string;
         status: "processed" | "processing" | "failed";
         failureCode: string | null;
@@ -103,6 +104,7 @@ function createDatabaseFixture(options: FixtureOptions = {}) {
     options.upload === undefined
       ? {
           id: uploadId,
+          kind: "document",
           originalFileName: "receipt.pdf",
           status: "processed",
           failureCode: null,
@@ -171,6 +173,7 @@ describe("getTransactionCandidateReviewForUser", () => {
     ).resolves.toEqual({
       upload: {
         id: uploadId,
+        kind: "document",
         originalFileName: "receipt.pdf",
         status: "processed",
         failureCode: null,
@@ -227,6 +230,7 @@ describe("getTransactionCandidateReviewForUser", () => {
     const fixture = createDatabaseFixture({
       upload: {
         id: uploadId,
+        kind: "document",
         originalFileName: "receipt.pdf",
         status: "failed",
         failureCode: "ai_timeout",
@@ -512,8 +516,11 @@ const authoritativeTransaction = {
 
 type TestAuthoritativeTransaction = Omit<
   typeof authoritativeTransaction,
-  "categoryId"
-> & { categoryId: string | null };
+  "categoryId" | "origin"
+> & {
+  categoryId: string | null;
+  origin: "document" | "voice";
+};
 
 interface ConfirmationFixtureOptions {
   account?:
@@ -528,6 +535,7 @@ interface ConfirmationFixtureOptions {
     | undefined;
   returnedCandidate?: TestCandidateRecord | undefined;
   returnedTransaction?: TestAuthoritativeTransaction | undefined;
+  uploadKind?: "document" | "audio";
 }
 
 function createConfirmationFixture(
@@ -576,6 +584,9 @@ function createConfirmationFixture(
   const findTransaction = vi
     .fn()
     .mockResolvedValue(options.existingTransaction);
+  const findUpload = vi.fn().mockResolvedValue({
+    kind: options.uploadKind ?? "document",
+  });
 
   const insertReturning = vi
     .fn()
@@ -596,6 +607,7 @@ function createConfirmationFixture(
       accounts: { findFirst: findAccount },
       categories: { findFirst: findCategory },
       transactions: { findFirst: findTransaction },
+      uploads: { findFirst: findUpload },
     },
     insert,
     update,
@@ -613,6 +625,7 @@ function createConfirmationFixture(
     findAccount,
     findCategory,
     findTransaction,
+    findUpload,
     insert,
     insertValues,
     lockFor,
@@ -714,6 +727,33 @@ describe("confirmTransactionCandidateForUser", () => {
     expect(fixture.insert).not.toHaveBeenCalled();
     expect(fixture.update).not.toHaveBeenCalled();
     expect(fixture.findTransaction).toHaveBeenCalledOnce();
+    expect(fixture.findUpload).not.toHaveBeenCalled();
+  });
+
+  it("creates a voice transaction from an audio candidate", async () => {
+    const voiceTransaction = {
+      ...authoritativeTransaction,
+      origin: "voice" as const,
+    };
+    const fixture = createConfirmationFixture({
+      returnedTransaction: voiceTransaction,
+      uploadKind: "audio",
+    });
+
+    await expect(
+      confirmTransactionCandidateForUser(
+        fixture.database,
+        userId,
+        candidateId,
+        confirmationInput,
+      ),
+    ).resolves.toMatchObject({
+      transaction: { origin: "voice" },
+      created: true,
+    });
+    expect(fixture.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: "voice" }),
+    );
   });
 
   it("confirms a transaction without an optional category", async () => {

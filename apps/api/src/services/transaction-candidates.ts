@@ -8,6 +8,7 @@ import {
   type TransactionCandidateStatus,
   type TransactionOrigin,
   type TransactionType,
+  type UploadKind,
   type UploadStatus,
 } from "../db/schema/index.js";
 import {
@@ -84,6 +85,7 @@ export interface TransactionCandidateListItem {
 export interface TransactionCandidateReview {
   upload: {
     id: string;
+    kind: UploadKind;
     originalFileName: string;
     status: UploadStatus;
     failureCode: string | null;
@@ -195,6 +197,7 @@ export async function getTransactionCandidateReviewForUser(
   const upload = await database.query.uploads.findFirst({
     columns: {
       id: true,
+      kind: true,
       originalFileName: true,
       status: true,
       failureCode: true,
@@ -549,6 +552,16 @@ export async function confirmTransactionCandidateForUser(
       );
     }
 
+    const candidateUpload = await transaction.query.uploads.findFirst({
+      columns: { kind: true },
+      where: (upload, { and, eq }) =>
+        and(eq(upload.id, candidate.uploadId), eq(upload.userId, userId)),
+    });
+
+    if (!candidateUpload) {
+      throw new Error("Transaction candidate references a missing upload.");
+    }
+
     const amountMinor = parseCandidateAmount(input.amountMinor);
     const currencyCode = normalizeCandidateCurrency(input.currencyCode);
     const description = normalizeCandidateText(input.description);
@@ -635,7 +648,7 @@ export async function confirmTransactionCandidateForUser(
         description,
         counterparty,
         notes,
-        origin: "document",
+        origin: candidateUpload.kind === "audio" ? "voice" : "document",
       })
       .returning({
         id: transactions.id,

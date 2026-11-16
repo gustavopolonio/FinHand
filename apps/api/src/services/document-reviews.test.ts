@@ -33,6 +33,7 @@ describe("listOpenDocumentReviewsForUser", () => {
     const fixture = createDatabaseFixture([
       {
         uploadId,
+        kind: "audio",
         originalFileName: "receipt.pdf",
         status: "processed",
         failureCode: null,
@@ -47,6 +48,7 @@ describe("listOpenDocumentReviewsForUser", () => {
     ).resolves.toEqual([
       {
         uploadId,
+        kind: "audio",
         originalFileName: "receipt.pdf",
         status: "processed",
         failureCode: null,

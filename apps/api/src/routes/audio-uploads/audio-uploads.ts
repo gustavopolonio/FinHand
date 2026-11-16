@@ -1,12 +1,15 @@
 import fastifyMultipart from "@fastify/multipart";
+import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
 import { InputError } from "../../errors/application-errors.js";
+import { getAudioPreviewForUser } from "../../services/document-previews.js";
 import {
   maximumAudioRecordingBytes,
   uploadAudioRecordingForUser,
 } from "../../services/audio-uploads.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
+import { documentUploadParamsSchema } from "../../validation/document-upload-schemas.js";
 
 interface AudioUploadRoutesOptions {
   documentStorage: DocumentStorage;
@@ -26,6 +29,22 @@ export async function audioUploadRoutes(
   });
 
   application.addHook("preHandler", application.requireAuthentication);
+  const uploadsApplication = application.withTypeProvider<ZodTypeProvider>();
+
+  uploadsApplication.get(
+    "/api/uploads/audio/:id/preview",
+    { schema: { params: documentUploadParamsSchema } },
+    async (request, reply) => {
+      const preview = await getAudioPreviewForUser({
+        database: application.database,
+        documentStorage,
+        uploadId: request.params.id,
+        userId: request.authenticatedUserId,
+      });
+
+      return reply.header("Cache-Control", "private, no-store").send(preview);
+    },
+  );
 
   application.post("/api/uploads/audio", async (request, reply) => {
     if (!request.isMultipart()) {

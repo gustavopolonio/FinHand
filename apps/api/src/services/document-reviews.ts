@@ -12,6 +12,7 @@ import type { Database } from "../db/index.js";
 import {
   transactionCandidates,
   uploads,
+  type UploadKind,
   type UploadStatus,
 } from "../db/schema/index.js";
 
@@ -24,6 +25,7 @@ const maximumOpenDocumentReviews = 50;
 
 export interface DocumentReviewListItem {
   uploadId: string;
+  kind: UploadKind;
   originalFileName: string;
   status: UploadStatus;
   failureCode: string | null;
@@ -34,6 +36,7 @@ export interface DocumentReviewListItem {
 
 interface DocumentReviewRecord {
   uploadId: string;
+  kind: UploadKind;
   originalFileName: string;
   status: UploadStatus;
   failureCode: string | null;
@@ -49,6 +52,7 @@ export async function listOpenDocumentReviewsForUser(
   const records: DocumentReviewRecord[] = await database
     .select({
       uploadId: uploads.id,
+      kind: uploads.kind,
       originalFileName: uploads.originalFileName,
       status: uploads.status,
       failureCode: uploads.failureCode,
@@ -79,6 +83,7 @@ export async function listOpenDocumentReviewsForUser(
     )
     .groupBy(
       uploads.id,
+      uploads.kind,
       uploads.originalFileName,
       uploads.status,
       uploads.failureCode,
