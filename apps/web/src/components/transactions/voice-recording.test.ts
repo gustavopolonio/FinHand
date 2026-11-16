@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   calculateVoiceInputLevel,
   formatVoiceRecordingDuration,
-  maximumVoiceRecordingSeconds,
   microphoneErrorMessage,
   selectVoiceRecordingMimeType,
   voiceRecordingDurationMilliseconds,
-  voiceRecordingElapsedSeconds,
+  voiceRecordingRemainingMilliseconds,
 } from "./voice-recording";
 
 describe("voice recording utilities", () => {
@@ -20,15 +19,6 @@ describe("voice recording utilities", () => {
     expect(selectVoiceRecordingMimeType(() => false)).toBeNull();
   });
 
-  it("measures and clamps elapsed recording time to 30 seconds", () => {
-    expect(voiceRecordingElapsedSeconds(1_000, 1_999)).toBe(0);
-    expect(voiceRecordingElapsedSeconds(1_000, 6_500)).toBe(5);
-    expect(voiceRecordingElapsedSeconds(1_000, 45_000)).toBe(
-      maximumVoiceRecordingSeconds,
-    );
-    expect(voiceRecordingElapsedSeconds(2_000, 1_000)).toBe(0);
-  });
-
   it("does not add paused time to the recorded duration", () => {
     expect(voiceRecordingDurationMilliseconds(7_500, null, 50_000)).toBe(
       7_500,
@@ -36,6 +26,14 @@ describe("voice recording utilities", () => {
     expect(voiceRecordingDurationMilliseconds(7_500, 20_000, 22_500)).toBe(
       10_000,
     );
+  });
+
+  it("schedules only the remaining active time after pause and resume", () => {
+    expect(voiceRecordingRemainingMilliseconds(0)).toBe(30_000);
+    expect(voiceRecordingRemainingMilliseconds(7_500)).toBe(22_500);
+    expect(voiceRecordingRemainingMilliseconds(30_000)).toBe(0);
+    expect(voiceRecordingRemainingMilliseconds(35_000)).toBe(0);
+    expect(voiceRecordingRemainingMilliseconds(-1_000)).toBe(30_000);
   });
 
   it("formats a bounded recording timer", () => {
@@ -61,6 +59,11 @@ describe("voice recording utilities", () => {
     expect(
       microphoneErrorMessage(new DOMException("Browser details", "NotFoundError")),
     ).toBe("No microphone was found on this device.");
+    expect(
+      microphoneErrorMessage(
+        new DOMException("Browser details", "NotReadableError"),
+      ),
+    ).toBe("The microphone is already in use by another application.");
     expect(microphoneErrorMessage(new Error("sensitive details"))).not.toContain(
       "sensitive details",
     );

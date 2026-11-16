@@ -17,19 +17,6 @@ export function selectVoiceRecordingMimeType(
   );
 }
 
-export function voiceRecordingElapsedSeconds(
-  startedAtMilliseconds: number,
-  currentMilliseconds: number,
-): number {
-  const elapsedMilliseconds = voiceRecordingDurationMilliseconds(
-    0,
-    startedAtMilliseconds,
-    currentMilliseconds,
-  );
-
-  return Math.floor(elapsedMilliseconds / 1_000);
-}
-
 export function voiceRecordingDurationMilliseconds(
   accumulatedMilliseconds: number,
   activeSegmentStartedAtMilliseconds: number | null,
@@ -46,6 +33,16 @@ export function voiceRecordingDurationMilliseconds(
   return Math.min(
     maximumVoiceRecordingSeconds * 1_000,
     Math.max(0, accumulatedMilliseconds) + activeMilliseconds,
+  );
+}
+
+export function voiceRecordingRemainingMilliseconds(
+  recordedMilliseconds: number,
+): number {
+  return Math.max(
+    0,
+    maximumVoiceRecordingSeconds * 1_000 -
+      Math.max(0, recordedMilliseconds),
   );
 }
 

@@ -33,6 +33,7 @@ import {
   microphoneErrorMessage,
   selectVoiceRecordingMimeType,
   voiceRecordingDurationMilliseconds,
+  voiceRecordingRemainingMilliseconds,
 } from "./voice-recording";
 
 export interface VoiceRecording {
@@ -251,8 +252,9 @@ export function VoiceRecordingForm({
 
   const scheduleActiveRecording = useCallback(() => {
     const maximumMilliseconds = maximumVoiceRecordingSeconds * 1_000;
-    const remainingMilliseconds =
-      maximumMilliseconds - recordedMillisecondsRef.current;
+    const remainingMilliseconds = voiceRecordingRemainingMilliseconds(
+      recordedMillisecondsRef.current,
+    );
 
     if (remainingMilliseconds <= 0) {
       stopRecording();
