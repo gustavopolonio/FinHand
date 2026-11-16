@@ -15,8 +15,8 @@ Milestone 2 adds Google authentication through Better Auth using the existing
 `users` table plus `auth_accounts`, `auth_sessions`, and `auth_verifications`.
 
 Milestone 3 adds user-owned uploads, short-lived desktop-to-mobile capture
-sessions, and reviewable transaction candidates. Audio transcription and RAG
-storage remain planned extensions for their corresponding milestones.
+sessions, and reviewable transaction candidates. Milestone 4 adds audio
+transcription. RAG storage remains an explicitly post-V1 extension.
 
 ## Design principles
 
@@ -506,28 +506,28 @@ only after explicit confirmation, or becomes `rejected` without creating a
 transaction.
 
 Transcript and recording retention will be defined with the broader cleanup
-policy in Milestone 6 rather than as part of the Milestone 4 V1.
+policy in Milestone 5 rather than as part of the Milestone 4 implementation.
 
 ## Planned extensions
 
 The following entities are part of the planned architecture but not the first migration.
 
-### Milestone 5 — RAG
+### Post-V1 backlog — RAG
 
 #### `documents`
 
-Stores document-specific indexing state and any extracted text approved for RAG
-retention. Document content is sensitive financial data and must use the same
-ownership checks as transactions. Milestone 3 does not require retaining full
-document text after transaction extraction.
+Stores document-specific indexing state and any extracted text approved for
+future RAG retrieval. Document content is sensitive financial data and must use
+the same ownership checks as transactions. Milestone 3 does not require
+retaining full document text after transaction extraction.
 
 #### `document_chunks`
 
-Stores ordered chunks of a document with page/source metadata, chunk text, and a pgvector embedding. The vector dimension and index type will be selected with the embedding model in Milestone 5 rather than fixed prematurely.
+Stores ordered chunks of a document with page/source metadata, chunk text, and a pgvector embedding. The vector dimension and index type will be selected with the post-V1 embedding model rather than fixed prematurely.
 
 Retrieved chunks must be restricted to documents owned by the requesting user. Assistant answers should retain source references sufficient to show which document chunks grounded the response.
 
-### Milestone 6 — AI usage metadata
+### Production Readiness — AI usage metadata
 
 An `ai_operations` table may store minimal operational metadata such as operation type, model, token counts, duration, status, and a Langfuse trace identifier. Prompts, document contents, transcripts, and credentials must not be copied into application logs.
 

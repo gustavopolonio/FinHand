@@ -7,7 +7,6 @@
 - **Mobile Receipt Capture:** Allow users on a mobile browser to open the device camera, photograph a receipt, and submit it for document processing.
 - **Desktop-to-Mobile Capture:** Allow an authenticated desktop user to create a short-lived QR capture session. Scanning the QR code opens an upload-only mobile page where the user can photograph or select a receipt. The submitted document returns to the initiating desktop session for processing and confirmation.
 - **Voice Input:** Allow users on desktop and mobile browsers to record up to 30 seconds of microphone audio describing one or more financial transactions. Users can pause, resume, and see a live microphone input-level meter before reviewing the recording. FinHand does not provide an audio-file picker. It privately stores the recording, transcribes it, extracts one or more transaction candidates, and requires the user to review and explicitly confirm each candidate before registration.
-- **AI Document Assistant (RAG):** Allow users to ask natural language questions about uploaded financial documents and receive answers grounded in their content.
 
 
 ## Non-Functional Requirements
@@ -35,12 +34,12 @@
 
 ### Database & Storage
 - PostgreSQL
-- pgvector
+- pgvector — planned for the post-V1 RAG backlog
 - Amazon S3
 
 ### AI Engineering
 - OpenAI API
-- RAG
+- RAG — post-V1 backlog
 - Tool Calling
 - Structured Outputs
 
@@ -55,4 +54,9 @@
 
 ### Testing
 - Vitest
-- AI Evaluation Datasets
+- AI evaluation datasets — post-V1 RAG backlog
+
+
+## Post-V1 Backlog
+
+- **AI Document Assistant (RAG):** Allow users to ask natural language questions about uploaded financial documents and receive answers grounded in their content. This capability is explicitly excluded from the V1 release scope.

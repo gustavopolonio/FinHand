@@ -73,7 +73,7 @@
 
 ## Milestone 4 — Voice Input
 
-**Status:** In Progress
+**Status:** Completed
 
 ### Tasks
 - [x] Build authenticated browser microphone recording for desktop and mobile with pause, resume, live input-level feedback, playback, discard-and-restart, and an automatic 30-second active-recording limit; do not expose an audio-file picker
@@ -92,30 +92,47 @@
 - One recording may produce multiple ordered transaction candidates.
 - No extracted candidate affects balances until the user explicitly confirms it; candidates from the same recording can be confirmed or rejected independently.
 
-## Milestone 5 — RAG Financial Assistant
+## Milestone 5 — Production Readiness
 
 **Status:** Not Started
 
 ### Tasks
+- [ ] Configure CI quality gates for backend and frontend tests, linting, type checking, production builds, and migration validation
+- [ ] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
+- [ ] Define staging and production environments, secrets, OAuth configuration, databases, S3 buckets, OpenAI configuration, and least-privilege IAM roles
+- [ ] Configure structured logging with request and job correlation IDs, safe error serialization, and sensitive-data redaction
+- [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts
+- [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
+- [ ] Migrate existing private objects into the shared uploads bucket using opaque keys, update IAM and configuration, verify integrity, and retire the document-specific bucket paths
+- [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
+- [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets
+- [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection
+- [ ] Define safe production database migration, connection-pool, backup, restore, and worker deployment procedures
+- [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
+- [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
+- [ ] Configure the deployment pipeline for database migrations, the API, asynchronous workers, and the web application in staging
+- [ ] Run staging smoke tests, restore drills, security checks, and representative performance/load tests; resolve release-blocking findings
+- [ ] Deploy the production application and verify health checks, workers, OAuth, uploads, AI processing, alerts, and rollback procedures
+
+### Acceptance Criteria
+- Every change passes automated quality gates before deployment.
+- Staging and production use isolated credentials and least-privilege access.
+- Logs, traces, metrics, and alerts diagnose API, worker, database, storage, and AI failures without exposing financial data or credentials.
+- Upload storage uses the shared bucket and opaque object keys, and retention cleanup cannot delete active user data.
+- Database migrations, backups, restores, worker deployment, and application rollback have verified procedures.
+- Security, accessibility, and representative load checks have no unresolved release-blocking findings.
+- The deployed application passes end-to-end smoke tests for authentication, financial CRUD, document processing, QR capture, and voice input.
+
+## Backlog — Post-V1
+
+Backlog items are intentionally excluded from the V1 release scope and are not
+required to complete Production Readiness.
+
+### RAG Financial Assistant
+
+- [ ] Define privacy, consent, retention, and source-citation requirements for document knowledge
 - [ ] Implement document text extraction and chunking
 - [ ] Generate and store embeddings using pgvector
-- [ ] Implement semantic retrieval
-- [ ] Generate source-grounded answers
-- [ ] Create AI evaluation datasets
-
-## Milestone 6 — Production Readiness
-
-**Status:** Not Started
-
-### Tasks
-- [ ] Configure structured logging
-- [ ] Implement application and AI observability
-- [ ] Replace document-status polling with server-pushed updates using SSE or WebSockets
-- [ ] Define and implement retention cleanup for abandoned database records and S3 objects
-- [ ] Migrate private objects, IAM permissions, and configuration from the document-specific development bucket to a shared `finhand-dev-uploads` bucket
-- [ ] Replace user-ID-based S3 object key prefixes with opaque random storage namespaces and migrate existing objects
-- [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
-- [ ] Review and polish UI styles, interaction details, and visual consistency across the application
-- [ ] Configure CI/CD
-- [ ] Run security and performance checks
-- [ ] Deploy the application
+- [ ] Implement user-scoped semantic retrieval
+- [ ] Generate source-grounded answers with citations
+- [ ] Create retrieval and answer-quality evaluation datasets
