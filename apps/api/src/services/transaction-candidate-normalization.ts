@@ -1,4 +1,4 @@
-import type { ExtractedTransactionCandidate } from "../ai/document-transaction-extractor.js";
+import type { ExtractedTransactionCandidate } from "../ai/transaction-candidate-extraction.js";
 import type {
   TransactionCandidateExtractionMetadata,
   TransactionType,

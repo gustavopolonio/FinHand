@@ -1,46 +1,14 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
 
 import type { SupportedDocumentMimeType } from "../services/document-uploads.js";
+import {
+  transactionCandidateExtractionSchema,
+  transactionCandidateFieldInstructions,
+  type ExtractedTransactionCandidate,
+} from "./transaction-candidate-extraction.js";
 
-const confidenceSchema = z.strictObject({
-  type: z.number().min(0).max(1).nullable(),
-  amountMinor: z.number().min(0).max(1).nullable(),
-  currencyCode: z.number().min(0).max(1).nullable(),
-  occurredOn: z.number().min(0).max(1).nullable(),
-  description: z.number().min(0).max(1).nullable(),
-  counterparty: z.number().min(0).max(1).nullable(),
-});
-
-const extractedCandidateSchema = z.strictObject({
-  type: z.enum(["income", "expense"]).nullable(),
-  amountMinor: z
-    .string()
-    .regex(/^[1-9][0-9]*$/)
-    .nullable(),
-  currencyCode: z
-    .string()
-    .regex(/^[A-Z]{3}$/)
-    .nullable(),
-  occurredOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  description: z.string().nullable(),
-  counterparty: z.string().nullable(),
-  notes: z.string().nullable(),
-  confidence: confidenceSchema,
-  warnings: z.array(z.string()).max(20),
-});
-
-const extractionSchema = z.strictObject({
-  candidates: z.array(extractedCandidateSchema).max(25),
-});
-
-export type ExtractedTransactionCandidate = z.infer<
-  typeof extractedCandidateSchema
->;
+export type { ExtractedTransactionCandidate } from "./transaction-candidate-extraction.js";
 
 export interface ExtractDocumentInput {
   content: Buffer;
@@ -66,11 +34,9 @@ Return one candidate for each distinct financial transaction represented by the 
 
 Return an empty candidates array when the document does not represent a financial transaction. Do not invent a candidate merely because a document was provided.
 
-Do not invent missing values. Use null and add a short warning when a field is missing or uncertain.
+For document extraction, return occurredOn only when the document contains a complete calendar date.
 
-For amountMinor, return only a positive base-10 integer string in the currency's smallest unit. For example, BRL 42.90 is "4290". Never return a decimal or a negative value. Use income or expense to represent direction.
-
-Use a three-letter uppercase ISO 4217 currency code when identifiable. Use YYYY-MM-DD for occurredOn only when a complete calendar date is present. Keep descriptions concise and put the merchant, payer, or payee in counterparty. Confidence values range from 0 to 1.`;
+${transactionCandidateFieldInstructions}`;
 
 export function createOpenAiDocumentTransactionExtractor({
   apiKey,
@@ -127,7 +93,7 @@ export function createOpenAiDocumentTransactionExtractor({
         ],
         text: {
           format: zodTextFormat(
-            extractionSchema,
+            transactionCandidateExtractionSchema,
             "document_transaction_candidates",
           ),
         },
