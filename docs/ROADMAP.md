@@ -98,7 +98,7 @@
 
 ### Tasks
 - [x] Configure CI quality gates for backend and frontend tests, linting, type checking, production builds, and migration validation
-- [ ] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
+- [x] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
 - [ ] Define staging and production environments, secrets, OAuth configuration, databases, S3 buckets, OpenAI configuration, and least-privilege IAM roles
 - [ ] Configure structured logging with request and job correlation IDs, safe error serialization, and sensitive-data redaction
 - [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts

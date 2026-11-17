@@ -18,6 +18,20 @@ jobs:
     name: Quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17-bookworm
+        env:
+          POSTGRES_USER: finhand_test
+          POSTGRES_PASSWORD: finhand_test
+          POSTGRES_DB: finhand_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finhand_test -d finhand_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
 
     steps:
       - name: Check out repository
@@ -34,6 +48,11 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Run PostgreSQL integration tests
+        env:
+          TEST_DATABASE_URL: postgresql://finhand_test:finhand_test@127.0.0.1:5432/finhand_test
+        run: npm run test:integration
 
       - name: Run type checking
         run: npm run typecheck
