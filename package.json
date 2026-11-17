@@ -16,6 +16,9 @@
     "db:logs": "docker compose logs --follow postgres",
     "db:migrate": "npm run db:migrate --workspace @finhand/api",
     "db:studio": "npm run db:studio --workspace @finhand/api",
+    "db:test:down": "docker compose --profile test rm --stop --force postgres-test",
+    "db:test:logs": "docker compose --profile test logs --follow postgres-test",
+    "db:test:up": "docker compose --profile test up --detach --wait postgres-test",
     "db:up": "docker compose up --detach --wait postgres",
     "db:verify": "npm run db:verify --workspace @finhand/api",
     "dev:api": "npm run dev --workspace @finhand/api",
@@ -27,6 +30,7 @@
     "start:worker": "npm run start:worker --workspace @finhand/api",
     "start:web": "npm run start --workspace @finhand/web",
     "test": "npm run test --workspaces --if-present",
+    "test:integration": "npm run test:integration --workspace @finhand/api",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

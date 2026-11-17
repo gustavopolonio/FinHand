@@ -21,5 +21,27 @@ services:
       start_period: 5s
     stop_grace_period: 10s
 
+  postgres-test:
+    image: pgvector/pgvector:0.8.7-pg17-bookworm
+    profiles:
+      - test
+    environment:
+      POSTGRES_USER: finhand_test
+      POSTGRES_PASSWORD: finhand_test
+      POSTGRES_DB: finhand_test
+    ports:
+      - "${POSTGRES_TEST_PORT:-5434}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U finhand_test -d finhand_test
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+    stop_grace_period: 5s
+
 volumes:
   postgres_data:
