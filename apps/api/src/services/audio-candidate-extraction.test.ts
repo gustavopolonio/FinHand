@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AudioTransactionExtractor } from "../ai/audio-transaction-extractor.js";
 import type { Database } from "../db/index.js";
-import { transactionCandidates, uploads } from "../db/schema/index.js";
+import { transactionCandidates } from "../db/schema/index.js";
 import {
   claimNextAudioTranscriptForCandidateExtraction,
   getDateInTimeZone,

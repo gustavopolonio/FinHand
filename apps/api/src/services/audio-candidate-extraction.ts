@@ -211,6 +211,7 @@ async function failClaimedAudioTranscript(
     throw new AggregateError(
       [processingError, failureTransitionError],
       "Audio candidate extraction failed and the upload could not be marked as failed.",
+      { cause: failureTransitionError },
     );
   }
 

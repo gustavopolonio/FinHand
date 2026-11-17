@@ -180,6 +180,7 @@ async function removeStoredAudioAfterFailure(
     throw new AggregateError(
       [error, cleanupError],
       "Audio upload failed and its storage cleanup was unsuccessful.",
+      { cause: cleanupError },
     );
   }
 

@@ -205,6 +205,7 @@ async function failClaimedUpload(
     throw new AggregateError(
       [processingError, failureTransitionError],
       "Document extraction failed and the upload could not be marked as failed.",
+      { cause: failureTransitionError },
     );
   }
 

@@ -30,7 +30,6 @@ const postgresDialect = new PgDialect();
 const userId = "33333333-3333-4333-8333-333333333333";
 const sessionId = "44444444-4444-4444-8444-444444444444";
 const token = "a".repeat(43);
-const tokenHash = createHash("sha256").update(token).digest("hex");
 const now = new Date("2026-11-08T12:00:00.000Z");
 const expiresAt = new Date(
   now.getTime() + documentCaptureSessionLifetimeMs,

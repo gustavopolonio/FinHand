@@ -190,6 +190,7 @@ async function failClaimedAudioUpload(
     throw new AggregateError(
       [processingError, failureTransitionError],
       "Audio transcription failed and the upload could not be marked as failed.",
+      { cause: failureTransitionError },
     );
   }
 

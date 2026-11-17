@@ -105,7 +105,6 @@ function proxyHttpRequest(
 
 function serializeUpgradeRequest(
   request: IncomingMessage,
-  target: URL,
 ): string {
   const headers = forwardedHeaders(request);
   const serializedHeaders = Object.entries(headers).flatMap(([name, value]) =>
@@ -134,7 +133,7 @@ function proxyWebSocket(
     Number(target.port),
     target.hostname,
     () => {
-      upstreamSocket.write(serializeUpgradeRequest(request, target));
+      upstreamSocket.write(serializeUpgradeRequest(request));
 
       if (head.length > 0) {
         upstreamSocket.write(head);
@@ -191,7 +190,6 @@ console.info(
 console.info(`Forwarding ${publicUrl.origin}/api/* to ${apiOrigin.origin}`);
 console.info(`Forwarding all other traffic to ${webOrigin.origin}`);
 
-let ngrok: ChildProcess | undefined;
 let isShuttingDown = false;
 
 async function shutdown(signal?: NodeJS.Signals) {
@@ -217,7 +215,7 @@ async function shutdown(signal?: NodeJS.Signals) {
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
-ngrok = spawn(
+const ngrok: ChildProcess = spawn(
   "ngrok",
   ["http", String(proxyPort), "--url", publicUrl.origin],
   { stdio: "inherit" },

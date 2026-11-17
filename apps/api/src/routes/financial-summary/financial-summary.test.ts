@@ -83,13 +83,12 @@ function createApplication(options: {
   select?: ReturnType<typeof vi.fn>;
 }) {
   const application = Fastify();
-  let database: Database;
   const transaction = vi.fn(
     async (callback: (transactionDatabase: Database) => unknown) =>
       callback(database),
   );
 
-  database = {
+  const database: Database = {
     query: {
       users: {
         findFirst:

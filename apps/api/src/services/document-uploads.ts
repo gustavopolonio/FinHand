@@ -211,6 +211,7 @@ async function removeStoredDocumentAfterFailure(
     throw new AggregateError(
       [error, cleanupError],
       "Document upload failed and its storage cleanup was unsuccessful.",
+      { cause: cleanupError },
     );
   }
 
