@@ -7,7 +7,8 @@
     "node": ">=22.0.0"
   },
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -25,6 +26,7 @@
     "dev:tunnel": "npm run dev:tunnel --workspace @finhand/api",
     "dev:worker": "npm run dev:worker --workspace @finhand/api",
     "dev:web": "npm run dev --workspace @finhand/web",
+    "infra:synth": "npm run synth --workspace @finhand/infra",
     "lint": "npm run lint --workspaces --if-present",
     "start:api": "npm run start --workspace @finhand/api",
     "start:worker": "npm run start:worker --workspace @finhand/api",

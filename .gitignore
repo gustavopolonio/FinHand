@@ -4,6 +4,7 @@ node_modules/
 dist/
 .next/
 coverage/
+cdk.out/
 *.tsbuildinfo
 
 # Local environment and secrets
