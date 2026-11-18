@@ -99,7 +99,7 @@
 ### Tasks
 - [x] Configure CI quality gates for backend and frontend tests, linting, type checking, production builds, and migration validation
 - [x] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
-- [ ] Define staging and production environments, secrets, OAuth configuration, databases, S3 buckets, OpenAI configuration, and least-privilege IAM roles
+- [ ] Define and provision the cost-conscious AWS production environment on one EC2 host, including Docker Compose, secrets, OAuth, PostgreSQL, S3, OpenAI configuration, backups, and a least-privilege instance role; defer staging until operational risk justifies it
 - [ ] Configure structured logging with request and job correlation IDs, safe error serialization, and sensitive-data redaction
 - [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts
 - [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
@@ -107,21 +107,21 @@
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
 - [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets
 - [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection
-- [ ] Define safe production database migration, connection-pool, backup, restore, and worker deployment procedures
+- [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
-- [ ] Configure the deployment pipeline for database migrations, the API, asynchronous workers, and the web application in staging
-- [ ] Run staging smoke tests, restore drills, security checks, and representative performance/load tests; resolve release-blocking findings
+- [ ] Configure a manually approved production deployment pipeline that publishes immutable images and updates the EC2 Docker Compose application through AWS Systems Manager
+- [ ] Run pre-deployment restore drills, security checks, and representative performance/load tests; resolve release-blocking findings
 - [ ] Deploy the production application and verify health checks, workers, OAuth, uploads, AI processing, alerts, and rollback procedures
 
 ### Acceptance Criteria
 - Every change passes automated quality gates before deployment.
-- Staging and production use isolated credentials and least-privilege access.
+- Production uses dedicated credentials and least-privilege access that are isolated from local development and CI.
 - Logs, traces, metrics, and alerts diagnose API, worker, database, storage, and AI failures without exposing financial data or credentials.
 - Upload storage uses the shared bucket and opaque object keys, and retention cleanup cannot delete active user data.
 - Database migrations, backups, restores, worker deployment, and application rollback have verified procedures.
 - Security, accessibility, and representative load checks have no unresolved release-blocking findings.
-- The deployed application passes end-to-end smoke tests for authentication, financial CRUD, document processing, QR capture, and voice input.
+- The production deployment passes non-destructive end-to-end smoke tests for authentication, financial CRUD, document processing, QR capture, and voice input.
 
 ## Backlog — Post-V1
 

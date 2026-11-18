@@ -50,7 +50,16 @@
 
 ### Infrastructure & DevOps
 - Docker
+- Docker Compose
 - GitHub Actions
+- AWS CDK with TypeScript
+- Amazon EC2 with an IAM instance profile
+- Amazon EBS
+- Amazon ECR
+- AWS Systems Manager Parameter Store and Secrets Manager
+- Amazon CloudWatch
+- Caddy with automated HTTPS
+- Amazon CloudFront and Route 53 — optional when their capabilities are needed
 
 ### Testing
 - Vitest
