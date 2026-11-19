@@ -10,7 +10,12 @@ import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
+import {
+  createHostBootstrapDocumentContent,
+  HOST_BOOTSTRAP_REVISION,
+} from "./host-bootstrap.js";
 
 const PRODUCTION_REGION = "us-east-1";
 
@@ -153,11 +158,54 @@ export class ProductionStack extends Stack {
     databaseVolume.applyRemovalPolicy(RemovalPolicy.RETAIN);
     Tags.of(databaseVolume).add("DataClassification", "financial-private");
 
-    new ec2.CfnVolumeAttachment(this, "DatabaseVolumeAttachment", {
-      device: "/dev/sdf",
-      instanceId: host.instanceId,
-      volumeId: databaseVolume.volumeId,
-    });
+    const databaseVolumeAttachment = new ec2.CfnVolumeAttachment(
+      this,
+      "DatabaseVolumeAttachment",
+      {
+        device: "/dev/sdf",
+        instanceId: host.instanceId,
+        volumeId: databaseVolume.volumeId,
+      },
+    );
+
+    const hostBootstrapDocument = new ssm.CfnDocument(
+      this,
+      "HostBootstrapDocument",
+      {
+        content: createHostBootstrapDocumentContent(),
+        documentFormat: "JSON",
+        documentType: "Command",
+        name: "finhand-prod-bootstrap-host",
+        targetType: "/AWS::EC2::Instance",
+        updateMethod: "NewVersion",
+      },
+    );
+
+    const hostBootstrapAssociation = new ssm.CfnAssociation(
+      this,
+      "HostBootstrapAssociation",
+      {
+        associationName: "finhand-prod-bootstrap-host",
+        complianceSeverity: "HIGH",
+        documentVersion: "$LATEST",
+        maxConcurrency: "1",
+        maxErrors: "0",
+        name: hostBootstrapDocument.ref,
+        parameters: {
+          BootstrapRevision: [HOST_BOOTSTRAP_REVISION],
+          DatabaseVolumeId: [databaseVolume.volumeId],
+        },
+        syncCompliance: "AUTO",
+        targets: [
+          {
+            key: "InstanceIds",
+            values: [host.instanceId],
+          },
+        ],
+        waitForSuccessTimeoutSeconds: 900,
+      },
+    );
+    hostBootstrapAssociation.addResourceDependency(databaseVolumeAttachment);
 
     const elasticIp = new ec2.CfnEIP(this, "ElasticIp", {
       domain: "vpc",
@@ -222,6 +270,16 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "DatabaseVolumeId", {
       description: "Retained encrypted PostgreSQL data volume ID",
       value: databaseVolume.volumeId,
+    });
+
+    new CfnOutput(this, "HostBootstrapDocumentName", {
+      description: "Systems Manager document that prepares the production host",
+      value: hostBootstrapDocument.ref,
+    });
+
+    new CfnOutput(this, "HostBootstrapAssociationId", {
+      description: "State Manager association that applies the host bootstrap",
+      value: hostBootstrapAssociation.attrAssociationId,
     });
   }
 

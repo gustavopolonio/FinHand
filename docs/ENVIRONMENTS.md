@@ -144,6 +144,38 @@ rotation, and a small encrypted swap file for brief memory spikes. Monitor
 memory before moving to a larger instance; swap must not be treated as normal
 application memory.
 
+### Host bootstrap
+
+Prepare the existing host with a version-controlled Systems Manager command
+document and State Manager association. Do not depend on EC2 user data for this
+step: user data is not reapplied reliably to an already-running instance when
+the bootstrap definition changes.
+
+The bootstrap must be safe to run repeatedly and must:
+
+- install and enable the Amazon Linux 2023 Docker package;
+- install a pinned ARM64 Docker Compose CLI plugin only after verifying its
+  SHA-256 checksum;
+- configure bounded local Docker logs without discarding unrelated daemon
+  settings;
+- locate the retained database disk by EBS volume ID rather than assuming that
+  the CloudFormation `/dev/sdf` name is preserved by the Nitro NVMe device
+  mapping;
+- create an ext4 filesystem only when the database disk contains no filesystem
+  or other recognized signature;
+- refuse to replace an unknown or unsupported existing filesystem;
+- mount the database disk by UUID at `/srv/finhand/postgres` and persist that
+  mount in `/etc/fstab`;
+- create root-owned deployment directories under `/opt/finhand`, with runtime
+  configuration inaccessible to ordinary users;
+- create a 1 GiB swap file on the encrypted root disk with mode `0600` and low
+  swappiness for brief memory spikes.
+
+CloudFormation waits for the association to report success. The association is
+also marked non-compliant when a later application of the desired host state
+fails. This bootstrap prepares the operating system only; it does not start
+PostgreSQL, Caddy, or any FinHand application container.
+
 ## Networking and TLS
 
 - Place the EC2 host in a public subnet with an internet gateway. Do not create
@@ -486,6 +518,8 @@ Before provisioning application resources:
 
 - [Amazon EC2 instance profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)
 - [AWS Systems Manager Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html)
+- [AWS Systems Manager State Manager associations](https://docs.aws.amazon.com/systems-manager/latest/userguide/state-manager-associations-creating.html)
 - [Amazon EBS encryption](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-encryption.html)
 - [Amazon S3 security best practices](https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html)
+- [Install the Docker Compose plugin](https://docs.docker.com/compose/install/linux/)
 - [GitHub Actions OIDC in AWS](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)

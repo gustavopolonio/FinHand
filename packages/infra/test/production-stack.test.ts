@@ -1,6 +1,11 @@
 import { App } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import {
+  HOST_BOOTSTRAP_REVISION,
+  HOST_BOOTSTRAP_SCRIPT,
+} from "../lib/host-bootstrap.js";
 import { ProductionStack } from "../lib/production-stack.js";
 
 const productionEnvironment = {
@@ -371,6 +376,127 @@ describe("ProductionStack", () => {
     );
   });
 
+  it("prepares the host through an idempotent Systems Manager association", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::SSM::Document", 1);
+    template.hasResourceProperties("AWS::SSM::Document", {
+      DocumentFormat: "JSON",
+      DocumentType: "Command",
+      Name: "finhand-prod-bootstrap-host",
+      TargetType: "/AWS::EC2::Instance",
+      UpdateMethod: "NewVersion",
+      Content: {
+        schemaVersion: "2.2",
+        parameters: {
+          BootstrapRevision: Match.objectLike({ type: "String" }),
+          DatabaseVolumeId: Match.objectLike({
+            allowedPattern: "^vol-[0-9a-f]+$",
+            type: "String",
+          }),
+        },
+        mainSteps: [
+          Match.objectLike({
+            action: "aws:runShellScript",
+            name: "bootstrapHost",
+            inputs: {
+              runCommand: [HOST_BOOTSTRAP_SCRIPT],
+              timeoutSeconds: "900",
+            },
+          }),
+        ],
+      },
+    });
+
+    template.resourceCountIs("AWS::SSM::Association", 1);
+    template.hasResourceProperties("AWS::SSM::Association", {
+      AssociationName: "finhand-prod-bootstrap-host",
+      ComplianceSeverity: "HIGH",
+      DocumentVersion: "$LATEST",
+      MaxConcurrency: "1",
+      MaxErrors: "0",
+      Name: { Ref: Match.stringLikeRegexp("HostBootstrapDocument") },
+      Parameters: {
+        BootstrapRevision: [HOST_BOOTSTRAP_REVISION],
+        DatabaseVolumeId: [
+          { Ref: Match.stringLikeRegexp("DatabaseVolume") },
+        ],
+      },
+      SyncCompliance: "AUTO",
+      Targets: [
+        {
+          Key: "InstanceIds",
+          Values: [{ Ref: Match.stringLikeRegexp("Host") }],
+        },
+      ],
+      WaitForSuccessTimeoutSeconds: 900,
+    });
+
+    const associations = template.findResources("AWS::SSM::Association");
+    const [association] = Object.values(associations);
+    expect(association.DependsOn).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^DatabaseVolumeAttachment/),
+      ]),
+    );
+  });
+
+  it("keeps destructive host setup behind explicit safety checks", () => {
+    const syntaxCheck = spawnSync("bash", ["-n"], {
+      encoding: "utf8",
+      input: HOST_BOOTSTRAP_SCRIPT,
+    });
+
+    expect(syntaxCheck.stderr).toBe("");
+    expect(syntaxCheck.status).toBe(0);
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'filesystem_type=$(blkid --match-tag TYPE --output value "$device"',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'if [[ -z "$filesystem_type" ]]; then',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'signatures=$(wipefs --no-act --noheadings --output TYPE "$device"',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'mkfs.ext4 -L finhand-postgres "$device"',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'printf \'UUID=%s %s ext4 defaults,nofail 0 2\\n\'',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).not.toContain("mkfs.ext4 -F");
+  });
+
+  it("pins and verifies Compose and configures bounded host resources", () => {
+    expect(HOST_BOOTSTRAP_REVISION).toMatch(/^[0-9a-f]{16}$/);
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      "dnf install -y docker e2fsprogs jq",
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).not.toContain("dnf install -y curl");
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain('COMPOSE_VERSION="v5.7.1"');
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'COMPOSE_SHA256="f2f49f903240895fa764c0dca3a14548b754ad9426f6b609ccaf55ec5a3aa2a5"',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain("sha256sum --check");
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      '{"max-size": "10m", "max-file": "3"}',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'fallocate --length 1G "$SWAP_FILE"',
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      "printf 'vm.swappiness = 10\\n'",
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      "install -d -o root -g root -m 0700 /opt/finhand/config",
+    );
+  });
+
   it("creates and associates one stable public IPv4 address", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -440,6 +566,14 @@ describe("ProductionStack", () => {
     });
     template.hasOutput("DatabaseVolumeId", {
       Description: "Retained encrypted PostgreSQL data volume ID",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("HostBootstrapDocumentName", {
+      Description: "Systems Manager document that prepares the production host",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("HostBootstrapAssociationId", {
+      Description: "State Manager association that applies the host bootstrap",
       Value: Match.anyValue(),
     });
   });
