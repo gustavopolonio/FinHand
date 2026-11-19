@@ -184,6 +184,112 @@ describe("ProductionStack", () => {
     }
   });
 
+  it("creates a least-privilege role for the production EC2 host", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::IAM::Role", 1);
+    template.hasResourceProperties("AWS::IAM::Role", {
+      AssumeRolePolicyDocument: {
+        Statement: [
+          {
+            Action: "sts:AssumeRole",
+            Effect: "Allow",
+            Principal: { Service: "ec2.amazonaws.com" },
+          },
+        ],
+        Version: "2012-10-17",
+      },
+      Description:
+        "Least-privilege runtime role for the FinHand production EC2 host",
+      ManagedPolicyArns: [
+        {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              { Ref: "AWS::Partition" },
+              ":iam::aws:policy/AmazonSSMManagedInstanceCore",
+            ],
+          ],
+        },
+      ],
+      RoleName: "finhand-prod-instance-role",
+    });
+
+    template.resourceCountIs("AWS::IAM::Policy", 1);
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyName: Match.stringLikeRegexp("InstanceRoleDefaultPolicy"),
+    });
+
+    const policies = template.findResources("AWS::IAM::Policy");
+    const [policy] = Object.values(policies);
+    const statements = policy.Properties.PolicyDocument.Statement as Array<{
+      Action: string | string[];
+      Resource: unknown;
+    }>;
+
+    expect(statements).toHaveLength(4);
+    expect(statements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Action: "ecr:GetAuthorizationToken",
+          Effect: "Allow",
+          Resource: "*",
+        }),
+        expect.objectContaining({
+          Action: [
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage",
+          ],
+          Effect: "Allow",
+          Resource: {
+            "Fn::GetAtt": [expect.stringMatching(/^WebRepository/), "Arn"],
+          },
+        }),
+        expect.objectContaining({
+          Action: [
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage",
+          ],
+          Effect: "Allow",
+          Resource: {
+            "Fn::GetAtt": [expect.stringMatching(/^ApiRepository/), "Arn"],
+          },
+        }),
+        expect.objectContaining({
+          Action: expect.arrayContaining([
+            "s3:AbortMultipartUpload",
+            "s3:DeleteObject",
+            "s3:GetObject",
+            "s3:ListMultipartUploadParts",
+            "s3:PutObject",
+          ]),
+          Effect: "Allow",
+          Resource: expect.objectContaining({
+            "Fn::Join": expect.any(Array),
+          }),
+          Sid: "UploadObjectAccess",
+        }),
+      ]),
+    );
+    const actions = statements.flatMap((statement) =>
+      Array.isArray(statement.Action) ? statement.Action : [statement.Action],
+    );
+    expect(actions).not.toContain("*");
+    expect(
+      statements.filter((statement) => statement.Resource === "*"),
+    ).toEqual([
+      expect.objectContaining({ Action: "ecr:GetAuthorizationToken" }),
+    ]);
+  });
+
   it("exposes the deployment outputs", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -217,6 +323,10 @@ describe("ProductionStack", () => {
     });
     template.hasOutput("ApiRepositoryUri", {
       Description: "ECR repository URI shared by the production API and worker",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("InstanceRoleName", {
+      Description: "Least-privilege role for the production EC2 host",
       Value: Match.anyValue(),
     });
   });

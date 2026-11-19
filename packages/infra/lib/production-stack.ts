@@ -7,6 +7,7 @@ import {
 } from "aws-cdk-lib";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
@@ -86,6 +87,33 @@ export class ProductionStack extends Stack {
       "finhand-prod-api-ecr",
     );
 
+    const instanceRole = new iam.Role(this, "InstanceRole", {
+      assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
+      description:
+        "Least-privilege runtime role for the FinHand production EC2 host",
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "AmazonSSMManagedInstanceCore",
+        ),
+      ],
+      roleName: "finhand-prod-instance-role",
+    });
+    webRepository.grantPull(instanceRole);
+    apiRepository.grantPull(instanceRole);
+    instanceRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "UploadObjectAccess",
+        actions: [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts",
+        ],
+        resources: [uploadsBucket.arnForObjects("*")],
+      }),
+    );
+
     new CfnOutput(this, "Architecture", {
       description: "Approved production deployment model",
       value: "single-ec2-docker-compose",
@@ -119,6 +147,11 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "ApiRepositoryUri", {
       description: "ECR repository URI shared by the production API and worker",
       value: apiRepository.repositoryUri,
+    });
+
+    new CfnOutput(this, "InstanceRoleName", {
+      description: "Least-privilege role for the production EC2 host",
+      value: instanceRole.roleName,
     });
   }
 
