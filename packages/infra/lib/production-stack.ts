@@ -6,6 +6,7 @@ import {
   type StackProps,
 } from "aws-cdk-lib";
 import * as ecr from "aws-cdk-lib/aws-ecr";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
@@ -24,6 +25,47 @@ export class ProductionStack extends Stack {
     Tags.of(this).add("Application", "finhand");
     Tags.of(this).add("Environment", "production");
     Tags.of(this).add("ManagedBy", "aws-cdk");
+
+    const vpc = new ec2.Vpc(this, "Vpc", {
+      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"),
+      maxAzs: 1,
+      natGateways: 0,
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: "public",
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+      ],
+      vpcName: "finhand-prod-vpc",
+    });
+
+    const hostSecurityGroup = new ec2.SecurityGroup(
+      this,
+      "HostSecurityGroup",
+      {
+        allowAllOutbound: false,
+        description:
+          "Public HTTP and HTTPS access for the FinHand production proxy",
+        securityGroupName: "finhand-prod-host-sg",
+        vpc,
+      },
+    );
+    hostSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(80),
+      "Public HTTP for certificate issuance and HTTPS redirects",
+    );
+    hostSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      "Public HTTPS for the Caddy reverse proxy",
+    );
+    hostSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      "HTTPS for AWS APIs, image pulls, OAuth, OpenAI, and updates",
+    );
 
     const uploadsBucket = new s3.Bucket(this, "UploadsBucket", {
       bucketName: `finhand-prod-uploads-${this.account}`,
@@ -47,6 +89,21 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "Architecture", {
       description: "Approved production deployment model",
       value: "single-ec2-docker-compose",
+    });
+
+    new CfnOutput(this, "VpcId", {
+      description: "Production VPC ID",
+      value: vpc.vpcId,
+    });
+
+    new CfnOutput(this, "PublicSubnetId", {
+      description: "Public subnet ID for the production EC2 host",
+      value: vpc.publicSubnets[0].subnetId,
+    });
+
+    new CfnOutput(this, "HostSecurityGroupId", {
+      description: "Security group ID for the production EC2 host",
+      value: hostSecurityGroup.securityGroupId,
     });
 
     new CfnOutput(this, "UploadsBucketName", {

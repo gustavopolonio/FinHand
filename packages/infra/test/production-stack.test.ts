@@ -9,6 +9,91 @@ const productionEnvironment = {
 };
 
 describe("ProductionStack", () => {
+  it("creates a single-subnet public VPC without paid network gateways", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+
+    template.hasResourceProperties("AWS::EC2::VPC", {
+      CidrBlock: "10.0.0.0/16",
+      EnableDnsHostnames: true,
+      EnableDnsSupport: true,
+      Tags: Match.arrayWith([
+        { Key: "Name", Value: "finhand-prod-vpc" },
+      ]),
+    });
+    template.resourceCountIs("AWS::EC2::Subnet", 1);
+    template.hasResourceProperties("AWS::EC2::Subnet", {
+      MapPublicIpOnLaunch: true,
+      Tags: Match.arrayWith([
+        { Key: "aws-cdk:subnet-name", Value: "public" },
+        { Key: "aws-cdk:subnet-type", Value: "Public" },
+      ]),
+    });
+    template.resourceCountIs("AWS::EC2::InternetGateway", 1);
+    template.resourceCountIs("AWS::EC2::VPCGatewayAttachment", 1);
+    template.hasResourceProperties("AWS::EC2::Route", {
+      DestinationCidrBlock: "0.0.0.0/0",
+      GatewayId: Match.anyValue(),
+    });
+    template.resourceCountIs("AWS::EC2::NatGateway", 0);
+    template.resourceCountIs("AWS::EC2::EIP", 0);
+  });
+
+  it("exposes only HTTP and HTTPS inbound to the future host", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::EC2::SecurityGroup", {
+      GroupDescription:
+        "Public HTTP and HTTPS access for the FinHand production proxy",
+      GroupName: "finhand-prod-host-sg",
+      SecurityGroupEgress: Match.arrayWith([
+        Match.objectLike({
+          CidrIp: "0.0.0.0/0",
+          FromPort: 443,
+          IpProtocol: "tcp",
+          ToPort: 443,
+        }),
+      ]),
+      SecurityGroupIngress: Match.arrayWith([
+        Match.objectLike({
+          CidrIp: "0.0.0.0/0",
+          FromPort: 80,
+          IpProtocol: "tcp",
+          ToPort: 80,
+        }),
+        Match.objectLike({
+          CidrIp: "0.0.0.0/0",
+          FromPort: 443,
+          IpProtocol: "tcp",
+          ToPort: 443,
+        }),
+      ]),
+    });
+
+    const securityGroups = template.findResources("AWS::EC2::SecurityGroup");
+    expect(Object.keys(securityGroups)).toHaveLength(1);
+    const [securityGroup] = Object.values(securityGroups);
+    const ingressRules = securityGroup.Properties.SecurityGroupIngress as Array<{
+      FromPort: number;
+      ToPort: number;
+    }>;
+    const egressRules = securityGroup.Properties.SecurityGroupEgress as unknown[];
+
+    expect(ingressRules).toHaveLength(2);
+    expect(egressRules).toHaveLength(1);
+    expect(ingressRules).not.toContainEqual(
+      expect.objectContaining({ FromPort: 22, ToPort: 22 }),
+    );
+  });
+
   it("creates a private retained uploads bucket", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -109,6 +194,18 @@ describe("ProductionStack", () => {
     template.hasOutput("Architecture", {
       Description: "Approved production deployment model",
       Value: "single-ec2-docker-compose",
+    });
+    template.hasOutput("VpcId", {
+      Description: "Production VPC ID",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("PublicSubnetId", {
+      Description: "Public subnet ID for the production EC2 host",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("HostSecurityGroupId", {
+      Description: "Security group ID for the production EC2 host",
+      Value: Match.anyValue(),
     });
     template.hasOutput("UploadsBucketName", {
       Description: "Private bucket for production document and audio uploads",
