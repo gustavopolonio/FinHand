@@ -222,6 +222,13 @@ Requirements:
 The API and worker share an image but run different commands. They are isolated
 processes, but not separate failure domains because they share one host.
 
+Build that shared API/worker image from the repository root using
+`apps/api/Dockerfile`. The image uses a digest-pinned Node.js 22 slim base,
+compiles TypeScript in a separate build stage, contains only the API workspace's
+production dependency tree, and runs as the non-root `node` user. CI must build
+it for `linux/arm64`; Compose starts `dist/server.js` for the API and overrides
+the command with `dist/worker.js` for the worker.
+
 ## PostgreSQL
 
 Run PostgreSQL as a private Docker Compose service backed by an encrypted gp3

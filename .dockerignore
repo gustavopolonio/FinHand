@@ -1,0 +1,16 @@
+.git
+.github
+.next
+.turbo
+**/.next
+**/coverage
+**/dist
+**/node_modules
+**/*.test.ts
+**/*.test.tsx
+**/test
+*.log
+.env
+.env.*
+packages/infra/cdk.out
+

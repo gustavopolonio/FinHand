@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "container:build:api": "docker build --platform linux/arm64 --file apps/api/Dockerfile --tag finhand-api:local .",
     "db:down": "docker compose down",
     "db:generate": "npm run db:generate --workspace @finhand/api",
     "db:logs": "docker compose logs --follow postgres",
