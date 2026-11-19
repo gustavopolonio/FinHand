@@ -40,7 +40,6 @@ describe("ProductionStack", () => {
       GatewayId: Match.anyValue(),
     });
     template.resourceCountIs("AWS::EC2::NatGateway", 0);
-    template.resourceCountIs("AWS::EC2::EIP", 0);
   });
 
   it("exposes only HTTP and HTTPS inbound to the future host", () => {
@@ -290,6 +289,108 @@ describe("ProductionStack", () => {
     ]);
   });
 
+  it("creates a hardened ARM host with separate retained database storage", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::EC2::Instance", 1);
+    template.hasResourceProperties("AWS::EC2::Instance", {
+      BlockDeviceMappings: [
+        {
+          DeviceName: "/dev/xvda",
+          Ebs: {
+            DeleteOnTermination: true,
+            Encrypted: true,
+            VolumeSize: 16,
+            VolumeType: "gp3",
+          },
+        },
+      ],
+      InstanceType: "t4g.small",
+      MetadataOptions: {
+        HttpEndpoint: "enabled",
+        HttpPutResponseHopLimit: 2,
+        HttpTokens: "required",
+        InstanceMetadataTags: "disabled",
+      },
+      PropagateTagsToVolumeOnCreation: true,
+      Tags: Match.arrayWith([
+        { Key: "Name", Value: "finhand-prod-host" },
+      ]),
+    });
+
+    const instances = template.findResources("AWS::EC2::Instance");
+    const [instance] = Object.values(instances);
+    expect(instance.Properties).not.toHaveProperty("KeyName");
+    expect(instance.Properties.Monitoring).not.toBe(true);
+
+    template.resourceCountIs("AWS::IAM::InstanceProfile", 1);
+    template.hasResourceProperties("AWS::IAM::InstanceProfile", {
+      Roles: [{ Ref: Match.stringLikeRegexp("InstanceRole") }],
+    });
+
+    template.resourceCountIs("AWS::EC2::Volume", 1);
+    template.hasResourceProperties("AWS::EC2::Volume", {
+      Encrypted: true,
+      Size: 20,
+      Tags: Match.arrayWith([
+        { Key: "DataClassification", Value: "financial-private" },
+        { Key: "Name", Value: "finhand-prod-database" },
+      ]),
+      VolumeType: "gp3",
+    });
+    template.hasResource("AWS::EC2::Volume", {
+      DeletionPolicy: "Retain",
+      UpdateReplacePolicy: "Retain",
+    });
+    const volumes = template.findResources("AWS::EC2::Volume");
+    const [databaseVolume] = Object.values(volumes);
+    expect(databaseVolume.Properties.AvailabilityZone).toEqual(
+      instance.Properties.AvailabilityZone,
+    );
+    template.hasResourceProperties("AWS::EC2::VolumeAttachment", {
+      Device: "/dev/sdf",
+      InstanceId: { Ref: Match.stringLikeRegexp("Host") },
+      VolumeId: { Ref: Match.stringLikeRegexp("DatabaseVolume") },
+    });
+
+    const parameters = Object.values(template.toJSON().Parameters ?? {}) as Array<{
+      Default?: string;
+      Type?: string;
+    }>;
+    expect(parameters).toContainEqual(
+      expect.objectContaining({
+        Default:
+          "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64",
+        Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      }),
+    );
+  });
+
+  it("creates and associates one stable public IPv4 address", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+
+    template.resourceCountIs("AWS::EC2::EIP", 1);
+    template.hasResourceProperties("AWS::EC2::EIP", {
+      Domain: "vpc",
+      Tags: Match.arrayWith([{ Key: "Name", Value: "finhand-prod-eip" }]),
+    });
+    template.resourceCountIs("AWS::EC2::EIPAssociation", 1);
+    template.hasResourceProperties("AWS::EC2::EIPAssociation", {
+      AllocationId: Match.anyValue(),
+      InstanceId: { Ref: Match.stringLikeRegexp("Host") },
+    });
+  });
+
   it("exposes the deployment outputs", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -327,6 +428,18 @@ describe("ProductionStack", () => {
     });
     template.hasOutput("InstanceRoleName", {
       Description: "Least-privilege role for the production EC2 host",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("HostInstanceId", {
+      Description: "Production EC2 host instance ID",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("HostPublicIp", {
+      Description: "Stable public IPv4 address for the production EC2 host",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("DatabaseVolumeId", {
+      Description: "Retained encrypted PostgreSQL data volume ID",
       Value: Match.anyValue(),
     });
   });

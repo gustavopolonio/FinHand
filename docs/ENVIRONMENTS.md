@@ -121,7 +121,10 @@ Start with one ARM-based `t4g.small` instance:
 
 - 2 vCPUs;
 - 2 GiB memory;
-- Amazon Linux;
+- Amazon Linux 2023;
+- a 16 GiB encrypted gp3 root volume for the operating system, Docker images,
+  and host logs;
+- a separate 20 GiB encrypted gp3 volume retained for PostgreSQL data;
 - one stable Elastic IP;
 - IMDSv2 required;
 - an instance-metadata response hop limit that permits the API and worker
@@ -448,10 +451,10 @@ The initial monthly AWS estimate before promotional credits and OpenAI usage is:
 | Resource | Expected monthly cost |
 | --- | ---: |
 | `t4g.small` EC2 compute | Approximately $12 |
-| 60 GiB total gp3 EBS storage | Approximately $4.80 |
+| 36 GiB total gp3 EBS storage | Approximately $2.88 |
 | One public IPv4 address | Approximately $3.65 |
 | Snapshots, S3, ECR, parameters, and low-volume logs | Approximately $2-$6 |
-| **Expected AWS total** | **Approximately $23-$28** |
+| **Expected AWS total** | **Approximately $21-$26** |
 
 Actual pricing and taxes must be checked before provisioning. OpenAI is billed
 separately. A free shared subdomain and Let's Encrypt certificate add no domain
@@ -472,8 +475,7 @@ Before provisioning application resources:
 - final production account and AWS Organizations membership;
 - initial free shared subdomain or permanent domain;
 - one public hostname with path routing or separate web and API hostnames;
-- exact Amazon Linux image and PostgreSQL major version;
-- root and database EBS volume sizes;
+- PostgreSQL major version;
 - logical backup and snapshot retention;
 - CloudWatch log retention and alarm recipients;
 - exact SecureString versus Secrets Manager placement;

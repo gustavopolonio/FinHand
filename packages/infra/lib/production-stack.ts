@@ -1,6 +1,7 @@
 import {
   CfnOutput,
   RemovalPolicy,
+  Size,
   Stack,
   Tags,
   type StackProps,
@@ -114,6 +115,60 @@ export class ProductionStack extends Stack {
       }),
     );
 
+    const host = new ec2.Instance(this, "Host", {
+      blockDevices: [
+        {
+          deviceName: "/dev/xvda",
+          volume: ec2.BlockDeviceVolume.ebs(16, {
+            deleteOnTermination: true,
+            encrypted: true,
+            volumeType: ec2.EbsDeviceVolumeType.GENERAL_PURPOSE_SSD_GP3,
+          }),
+        },
+      ],
+      detailedMonitoring: false,
+      httpEndpoint: true,
+      httpPutResponseHopLimit: 2,
+      httpTokens: ec2.HttpTokens.REQUIRED,
+      instanceMetadataTags: false,
+      instanceName: "finhand-prod-host",
+      instanceType: new ec2.InstanceType("t4g.small"),
+      machineImage: ec2.MachineImage.latestAmazonLinux2023({
+        cpuType: ec2.AmazonLinuxCpuType.ARM_64,
+      }),
+      propagateTagsToVolumeOnCreation: true,
+      role: instanceRole,
+      securityGroup: hostSecurityGroup,
+      vpc,
+      vpcSubnets: { subnets: [vpc.publicSubnets[0]] },
+    });
+
+    const databaseVolume = new ec2.Volume(this, "DatabaseVolume", {
+      availabilityZone: vpc.publicSubnets[0].availabilityZone,
+      encrypted: true,
+      size: Size.gibibytes(20),
+      volumeName: "finhand-prod-database",
+      volumeType: ec2.EbsDeviceVolumeType.GENERAL_PURPOSE_SSD_GP3,
+    });
+    databaseVolume.applyRemovalPolicy(RemovalPolicy.RETAIN);
+    Tags.of(databaseVolume).add("DataClassification", "financial-private");
+
+    new ec2.CfnVolumeAttachment(this, "DatabaseVolumeAttachment", {
+      device: "/dev/sdf",
+      instanceId: host.instanceId,
+      volumeId: databaseVolume.volumeId,
+    });
+
+    const elasticIp = new ec2.CfnEIP(this, "ElasticIp", {
+      domain: "vpc",
+    });
+    Tags.of(elasticIp).add("Name", "finhand-prod-eip");
+
+    new ec2.CfnEIPAssociation(this, "ElasticIpAssociation", {
+      allocationId: elasticIp.attrAllocationId,
+      instanceId: host.instanceId,
+    });
+
     new CfnOutput(this, "Architecture", {
       description: "Approved production deployment model",
       value: "single-ec2-docker-compose",
@@ -152,6 +207,21 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "InstanceRoleName", {
       description: "Least-privilege role for the production EC2 host",
       value: instanceRole.roleName,
+    });
+
+    new CfnOutput(this, "HostInstanceId", {
+      description: "Production EC2 host instance ID",
+      value: host.instanceId,
+    });
+
+    new CfnOutput(this, "HostPublicIp", {
+      description: "Stable public IPv4 address for the production EC2 host",
+      value: elasticIp.attrPublicIp,
+    });
+
+    new CfnOutput(this, "DatabaseVolumeId", {
+      description: "Retained encrypted PostgreSQL data volume ID",
+      value: databaseVolume.volumeId,
     });
   }
 
