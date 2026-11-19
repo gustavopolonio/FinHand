@@ -229,6 +229,12 @@ production dependency tree, and runs as the non-root `node` user. CI must build
 it for `linux/arm64`; Compose starts `dist/server.js` for the API and overrides
 the command with `dist/worker.js` for the worker.
 
+Build the web image from `apps/web/Dockerfile`. Its separate build stage receives
+the public API origin through `NEXT_PUBLIC_API_URL` and produces Next.js
+standalone output. The final ARM64 image contains the traced server runtime and
+static assets, runs as the non-root `node` user, and does not contain source
+files or development dependencies.
+
 ## PostgreSQL
 
 Run PostgreSQL as a private Docker Compose service backed by an encrypted gp3
