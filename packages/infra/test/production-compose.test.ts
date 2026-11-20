@@ -1,0 +1,104 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const composeConfiguration = readFileSync(
+  new URL("../../../deploy/production/compose.yaml", import.meta.url),
+  "utf8",
+);
+const caddyConfiguration = readFileSync(
+  new URL("../../../deploy/production/Caddyfile", import.meta.url),
+  "utf8",
+);
+const environmentExample = readFileSync(
+  new URL("../../../deploy/production/environment.example", import.meta.url),
+  "utf8",
+);
+
+function serviceConfiguration(serviceName: string): string {
+  const serviceStart = composeConfiguration.indexOf(`\n  ${serviceName}:\n`);
+  if (serviceStart === -1) {
+    throw new Error(`Missing ${serviceName} service.`);
+  }
+
+  const remainingConfiguration = composeConfiguration.slice(serviceStart + 1);
+  const nextTopLevelEntry = remainingConfiguration
+    .slice(1)
+    .search(/\n(?: {2}[a-z][a-z0-9_-]*|networks|volumes):\n/u);
+
+  return nextTopLevelEntry === -1
+    ? remainingConfiguration
+    : remainingConfiguration.slice(0, nextTopLevelEntry + 1);
+}
+
+describe("production Compose deployment", () => {
+  it("publishes only the Caddy HTTP and HTTPS ports", () => {
+    expect(serviceConfiguration("proxy")).toContain(
+      'ports:\n      - "80:80"\n      - "443:443"',
+    );
+    expect(serviceConfiguration("web")).not.toContain("ports:");
+    expect(serviceConfiguration("api")).not.toContain("ports:");
+    expect(serviceConfiguration("worker")).not.toContain("ports:");
+    expect(serviceConfiguration("postgres")).not.toContain("ports:");
+    expect(caddyConfiguration).toContain("reverse_proxy web:3000");
+    expect(caddyConfiguration).toContain("reverse_proxy api:3001");
+  });
+
+  it("runs the API and worker from the same immutable application image", () => {
+    expect(serviceConfiguration("api")).toContain(
+      "image: ${FINHAND_API_IMAGE:",
+    );
+    expect(serviceConfiguration("worker")).toContain(
+      "image: ${FINHAND_API_IMAGE:",
+    );
+    expect(serviceConfiguration("worker")).toContain(
+      "- dist/worker.js",
+    );
+    expect(environmentExample).toContain(
+      "finhand-prod-api-ecr:<git-commit-sha>",
+    );
+    expect(environmentExample).toContain(
+      "finhand-prod-web-ecr:<git-commit-sha>",
+    );
+  });
+
+  it("keeps PostgreSQL private on the dedicated data mount", () => {
+    const postgresConfiguration = serviceConfiguration("postgres");
+
+    expect(postgresConfiguration).toContain(
+      "image: pgvector/pgvector:0.8.7-pg17-bookworm@sha256:",
+    );
+    expect(postgresConfiguration).toContain(
+      "${POSTGRES_DATA_DIR:-/srv/finhand/postgres}:/var/lib/postgresql/data",
+    );
+    expect(postgresConfiguration).toContain("/postgres.env");
+    expect(postgresConfiguration).not.toContain("frontend");
+    expect(postgresConfiguration).not.toContain("ports:");
+  });
+
+  it("adds restart, health, resource, and log safeguards to every service", () => {
+    expect(composeConfiguration.match(/restart: unless-stopped/gu)).toHaveLength(
+      5,
+    );
+    expect(composeConfiguration.match(/healthcheck:/gu)).toHaveLength(5);
+    expect(composeConfiguration.match(/logging: \*service-logging/gu)).toHaveLength(
+      5,
+    );
+    expect(composeConfiguration.match(/mem_limit:/gu)).toHaveLength(5);
+    expect(composeConfiguration.match(/cpus:/gu)).toHaveLength(5);
+  });
+
+  it("keeps application secrets outside version-controlled deployment files", () => {
+    expect(composeConfiguration).toContain("/api.env");
+    expect(composeConfiguration).toContain("/worker.env");
+    expect(composeConfiguration).toContain("/postgres.env");
+    expect(composeConfiguration).not.toMatch(/OPENAI_API_KEY=/u);
+    expect(composeConfiguration).not.toMatch(/DATABASE_URL=/u);
+    expect(composeConfiguration).not.toMatch(/BETTER_AUTH_SECRET=/u);
+    expect(environmentExample).not.toMatch(/PASSWORD=/u);
+    expect(environmentExample).not.toMatch(/SECRET=/u);
+    expect(serviceConfiguration("proxy")).toContain(
+      "image: caddy:2.10.2-alpine@sha256:",
+    );
+    expect(composeConfiguration).not.toContain(":latest");
+  });
+});

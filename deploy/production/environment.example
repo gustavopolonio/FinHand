@@ -1,0 +1,13 @@
+# Copy only these public deployment settings to a protected host environment
+# file. Application secrets belong in the service-specific files referenced by
+# FINHAND_CONFIG_DIR, not in this file or in Git.
+
+FINHAND_WEB_IMAGE=000000000000.dkr.ecr.us-east-1.amazonaws.com/finhand-prod-web-ecr:<git-commit-sha>
+FINHAND_API_IMAGE=000000000000.dkr.ecr.us-east-1.amazonaws.com/finhand-prod-api-ecr:<git-commit-sha>
+
+WEB_DOMAIN=app.example.com
+API_DOMAIN=api.example.com
+ACME_EMAIL=operator@example.com
+
+FINHAND_CONFIG_DIR=/opt/finhand/config
+POSTGRES_DATA_DIR=/srv/finhand/postgres

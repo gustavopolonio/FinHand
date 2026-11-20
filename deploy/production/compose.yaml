@@ -1,0 +1,169 @@
+name: finhand-production
+
+x-service-logging: &service-logging
+  driver: json-file
+  options:
+    max-file: "3"
+    max-size: 10m
+
+x-service-security: &service-security
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  proxy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in the deployment environment file}
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in the deployment environment file}
+      WEB_DOMAIN: ${WEB_DOMAIN:?Set WEB_DOMAIN in the deployment environment file}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - frontend
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://127.0.0.1:2019/config/
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *service-logging
+    cpus: 0.25
+    mem_limit: 128m
+
+  web:
+    <<: *service-security
+    image: ${FINHAND_WEB_IMAGE:?Set FINHAND_WEB_IMAGE to an immutable ECR image tag}
+    restart: unless-stopped
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+    expose:
+      - "3000"
+    networks:
+      - frontend
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/').then(response=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *service-logging
+    cpus: 0.75
+    mem_limit: 384m
+
+  api:
+    <<: *service-security
+    image: ${FINHAND_API_IMAGE:?Set FINHAND_API_IMAGE to an immutable ECR image tag}
+    restart: unless-stopped
+    env_file:
+      - ${FINHAND_CONFIG_DIR:-/opt/finhand/config}/api.env
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 3001
+      NODE_ENV: production
+    expose:
+      - "3001"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3001/health').then(response=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    logging: *service-logging
+    cpus: 1.0
+    mem_limit: 512m
+
+  worker:
+    <<: *service-security
+    image: ${FINHAND_API_IMAGE:?Set FINHAND_API_IMAGE to an immutable ECR image tag}
+    command:
+      - node
+      - dist/worker.js
+    restart: unless-stopped
+    env_file:
+      - ${FINHAND_CONFIG_DIR:-/opt/finhand/config}/worker.env
+    environment:
+      NODE_ENV: production
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kill -0 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 60s
+    logging: *service-logging
+    cpus: 1.0
+    mem_limit: 640m
+
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17-bookworm@sha256:7d0a41464797aeb9862dfdc0bbf1526b82cfd324cdd8036df19e3545f4a9ccb8
+    restart: unless-stopped
+    env_file:
+      - ${FINHAND_CONFIG_DIR:-/opt/finhand/config}/postgres.env
+    volumes:
+      - ${POSTGRES_DATA_DIR:-/srv/finhand/postgres}:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 60s
+    logging: *service-logging
+    cpus: 1.0
+    mem_limit: 768m
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  caddy_config:
+  caddy_data:

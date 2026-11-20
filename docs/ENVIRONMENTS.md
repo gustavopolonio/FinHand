@@ -235,6 +235,25 @@ standalone output. The final ARM64 image contains the traced server runtime and
 static assets, runs as the non-root `node` user, and does not contain source
 files or development dependencies.
 
+The version-controlled production runtime configuration lives under
+`deploy/production`. `compose.yaml` connects the five services without
+publishing application or database ports, while `Caddyfile` routes the two
+public hostnames to the private web and API services. Start Compose with an
+explicit protected deployment environment file:
+
+```bash
+docker compose \
+  --env-file /opt/finhand/config/deployment.env \
+  --file /opt/finhand/current/compose.yaml \
+  up --detach
+```
+
+`deploy/production/environment.example` documents only public deployment
+settings. The referenced API, worker, and PostgreSQL environment files are
+created on the host with mode `0600`; they are never committed or copied into
+container images. The API and worker image values must use the same immutable
+Git commit SHA tag that passed CI.
+
 ## PostgreSQL
 
 Run PostgreSQL as a private Docker Compose service backed by an encrypted gp3
