@@ -254,6 +254,54 @@ created on the host with mode `0600`; they are never committed or copied into
 container images. The API and worker image values must use the same immutable
 Git commit SHA tag that passed CI.
 
+The `finhand-prod-render-runtime-config` Systems Manager document retrieves the
+following exact Parameter Store contract under `/finhand/production`. Standard
+`String` and `SecureString` parameters avoid a recurring Secrets Manager or
+customer-managed KMS-key charge for this V1 environment.
+
+| Relative parameter name | Type | Consumer or purpose |
+| --- | --- | --- |
+| `deployment/web-image` | `String` | Immutable web ECR image tagged with the full Git SHA |
+| `deployment/api-image` | `String` | Immutable API/worker ECR image tagged with the same full Git SHA |
+| `deployment/web-domain` | `String` | Lowercase public web hostname, without a scheme |
+| `deployment/api-domain` | `String` | Lowercase public API hostname, without a scheme |
+| `deployment/acme-email` | `String` | Caddy certificate account contact |
+| `database/user` | `String` | Restricted application database role |
+| `database/password` | `SecureString` | 32-128 high-entropy URL-safe characters |
+| `database/name` | `String` | Production database name |
+| `application/log-level` | `String` | One supported application log level |
+| `application/better-auth-secret` | `SecureString` | Independent value with at least 32 characters |
+| `application/google-client-id` | `String` | Production Google OAuth client ID |
+| `application/google-client-secret` | `SecureString` | Production Google OAuth client secret |
+| `application/openai-api-key` | `SecureString` | Restricted production OpenAI project key |
+| `application/openai-document-model` | `String` | Approved document and fallback audio extraction model |
+
+Create every parameter before invoking the renderer. Use standard-tier
+parameters and the default `alias/aws/ssm` key for `SecureString` values; do
+not pass plaintext secrets through CloudFormation parameters or command-line
+arguments. The deployment operator can run the renderer without supplying any
+secret values to the command itself:
+
+```bash
+aws ssm send-command \
+  --profile <production-administrator-profile> \
+  --region us-east-1 \
+  --document-name finhand-prod-render-runtime-config \
+  --targets Key=InstanceIds,Values=<production-instance-id>
+```
+
+The command fails before replacing existing files if any required parameter is
+missing, has the wrong `String`/`SecureString` type, or violates its validation
+rule. Its output contains parameter names and validation errors only, never
+parameter values.
+
+The EC2 role can decrypt and read only this parameter path. The renderer uses
+the stack region and uploads bucket directly, derives the HTTPS web and API
+origins from the validated domains, and installs `deployment.env`, `api.env`,
+`worker.env`, and `postgres.env` only after validating the complete parameter
+set. It does not print parameter values, place them in command arguments, or
+give the API container the OpenAI key.
+
 ## PostgreSQL
 
 Run PostgreSQL as a private Docker Compose service backed by an encrypted gp3

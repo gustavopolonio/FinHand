@@ -235,9 +235,10 @@ describe("ProductionStack", () => {
     const statements = policy.Properties.PolicyDocument.Statement as Array<{
       Action: string | string[];
       Resource: unknown;
+      Sid?: string;
     }>;
 
-    expect(statements).toHaveLength(4);
+    expect(statements).toHaveLength(5);
     expect(statements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -281,6 +282,14 @@ describe("ProductionStack", () => {
           }),
           Sid: "UploadObjectAccess",
         }),
+        expect.objectContaining({
+          Action: "ssm:GetParametersByPath",
+          Effect: "Allow",
+          Resource: expect.objectContaining({
+            "Fn::Join": expect.any(Array),
+          }),
+          Sid: "RuntimeParameterRead",
+        }),
       ]),
     );
     const actions = statements.flatMap((statement) =>
@@ -292,6 +301,12 @@ describe("ProductionStack", () => {
     ).toEqual([
       expect.objectContaining({ Action: "ecr:GetAuthorizationToken" }),
     ]);
+    const runtimeParameterStatement = statements.find(
+      (statement) => statement.Sid === "RuntimeParameterRead",
+    );
+    expect(JSON.stringify(runtimeParameterStatement?.Resource)).toContain(
+      ":parameter/finhand/production/*",
+    );
   });
 
   it("creates a hardened ARM host with separate retained database storage", () => {
@@ -384,7 +399,7 @@ describe("ProductionStack", () => {
 
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("AWS::SSM::Document", 1);
+    template.resourceCountIs("AWS::SSM::Document", 2);
     template.hasResourceProperties("AWS::SSM::Document", {
       DocumentFormat: "JSON",
       DocumentType: "Command",
@@ -444,6 +459,37 @@ describe("ProductionStack", () => {
         expect.stringMatching(/^DatabaseVolumeAttachment/),
       ]),
     );
+  });
+
+  it("creates a manual runtime-configuration rendering document", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::SSM::Document", {
+      DocumentFormat: "JSON",
+      DocumentType: "Command",
+      Name: "finhand-prod-render-runtime-config",
+      TargetType: "/AWS::EC2::Instance",
+      UpdateMethod: "NewVersion",
+      Content: {
+        schemaVersion: "2.2",
+        mainSteps: [
+          Match.objectLike({
+            action: "aws:runShellScript",
+            name: "renderRuntimeConfiguration",
+            inputs: {
+              runCommand: [Match.anyValue()],
+              timeoutSeconds: "180",
+            },
+          }),
+        ],
+      },
+    });
+
+    template.resourceCountIs("AWS::SSM::Association", 1);
   });
 
   it("keeps destructive host setup behind explicit safety checks", () => {
@@ -574,6 +620,11 @@ describe("ProductionStack", () => {
     });
     template.hasOutput("HostBootstrapAssociationId", {
       Description: "State Manager association that applies the host bootstrap",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("RuntimeConfigurationDocumentName", {
+      Description:
+        "Systems Manager document that renders protected runtime environment files",
       Value: Match.anyValue(),
     });
   });

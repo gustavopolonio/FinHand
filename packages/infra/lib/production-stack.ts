@@ -1,4 +1,5 @@
 import {
+  ArnFormat,
   CfnOutput,
   RemovalPolicy,
   Size,
@@ -16,6 +17,10 @@ import {
   createHostBootstrapDocumentContent,
   HOST_BOOTSTRAP_REVISION,
 } from "./host-bootstrap.js";
+import {
+  createRuntimeConfigurationDocumentContent,
+  runtimeParameterRoot,
+} from "./runtime-configuration.js";
 
 const PRODUCTION_REGION = "us-east-1";
 
@@ -119,6 +124,20 @@ export class ProductionStack extends Stack {
         resources: [uploadsBucket.arnForObjects("*")],
       }),
     );
+    instanceRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "RuntimeParameterRead",
+        actions: ["ssm:GetParametersByPath"],
+        resources: [
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ssm",
+            resource: "parameter",
+            resourceName: `${runtimeParameterRoot.slice(1)}/*`,
+          }),
+        ],
+      }),
+    );
 
     const host = new ec2.Instance(this, "Host", {
       blockDevices: [
@@ -207,6 +226,23 @@ export class ProductionStack extends Stack {
     );
     hostBootstrapAssociation.addResourceDependency(databaseVolumeAttachment);
 
+    const runtimeConfigurationDocument = new ssm.CfnDocument(
+      this,
+      "RuntimeConfigurationDocument",
+      {
+        content: createRuntimeConfigurationDocumentContent({
+          accountId: this.account,
+          region: this.region,
+          uploadsBucketName: uploadsBucket.bucketName,
+        }),
+        documentFormat: "JSON",
+        documentType: "Command",
+        name: "finhand-prod-render-runtime-config",
+        targetType: "/AWS::EC2::Instance",
+        updateMethod: "NewVersion",
+      },
+    );
+
     const elasticIp = new ec2.CfnEIP(this, "ElasticIp", {
       domain: "vpc",
     });
@@ -280,6 +316,12 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "HostBootstrapAssociationId", {
       description: "State Manager association that applies the host bootstrap",
       value: hostBootstrapAssociation.attrAssociationId,
+    });
+
+    new CfnOutput(this, "RuntimeConfigurationDocumentName", {
+      description:
+        "Systems Manager document that renders protected runtime environment files",
+      value: runtimeConfigurationDocument.ref,
     });
   }
 
