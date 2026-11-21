@@ -74,6 +74,17 @@ describe("production application deployment", () => {
     expect(script).toContain(
       'mv --force --no-target-directory "$rollback_link" "$CURRENT_RELEASE"',
     );
+    expect(script).toContain(
+      '"${rollback_compose[@]}" up --detach --no-deps --force-recreate --wait --wait-timeout 180 proxy',
+    );
+  });
+
+  it("recreates only the proxy so a changed Caddyfile is mounted", () => {
+    const proxyStart =
+      '"${current_compose[@]}" up --detach --no-deps --force-recreate --wait --wait-timeout 180 proxy';
+
+    expect(script).toContain(proxyStart);
+    expect(proxyStart).not.toContain("postgres");
   });
 
   it("wraps deployment in a bounded Systems Manager command document", () => {
