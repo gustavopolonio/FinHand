@@ -33,6 +33,10 @@ describe("production application deployment", () => {
     expect(script).toContain("compose.yaml");
     expect(script).toContain("Caddyfile");
     expect(script).toContain("config --quiet");
+    expect(script).toMatch(/DEPLOYMENT_REVISION="[0-9a-f]{16}"/u);
+    expect(script).toContain(
+      'release_directory="$RELEASES_DIRECTORY/${web_release}-${DEPLOYMENT_REVISION}"',
+    );
     expect(script).toContain('cmp --silent "$temporary_directory/compose.yaml"');
     expect(script).not.toContain(options.composeConfiguration);
   });

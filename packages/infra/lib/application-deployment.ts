@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 interface ApplicationDeploymentScriptOptions {
   accountId: string;
   backupBucketName: string;
@@ -18,6 +20,11 @@ export function createApplicationDeploymentScript({
   region,
 }: ApplicationDeploymentScriptOptions): string {
   const registry = `${accountId}.dkr.ecr.${region}.amazonaws.com`;
+  const deploymentRevision = createHash("sha256")
+    .update(composeConfiguration)
+    .update(caddyConfiguration)
+    .digest("hex")
+    .slice(0, 16);
 
   return [
     "#!/usr/bin/env bash",
@@ -33,6 +40,7 @@ export function createApplicationDeploymentScript({
     `AWS_REGION="${region}"`,
     `ECR_REGISTRY="${registry}"`,
     `BACKUP_BUCKET="${backupBucketName}"`,
+    `DEPLOYMENT_REVISION="${deploymentRevision}"`,
     `COMPOSE_CONFIGURATION="${encode(composeConfiguration)}"`,
     `CADDY_CONFIGURATION="${encode(caddyConfiguration)}"`,
     "",
@@ -65,7 +73,7 @@ export function createApplicationDeploymentScript({
     '  echo "Configured images must use the same full Git commit SHA." >&2',
     "  exit 1",
     "fi",
-    'release_directory="$RELEASES_DIRECTORY/$web_release"',
+    'release_directory="$RELEASES_DIRECTORY/${web_release}-${DEPLOYMENT_REVISION}"',
     'temporary_directory=$(mktemp -d "$RUNTIME_DIRECTORY/.deployment.XXXXXX")',
     'trap \'rm -rf "$temporary_directory"\' EXIT',
     "",

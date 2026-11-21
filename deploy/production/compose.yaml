@@ -160,6 +160,8 @@ services:
     restart: unless-stopped
     env_file:
       - ${FINHAND_CONFIG_DIR:-/opt/finhand/config}/postgres.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ${POSTGRES_DATA_DIR:-/srv/finhand/postgres}:/var/lib/postgresql/data
     networks:

@@ -86,6 +86,9 @@ describe("production Compose deployment", () => {
       "${POSTGRES_DATA_DIR:-/srv/finhand/postgres}:/var/lib/postgresql/data",
     );
     expect(postgresConfiguration).toContain("/postgres.env");
+    expect(postgresConfiguration).toContain(
+      "PGDATA: /var/lib/postgresql/data/pgdata",
+    );
     expect(postgresConfiguration).not.toContain("frontend");
     expect(postgresConfiguration).not.toContain("ports:");
   });
