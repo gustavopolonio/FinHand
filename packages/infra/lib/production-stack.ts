@@ -23,6 +23,7 @@ import {
 } from "./runtime-configuration.js";
 
 const PRODUCTION_REGION = "us-east-1";
+const PRODUCTION_AMI_ID = "ami-00b0d691a87846f99";
 
 export class ProductionStack extends Stack {
   public constructor(scope: Construct, id: string, props: StackProps = {}) {
@@ -133,6 +134,12 @@ export class ProductionStack extends Stack {
             arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
             service: "ssm",
             resource: "parameter",
+            resourceName: runtimeParameterRoot.slice(1),
+          }),
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ssm",
+            resource: "parameter",
             resourceName: `${runtimeParameterRoot.slice(1)}/*`,
           }),
         ],
@@ -157,8 +164,8 @@ export class ProductionStack extends Stack {
       instanceMetadataTags: false,
       instanceName: "finhand-prod-host",
       instanceType: new ec2.InstanceType("t4g.small"),
-      machineImage: ec2.MachineImage.latestAmazonLinux2023({
-        cpuType: ec2.AmazonLinuxCpuType.ARM_64,
+      machineImage: ec2.MachineImage.genericLinux({
+        [PRODUCTION_REGION]: PRODUCTION_AMI_ID,
       }),
       propagateTagsToVolumeOnCreation: true,
       role: instanceRole,

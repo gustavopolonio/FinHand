@@ -285,9 +285,14 @@ describe("ProductionStack", () => {
         expect.objectContaining({
           Action: "ssm:GetParametersByPath",
           Effect: "Allow",
-          Resource: expect.objectContaining({
-            "Fn::Join": expect.any(Array),
-          }),
+          Resource: expect.arrayContaining([
+            expect.objectContaining({
+              "Fn::Join": expect.any(Array),
+            }),
+            expect.objectContaining({
+              "Fn::Join": expect.any(Array),
+            }),
+          ]),
           Sid: "RuntimeParameterRead",
         }),
       ]),
@@ -304,7 +309,13 @@ describe("ProductionStack", () => {
     const runtimeParameterStatement = statements.find(
       (statement) => statement.Sid === "RuntimeParameterRead",
     );
-    expect(JSON.stringify(runtimeParameterStatement?.Resource)).toContain(
+    const runtimeParameterResources = JSON.stringify(
+      runtimeParameterStatement?.Resource,
+    );
+    expect(runtimeParameterResources).toContain(
+      ":parameter/finhand/production\"",
+    );
+    expect(runtimeParameterResources).toContain(
       ":parameter/finhand/production/*",
     );
   });
@@ -331,6 +342,7 @@ describe("ProductionStack", () => {
         },
       ],
       InstanceType: "t4g.small",
+      ImageId: "ami-00b0d691a87846f99",
       MetadataOptions: {
         HttpEndpoint: "enabled",
         HttpPutResponseHopLimit: 2,
@@ -379,13 +391,10 @@ describe("ProductionStack", () => {
     });
 
     const parameters = Object.values(template.toJSON().Parameters ?? {}) as Array<{
-      Default?: string;
       Type?: string;
     }>;
-    expect(parameters).toContainEqual(
+    expect(parameters).not.toContainEqual(
       expect.objectContaining({
-        Default:
-          "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64",
         Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
       }),
     );
