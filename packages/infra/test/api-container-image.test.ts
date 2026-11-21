@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const dockerfile = readFileSync(
   new URL("../../../apps/api/Dockerfile", import.meta.url),
   "utf8",
@@ -14,7 +12,6 @@ const dockerIgnore = readFileSync(
 
 describe("API production container image", () => {
   it("builds the API in a separate stage and installs runtime dependencies only", () => {
-    expect(repositoryRoot).toMatch(/fin-hand\/$/);
     expect(dockerfile).toContain(
       "FROM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS base",
     );
