@@ -115,6 +115,18 @@ describe("production runtime configuration", () => {
     expect(postgresWrites.join("\n")).toContain("POSTGRES_PASSWORD");
   });
 
+  it("uses the web origin for Better Auth's browser-facing routes", () => {
+    expect(runtimeConfigurationScript).toContain(
+      'web_url="https://${web_domain}"',
+    );
+    expect(runtimeConfigurationScript).toContain(
+      'better_auth_url="$web_url"',
+    );
+    expect(runtimeConfigurationScript).not.toContain(
+      'better_auth_url="https://${api_domain}"',
+    );
+  });
+
   it("installs five protected files without printing their values", () => {
     for (const fileName of [
       "deployment.env",

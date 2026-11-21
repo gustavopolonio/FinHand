@@ -231,15 +231,18 @@ it for `linux/arm64`; Compose starts `dist/server.js` for the API and overrides
 the command with `dist/worker.js` for the worker.
 
 Build the web image from `apps/web/Dockerfile`. Its separate build stage receives
-the public API origin through `NEXT_PUBLIC_API_URL` and produces Next.js
+the same-origin web URL through `NEXT_PUBLIC_API_URL` and produces Next.js
 standalone output. The final ARM64 image contains the traced server runtime and
 static assets, runs as the non-root `node` user, and does not contain source
 files or development dependencies.
 
 The version-controlled production runtime configuration lives under
 `deploy/production`. `compose.yaml` connects the five services without
-publishing application or database ports, while `Caddyfile` routes the two
-public hostnames to the private web and API services. Start Compose with an
+publishing application or database ports. On the web hostname, `Caddyfile`
+routes `/api/*` to the private API service and all other paths to the private
+web service. The separate API hostname remains available for operational use,
+but browser traffic uses the web origin so authentication cookies are
+first-party. Start Compose with an
 explicit protected deployment environment file:
 
 ```bash
@@ -399,11 +402,11 @@ other users, or persist them in Docker images, Git, CI logs, or shell history.
 | `LOG_LEVEL` | API, worker | Parameter Store or Compose | No | Start with `info` |
 | `DATABASE_URL` | API, worker, migration | SecureString | Yes | Internal Compose hostname and restricted database role |
 | `BETTER_AUTH_SECRET` | API | SecureString | Yes | Independent production secret, at least 32 characters |
-| `BETTER_AUTH_URL` | API | Parameter Store or Compose | No | Final public API origin |
+| `BETTER_AUTH_URL` | API | Parameter Store or Compose | No | Final public web origin; Caddy routes `/api/*` to the API |
 | `GOOGLE_CLIENT_ID` | API | Parameter Store | No | Production Google OAuth client |
 | `GOOGLE_CLIENT_SECRET` | API | SecureString | Yes | Production Google OAuth secret |
 | `WEB_URL` | API | Parameter Store or Compose | No | Final public web origin |
-| `NEXT_PUBLIC_API_URL` | Web image build | CI build configuration | Public | Final public API origin |
+| `NEXT_PUBLIC_API_URL` | Web image build | CI build configuration | Public | Final public web origin for same-origin API requests |
 | `AWS_REGION` | API, worker, backup job | Compose environment | No | `us-east-1` |
 | `S3_UPLOAD_BUCKET` | API, worker | Parameter Store or Compose | No | Production uploads bucket name |
 | `OPENAI_API_KEY` | Worker | SecureString | Yes | Restricted production OpenAI project key |
@@ -420,12 +423,17 @@ Local-only variables such as `POSTGRES_PORT`, `POSTGRES_TEST_PORT`,
 Create a production-only Google OAuth client. Do not reuse the local or ngrok
 client credentials.
 
-The final configuration requires:
+The final configuration uses the web origin for browser API and OAuth traffic:
 
 ```text
 Authorized JavaScript origin: <production web origin>
-Authorized redirect URI:      <production API origin>/api/auth/callback/google
+Authorized redirect URI:      <production web origin>/api/auth/callback/google
 ```
+
+The separate API hostname may remain available for health checks and direct
+operational access, but it must not initiate the browser OAuth flow. Free
+shared-domain providers such as DuckDNS are public suffixes, so sibling
+hostnames cannot safely share authentication cookies.
 
 The chosen free or permanent hostname must use HTTPS and remain stable. Changing
 it later requires updating Google OAuth, Better Auth, cookies, deployment

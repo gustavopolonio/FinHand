@@ -5,7 +5,14 @@
 
 {$WEB_DOMAIN} {
 	encode zstd gzip
-	reverse_proxy web:3000
+
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
 }
 
 {$API_DOMAIN} {

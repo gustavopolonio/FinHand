@@ -42,6 +42,25 @@ describe("production Compose deployment", () => {
     expect(serviceConfiguration("postgres")).not.toContain("ports:");
     expect(caddyConfiguration).toContain("reverse_proxy web:3000");
     expect(caddyConfiguration).toContain("reverse_proxy api:3001");
+    expect(caddyConfiguration).toContain("handle /api/*");
+  });
+
+  it("serves browser API requests from the web origin", () => {
+    const webSiteStart = caddyConfiguration.indexOf("{$WEB_DOMAIN} {");
+    const apiSiteStart = caddyConfiguration.indexOf("{$API_DOMAIN} {");
+    const webSiteConfiguration = caddyConfiguration.slice(
+      webSiteStart,
+      apiSiteStart,
+    );
+
+    expect(webSiteStart).toBeGreaterThanOrEqual(0);
+    expect(apiSiteStart).toBeGreaterThan(webSiteStart);
+    expect(webSiteConfiguration).toContain(
+      "handle /api/* {\n\t\treverse_proxy api:3001\n\t}",
+    );
+    expect(webSiteConfiguration).toContain(
+      "handle {\n\t\treverse_proxy web:3000\n\t}",
+    );
   });
 
   it("runs migrations as an explicit one-off database-only service", () => {
