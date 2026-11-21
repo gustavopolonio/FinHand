@@ -24,6 +24,10 @@ describe("production application deployment", () => {
     expect(syntaxCheck.status, syntaxCheck.stderr).toBe(0);
     expect(script).toContain('if [[ $(id -u) -ne 0 ]]; then');
     expect(script).toContain('flock --nonblock 9');
+    expect(script).toContain(
+      'export DOCKER_CONFIG="$temporary_directory/docker"',
+    );
+    expect(script).toContain('install -d -o root -g root -m 0700 "$DOCKER_CONFIG"');
     expect(script).toContain("Another FinHand deployment is already running.");
     expect(script).not.toContain("set -x");
   });

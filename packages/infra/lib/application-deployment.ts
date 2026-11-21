@@ -76,6 +76,8 @@ export function createApplicationDeploymentScript({
     'release_directory="$RELEASES_DIRECTORY/${web_release}-${DEPLOYMENT_REVISION}"',
     'temporary_directory=$(mktemp -d "$RUNTIME_DIRECTORY/.deployment.XXXXXX")',
     'trap \'rm -rf "$temporary_directory"\' EXIT',
+    'export DOCKER_CONFIG="$temporary_directory/docker"',
+    'install -d -o root -g root -m 0700 "$DOCKER_CONFIG"',
     "",
     'printf "%s" "$COMPOSE_CONFIGURATION" | base64 --decode > "$temporary_directory/compose.yaml"',
     'printf "%s" "$CADDY_CONFIGURATION" | base64 --decode > "$temporary_directory/Caddyfile"',
