@@ -100,19 +100,27 @@ describe("production runtime configuration", () => {
       .filter((line) =>
         line.includes('write_environment_value "$postgres_file"'),
       );
+    const migrationWrites = runtimeConfigurationScript
+      .split("\n")
+      .filter((line) =>
+        line.includes('write_environment_value "$migration_file"'),
+      );
 
     expect(apiWrites.join("\n")).not.toContain("OPENAI_API_KEY");
     expect(workerWrites.join("\n")).not.toContain("BETTER_AUTH_SECRET");
     expect(workerWrites.join("\n")).not.toContain("GOOGLE_CLIENT_SECRET");
+    expect(migrationWrites).toHaveLength(1);
+    expect(migrationWrites.join("\n")).toContain("DATABASE_URL");
     expect(postgresWrites).toHaveLength(3);
     expect(postgresWrites.join("\n")).toContain("POSTGRES_PASSWORD");
   });
 
-  it("installs four protected files without printing their values", () => {
+  it("installs five protected files without printing their values", () => {
     for (const fileName of [
       "deployment.env",
       "api.env",
       "worker.env",
+      "migration.env",
       "postgres.env",
     ]) {
       expect(runtimeConfigurationScript).toContain(fileName);

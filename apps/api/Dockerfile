@@ -39,6 +39,7 @@ ENV NODE_ENV=production \
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=production-dependencies --chown=node:node /app/apps/api ./apps/api
 COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --chown=node:node apps/api/drizzle ./apps/api/drizzle
 
 USER node
 WORKDIR /app/apps/api

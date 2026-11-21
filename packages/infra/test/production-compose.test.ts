@@ -38,9 +38,24 @@ describe("production Compose deployment", () => {
     expect(serviceConfiguration("web")).not.toContain("ports:");
     expect(serviceConfiguration("api")).not.toContain("ports:");
     expect(serviceConfiguration("worker")).not.toContain("ports:");
+    expect(serviceConfiguration("migrate")).not.toContain("ports:");
     expect(serviceConfiguration("postgres")).not.toContain("ports:");
     expect(caddyConfiguration).toContain("reverse_proxy web:3000");
     expect(caddyConfiguration).toContain("reverse_proxy api:3001");
+  });
+
+  it("runs migrations as an explicit one-off database-only service", () => {
+    const migrationConfiguration = serviceConfiguration("migrate");
+
+    expect(migrationConfiguration).toContain(
+      "image: ${FINHAND_API_IMAGE:",
+    );
+    expect(migrationConfiguration).toContain("- dist/migrate.js");
+    expect(migrationConfiguration).toContain("- deployment");
+    expect(migrationConfiguration).toContain("/migration.env");
+    expect(migrationConfiguration).toContain("- backend");
+    expect(migrationConfiguration).not.toContain("frontend");
+    expect(migrationConfiguration).not.toContain("restart:");
   });
 
   it("runs the API and worker from the same immutable application image", () => {
@@ -81,15 +96,16 @@ describe("production Compose deployment", () => {
     );
     expect(composeConfiguration.match(/healthcheck:/gu)).toHaveLength(5);
     expect(composeConfiguration.match(/logging: \*service-logging/gu)).toHaveLength(
-      5,
+      6,
     );
-    expect(composeConfiguration.match(/mem_limit:/gu)).toHaveLength(5);
-    expect(composeConfiguration.match(/cpus:/gu)).toHaveLength(5);
+    expect(composeConfiguration.match(/mem_limit:/gu)).toHaveLength(6);
+    expect(composeConfiguration.match(/cpus:/gu)).toHaveLength(6);
   });
 
   it("keeps application secrets outside version-controlled deployment files", () => {
     expect(composeConfiguration).toContain("/api.env");
     expect(composeConfiguration).toContain("/worker.env");
+    expect(composeConfiguration).toContain("/migration.env");
     expect(composeConfiguration).toContain("/postgres.env");
     expect(composeConfiguration).not.toMatch(/OPENAI_API_KEY=/u);
     expect(composeConfiguration).not.toMatch(/DATABASE_URL=/u);

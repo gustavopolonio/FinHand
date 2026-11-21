@@ -298,9 +298,10 @@ parameter values.
 The EC2 role can decrypt and read only this parameter path. The renderer uses
 the stack region and uploads bucket directly, derives the HTTPS web and API
 origins from the validated domains, and installs `deployment.env`, `api.env`,
-`worker.env`, and `postgres.env` only after validating the complete parameter
-set. It does not print parameter values, place them in command arguments, or
-give the API container the OpenAI key.
+`worker.env`, `migration.env`, and `postgres.env` only after validating the
+complete parameter set. The migration file contains only the internal database
+URL. The renderer does not print parameter values, place them in command
+arguments, or give the API or migration container the OpenAI key.
 
 ## PostgreSQL
 

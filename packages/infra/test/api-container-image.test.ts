@@ -30,6 +30,9 @@ describe("API production container image", () => {
     expect(dockerfile).toContain(
       "COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist",
     );
+    expect(dockerfile).toContain(
+      "COPY --chown=node:node apps/api/drizzle ./apps/api/drizzle",
+    );
   });
 
   it("runs the API as a non-root production process", () => {
