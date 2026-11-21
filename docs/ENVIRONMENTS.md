@@ -44,6 +44,7 @@ Examples:
 finhand-prod-host
 finhand-prod-data
 finhand-prod-uploads-<account-id>
+finhand-prod-backups-<account-id>
 finhand-prod-web-ecr
 finhand-prod-api-ecr
 finhand-prod-instance-role
@@ -69,7 +70,7 @@ The infrastructure package should define:
 1. the VPC, public subnet, security group, and Elastic IP;
 2. one EC2 host and its encrypted EBS volumes;
 3. the EC2 instance profile and deployment role;
-4. the private S3 uploads bucket;
+4. the private S3 uploads and database-backup buckets;
 5. ECR repositories;
 6. Parameter Store and Secrets Manager values;
 7. logging, alarms, backups, and budgets;
@@ -333,8 +334,8 @@ Backups are mandatory because the database shares the application host.
   to a private, encrypted S3 backup prefix.
 - Do not reuse a live database file copy as the logical backup.
 - Keep backup objects inaccessible to browser-facing presigned URL flows.
-- Define a finite retention policy after the retention task establishes the
-  required recovery window.
+- Retain deployment backups for 30 days and noncurrent object versions for 7
+  days; revisit the window when real recovery requirements justify it.
 - Create encrypted EBS snapshots as a secondary server-volume recovery layer.
 - Alert when the most recent logical backup is missing or too old.
 - Test restoring a dump into an isolated temporary PostgreSQL container before
@@ -514,6 +515,28 @@ Every production release must follow this sequence:
 12. Roll back to the previous image SHA when release health fails. Database
     migrations require the separate forward-compatible migration and recovery
     procedure.
+
+The `finhand-prod-deploy-application` Systems Manager document performs steps
+5-9 on the EC2 host. It prevents concurrent deployments, embeds the reviewed
+Compose and Caddy configuration, pulls only the image URIs already validated by
+the runtime renderer, starts PostgreSQL, creates and validates a custom-format
+`pg_dump`, uploads it under `database/` in the private retained backup bucket,
+runs the one-off migration container, and waits for every long-running service
+to become healthy. If container health checks fail, it restores the previous
+release symlink and attempts to restart the previous containers; applied
+database migrations are not automatically reversed.
+
+After updating image parameters and successfully running
+`finhand-prod-render-runtime-config`, invoke the deployment without supplying
+credentials or secrets as command arguments:
+
+```bash
+aws ssm send-command \
+  --profile <production-administrator-profile> \
+  --region us-east-1 \
+  --document-name finhand-prod-deploy-application \
+  --targets Key=InstanceIds,Values=<production-instance-id>
+```
 
 The single host does not provide a rolling multi-instance deployment. Brief
 application interruptions during deployment are acceptable for V1 and must be

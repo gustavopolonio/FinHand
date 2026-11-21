@@ -1,6 +1,7 @@
 import {
   ArnFormat,
   CfnOutput,
+  Duration,
   RemovalPolicy,
   Size,
   Stack,
@@ -12,7 +13,10 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ssm from "aws-cdk-lib/aws-ssm";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Construct } from "constructs";
+import { createApplicationDeploymentDocumentContent } from "./application-deployment.js";
 import {
   createHostBootstrapDocumentContent,
   HOST_BOOTSTRAP_REVISION,
@@ -24,6 +28,20 @@ import {
 
 const PRODUCTION_REGION = "us-east-1";
 const PRODUCTION_AMI_ID = "ami-00b0d691a87846f99";
+
+function readProductionDeploymentFile(fileName: string): string {
+  const candidates = [
+    resolve(process.cwd(), "deploy/production", fileName),
+    resolve(process.cwd(), "../../deploy/production", fileName),
+  ];
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+
+  if (!filePath) {
+    throw new Error(`Could not find production deployment file: ${fileName}`);
+  }
+
+  return readFileSync(filePath, "utf8");
+}
 
 export class ProductionStack extends Stack {
   public constructor(scope: Construct, id: string, props: StackProps = {}) {
@@ -90,6 +108,24 @@ export class ProductionStack extends Stack {
     });
     Tags.of(uploadsBucket).add("DataClassification", "financial-private");
 
+    const backupBucket = new s3.Bucket(this, "BackupBucket", {
+      bucketName: `finhand-prod-backups-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      lifecycleRules: [
+        {
+          expiration: Duration.days(30),
+          id: "ExpireDatabaseBackups",
+          noncurrentVersionExpiration: Duration.days(7),
+        },
+      ],
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      removalPolicy: RemovalPolicy.RETAIN,
+      versioned: true,
+    });
+    Tags.of(backupBucket).add("DataClassification", "financial-private");
+
     const webRepository = this.createApplicationRepository(
       "WebRepository",
       "finhand-prod-web-ecr",
@@ -123,6 +159,13 @@ export class ProductionStack extends Stack {
           "s3:ListMultipartUploadParts",
         ],
         resources: [uploadsBucket.arnForObjects("*")],
+      }),
+    );
+    instanceRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "DatabaseBackupAccess",
+        actions: ["s3:PutObject", "s3:GetObject"],
+        resources: [backupBucket.arnForObjects("database/*")],
       }),
     );
     instanceRole.addToPolicy(
@@ -250,6 +293,26 @@ export class ProductionStack extends Stack {
       },
     );
 
+    const applicationDeploymentDocument = new ssm.CfnDocument(
+      this,
+      "ApplicationDeploymentDocument",
+      {
+        content: createApplicationDeploymentDocumentContent({
+          accountId: this.account,
+          backupBucketName: backupBucket.bucketName,
+          caddyConfiguration: readProductionDeploymentFile("Caddyfile"),
+          composeConfiguration:
+            readProductionDeploymentFile("compose.yaml"),
+          region: this.region,
+        }),
+        documentFormat: "JSON",
+        documentType: "Command",
+        name: "finhand-prod-deploy-application",
+        targetType: "/AWS::EC2::Instance",
+        updateMethod: "NewVersion",
+      },
+    );
+
     const elasticIp = new ec2.CfnEIP(this, "ElasticIp", {
       domain: "vpc",
     });
@@ -283,6 +346,11 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "UploadsBucketName", {
       description: "Private bucket for production document and audio uploads",
       value: uploadsBucket.bucketName,
+    });
+
+    new CfnOutput(this, "BackupBucketName", {
+      description: "Private retained bucket for production database backups",
+      value: backupBucket.bucketName,
     });
 
     new CfnOutput(this, "WebRepositoryUri", {
@@ -329,6 +397,12 @@ export class ProductionStack extends Stack {
       description:
         "Systems Manager document that renders protected runtime environment files",
       value: runtimeConfigurationDocument.ref,
+    });
+
+    new CfnOutput(this, "ApplicationDeploymentDocumentName", {
+      description:
+        "Systems Manager document that deploys the production application",
+      value: applicationDeploymentDocument.ref,
     });
   }
 

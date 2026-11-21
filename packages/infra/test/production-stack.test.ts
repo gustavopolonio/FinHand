@@ -153,6 +153,35 @@ describe("ProductionStack", () => {
     });
   });
 
+  it("creates a private retained database-backup bucket with bounded retention", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::S3::Bucket", {
+      BucketName: "finhand-prod-backups-123456789012",
+      LifecycleConfiguration: {
+        Rules: [
+          Match.objectLike({
+            ExpirationInDays: 30,
+            Id: "ExpireDatabaseBackups",
+            NoncurrentVersionExpiration: { NoncurrentDays: 7 },
+            Status: "Enabled",
+          }),
+        ],
+      },
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
+      VersioningConfiguration: { Status: "Enabled" },
+    });
+  });
+
   it("creates immutable retained repositories for the web and API images", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -238,7 +267,7 @@ describe("ProductionStack", () => {
       Sid?: string;
     }>;
 
-    expect(statements).toHaveLength(5);
+    expect(statements).toHaveLength(6);
     expect(statements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -281,6 +310,14 @@ describe("ProductionStack", () => {
             "Fn::Join": expect.any(Array),
           }),
           Sid: "UploadObjectAccess",
+        }),
+        expect.objectContaining({
+          Action: ["s3:PutObject", "s3:GetObject"],
+          Effect: "Allow",
+          Resource: expect.objectContaining({
+            "Fn::Join": expect.any(Array),
+          }),
+          Sid: "DatabaseBackupAccess",
         }),
         expect.objectContaining({
           Action: "ssm:GetParametersByPath",
@@ -408,7 +445,7 @@ describe("ProductionStack", () => {
 
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("AWS::SSM::Document", 2);
+    template.resourceCountIs("AWS::SSM::Document", 3);
     template.hasResourceProperties("AWS::SSM::Document", {
       DocumentFormat: "JSON",
       DocumentType: "Command",
@@ -499,6 +536,35 @@ describe("ProductionStack", () => {
     });
 
     template.resourceCountIs("AWS::SSM::Association", 1);
+  });
+
+  it("creates a manual application deployment document", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::SSM::Document", {
+      DocumentFormat: "JSON",
+      DocumentType: "Command",
+      Name: "finhand-prod-deploy-application",
+      TargetType: "/AWS::EC2::Instance",
+      UpdateMethod: "NewVersion",
+      Content: {
+        schemaVersion: "2.2",
+        mainSteps: [
+          Match.objectLike({
+            action: "aws:runShellScript",
+            name: "deployApplication",
+            inputs: {
+              runCommand: [Match.anyValue()],
+              timeoutSeconds: "900",
+            },
+          }),
+        ],
+      },
+    });
   });
 
   it("keeps destructive host setup behind explicit safety checks", () => {
@@ -599,6 +665,10 @@ describe("ProductionStack", () => {
       Description: "Private bucket for production document and audio uploads",
       Value: Match.anyValue(),
     });
+    template.hasOutput("BackupBucketName", {
+      Description: "Private retained bucket for production database backups",
+      Value: Match.anyValue(),
+    });
     template.hasOutput("WebRepositoryUri", {
       Description: "ECR repository URI for the production web image",
       Value: Match.anyValue(),
@@ -634,6 +704,11 @@ describe("ProductionStack", () => {
     template.hasOutput("RuntimeConfigurationDocumentName", {
       Description:
         "Systems Manager document that renders protected runtime environment files",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("ApplicationDeploymentDocumentName", {
+      Description:
+        "Systems Manager document that deploys the production application",
       Value: Match.anyValue(),
     });
   });

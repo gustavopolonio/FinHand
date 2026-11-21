@@ -25,7 +25,7 @@ export const HOST_BOOTSTRAP_SCRIPT = [
   "fi",
   "",
   "install_host_packages() {",
-  "  dnf install -y docker e2fsprogs jq",
+  "  dnf install -y docker e2fsprogs jq util-linux-core",
   "  systemctl enable --now docker",
   "}",
   "",
