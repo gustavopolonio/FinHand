@@ -68,7 +68,6 @@ export function buildApplication({
       durationMs: Math.round(reply.elapsedTime * 100) / 100,
       event: "http.request.completed",
       method: request.method,
-      requestId: request.id,
       route: request.routeOptions.url,
       statusCode: reply.statusCode,
     };

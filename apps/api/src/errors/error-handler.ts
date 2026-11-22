@@ -58,7 +58,6 @@ export function registerApplicationErrorHandler(
         err: error,
         event: "http.request.failed",
         method: request.method,
-        requestId: request.id,
         route: request.routeOptions.url,
       },
       "Unhandled request error",

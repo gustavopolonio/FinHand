@@ -23,10 +23,16 @@ function createDependencies() {
   return { authentication, databaseConnection, documentStorage, end };
 }
 
-function createLogDestination(entries: Record<string, unknown>[]): Writable {
+function createLogDestination(
+  entries: Record<string, unknown>[],
+  serializedEntries?: string[],
+): Writable {
   return new Writable({
     write(chunk, _encoding, callback) {
-      entries.push(JSON.parse(chunk.toString()) as Record<string, unknown>);
+      const serializedEntry = chunk.toString();
+
+      serializedEntries?.push(serializedEntry);
+      entries.push(JSON.parse(serializedEntry) as Record<string, unknown>);
       callback();
     },
   });
@@ -95,6 +101,7 @@ describe("buildApplication", () => {
     const { authentication, databaseConnection, documentStorage } =
       createDependencies();
     const entries: Record<string, unknown>[] = [];
+    const serializedEntries: string[] = [];
     const application = buildApplication({
       authentication,
       authenticationBaseUrl: "http://localhost:3001",
@@ -107,7 +114,7 @@ describe("buildApplication", () => {
           level: "debug",
           service: "api",
         }),
-        stream: createLogDestination(entries),
+        stream: createLogDestination(entries, serializedEntries),
       },
     });
 
@@ -130,6 +137,10 @@ describe("buildApplication", () => {
     });
     expect(completion?.durationMs).toEqual(expect.any(Number));
     expect(JSON.stringify(entries)).not.toContain("private-token");
+    const serializedCompletion = serializedEntries.find((entry) =>
+      entry.includes('"event":"http.request.completed"'),
+    );
+    expect(serializedCompletion?.match(/"requestId"/gu)).toHaveLength(1);
 
     await application.close();
   });
@@ -138,6 +149,7 @@ describe("buildApplication", () => {
     const { authentication, databaseConnection, documentStorage } =
       createDependencies();
     const entries: Record<string, unknown>[] = [];
+    const serializedEntries: string[] = [];
     const application = buildApplication({
       authentication,
       authenticationBaseUrl: "http://localhost:3001",
@@ -150,7 +162,7 @@ describe("buildApplication", () => {
           level: "info",
           service: "api",
         }),
-        stream: createLogDestination(entries),
+        stream: createLogDestination(entries, serializedEntries),
       },
     });
     application.get("/test-unhandled-error", async () => {
@@ -174,6 +186,10 @@ describe("buildApplication", () => {
       route: "/test-unhandled-error",
     });
     expect(JSON.stringify(entries)).not.toContain("customer account secret");
+    const serializedFailure = serializedEntries.find((entry) =>
+      entry.includes('"event":"http.request.failed"'),
+    );
+    expect(serializedFailure?.match(/"requestId"/gu)).toHaveLength(1);
 
     await application.close();
   });
