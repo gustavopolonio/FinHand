@@ -7,6 +7,7 @@ import {
 
 function createLogger(): CleanupWorkerLogger {
   return {
+    debug: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
   };
@@ -29,7 +30,10 @@ describe("document capture session cleanup worker", () => {
 
     await vi.waitFor(() => expect(cleanup).toHaveBeenCalledTimes(1));
     expect(logger.info).toHaveBeenCalledWith(
-      { expiredSessionCount: 2 },
+      {
+        event: "document.capture.cleanup.completed",
+        expiredSessionCount: 2,
+      },
       "Document capture session cleanup completed",
     );
 
@@ -88,16 +92,39 @@ describe("document capture session cleanup worker", () => {
 
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
-        error,
+        { err: error, event: "document.capture.cleanup.failed" },
         "Document capture session cleanup failed",
       ),
     );
     await vi.advanceTimersByTimeAsync(1_000);
     expect(cleanup).toHaveBeenCalledTimes(2);
     expect(logger.info).toHaveBeenCalledWith(
-      { expiredSessionCount: 3 },
+      {
+        event: "document.capture.cleanup.completed",
+        expiredSessionCount: 3,
+      },
       "Document capture session cleanup completed",
     );
+
+    await worker.stop();
+  });
+
+  it("logs cleanup cycles without expired sessions at debug level", async () => {
+    const logger = createLogger();
+    const worker = startDocumentCaptureSessionCleanupWorker({
+      cleanup: vi.fn().mockResolvedValue(0),
+      logger,
+    });
+
+    await vi.waitFor(() => expect(logger.debug).toHaveBeenCalledOnce());
+    expect(logger.debug).toHaveBeenCalledWith(
+      {
+        event: "document.capture.cleanup.completed",
+        expiredSessionCount: 0,
+      },
+      "Document capture session cleanup completed",
+    );
+    expect(logger.info).not.toHaveBeenCalled();
 
     await worker.stop();
   });

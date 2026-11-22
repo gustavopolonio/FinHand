@@ -8,35 +8,24 @@ import {
   getDocumentStorageEnvironment,
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
+import { createApplicationLogger } from "./logging/logger.js";
 import { processNextAudioUpload } from "./services/audio-processing.js";
 import { recoverExpiredAudioProcessingLeases } from "./services/audio-transcription-recovery.js";
 import { expirePendingDocumentCaptureSessions } from "./services/document-capture-session-cleanup.js";
 import { processNextDocumentUpload } from "./services/document-extraction.js";
-import {
-  type AudioProcessingWorkerLogger,
-  startAudioProcessingWorker,
-} from "./workers/audio-transcription-worker.js";
-import {
-  type AudioProcessingRecoveryWorkerLogger,
-  startAudioProcessingRecoveryWorker,
-} from "./workers/audio-transcription-recovery-worker.js";
-import {
-  recoverExpiredDocumentProcessingLeases,
-} from "./services/document-processing-recovery.js";
+import { recoverExpiredDocumentProcessingLeases } from "./services/document-processing-recovery.js";
 import { createS3DocumentStorage } from "./storage/document-storage.js";
-import {
-  type CleanupWorkerLogger,
-  startDocumentCaptureSessionCleanupWorker,
-} from "./workers/document-capture-session-cleanup-worker.js";
-import {
-  type DocumentExtractionWorkerLogger,
-  startDocumentExtractionWorker,
-} from "./workers/document-extraction-worker.js";
-import {
-  type DocumentProcessingRecoveryWorkerLogger,
-  startDocumentProcessingRecoveryWorker,
-} from "./workers/document-processing-recovery-worker.js";
+import { startAudioProcessingRecoveryWorker } from "./workers/audio-transcription-recovery-worker.js";
+import { startAudioProcessingWorker } from "./workers/audio-transcription-worker.js";
+import { startDocumentCaptureSessionCleanupWorker } from "./workers/document-capture-session-cleanup-worker.js";
+import { startDocumentExtractionWorker } from "./workers/document-extraction-worker.js";
+import { startDocumentProcessingRecoveryWorker } from "./workers/document-processing-recovery-worker.js";
 
+const logger = createApplicationLogger({
+  environment: environment.nodeEnvironment,
+  level: environment.logLevel,
+  service: "worker",
+});
 const databaseConnection = createDatabase(environment.databaseUrl);
 const documentStorage = createS3DocumentStorage(
   getDocumentStorageEnvironment(),
@@ -55,27 +44,13 @@ const audioExtractor = createOpenAiAudioTransactionExtractor({
   apiKey: audioTranscriptionEnvironment.apiKey,
   model: audioTranscriptionEnvironment.extractionModel,
 });
-const cleanupLogger: CleanupWorkerLogger = {
-  error(error, message) {
-    console.error(message, error);
-  },
-  info(context, message) {
-    console.info(message, context);
-  },
-};
+const cleanupLogger = logger.child({ component: "document-capture-cleanup" });
 const cleanupWorker = startDocumentCaptureSessionCleanupWorker({
   cleanup: () =>
     expirePendingDocumentCaptureSessions(databaseConnection.database),
   logger: cleanupLogger,
 });
-const extractionLogger: DocumentExtractionWorkerLogger = {
-  error(context, message) {
-    console.error(message, context);
-  },
-  info(context, message) {
-    console.info(message, context);
-  },
-};
+const extractionLogger = logger.child({ component: "document-extraction" });
 const extractionWorker = startDocumentExtractionWorker({
   logger: extractionLogger,
   pollIntervalMilliseconds:
@@ -89,14 +64,7 @@ const extractionWorker = startDocumentExtractionWorker({
         documentExtractionEnvironment.leaseDurationMilliseconds,
     }),
 });
-const audioProcessingLogger: AudioProcessingWorkerLogger = {
-  error(context, message) {
-    console.error(message, context);
-  },
-  info(context, message) {
-    console.info(message, context);
-  },
-};
+const audioProcessingLogger = logger.child({ component: "audio-processing" });
 const audioProcessingWorker = startAudioProcessingWorker({
   logger: audioProcessingLogger,
   pollIntervalMilliseconds:
@@ -111,14 +79,9 @@ const audioProcessingWorker = startAudioProcessingWorker({
       transcriber: audioTranscriber,
     }),
 });
-const audioProcessingRecoveryLogger: AudioProcessingRecoveryWorkerLogger = {
-  error(error, message) {
-    console.error(message, error);
-  },
-  info(context, message) {
-    console.info(message, context);
-  },
-};
+const audioProcessingRecoveryLogger = logger.child({
+  component: "audio-processing-recovery",
+});
 const audioProcessingRecoveryWorker =
   startAudioProcessingRecoveryWorker({
     intervalMilliseconds:
@@ -127,14 +90,9 @@ const audioProcessingRecoveryWorker =
     recover: () =>
       recoverExpiredAudioProcessingLeases(databaseConnection.database),
   });
-const recoveryLogger: DocumentProcessingRecoveryWorkerLogger = {
-  error(error, message) {
-    console.error(message, error);
-  },
-  info(context, message) {
-    console.info(message, context);
-  },
-};
+const recoveryLogger = logger.child({
+  component: "document-processing-recovery",
+});
 const recoveryWorker = startDocumentProcessingRecoveryWorker({
   intervalMilliseconds:
     documentExtractionEnvironment.recoveryIntervalMilliseconds,
@@ -142,6 +100,20 @@ const recoveryWorker = startDocumentProcessingRecoveryWorker({
   recover: () =>
     recoverExpiredDocumentProcessingLeases(databaseConnection.database),
 });
+
+logger.info(
+  {
+    event: "worker.started",
+    workers: [
+      "audio-processing",
+      "audio-processing-recovery",
+      "document-capture-cleanup",
+      "document-extraction",
+      "document-processing-recovery",
+    ],
+  },
+  "Worker process started",
+);
 
 let isShuttingDown = false;
 
@@ -151,7 +123,10 @@ async function shutdown(signal: NodeJS.Signals) {
   }
 
   isShuttingDown = true;
-  console.info("Shutting down worker", { signal });
+  logger.info(
+    { event: "worker.shutdown.started", signal },
+    "Shutting down worker",
+  );
 
   try {
     await Promise.all([
@@ -163,8 +138,17 @@ async function shutdown(signal: NodeJS.Signals) {
     ]);
     documentStorage.close();
     await databaseConnection.pool.end();
+    logger.info(
+      { event: "worker.shutdown.completed", signal },
+      "Worker shut down cleanly",
+    );
+    logger.flush();
   } catch (error) {
-    console.error("Failed to shut down worker cleanly", error);
+    logger.error(
+      { err: error, event: "worker.shutdown.failed", signal },
+      "Failed to shut down worker cleanly",
+    );
+    logger.flush();
     process.exitCode = 1;
   }
 }

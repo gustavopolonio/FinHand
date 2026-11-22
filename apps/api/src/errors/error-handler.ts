@@ -53,7 +53,16 @@ export function registerApplicationErrorHandler(
       });
     }
 
-    request.log.error({ err: error }, "Unhandled request error");
+    request.log.error(
+      {
+        err: error,
+        event: "http.request.failed",
+        method: request.method,
+        requestId: request.id,
+        route: request.routeOptions.url,
+      },
+      "Unhandled request error",
+    );
 
     return reply.status(500).send({ error: "Internal server error" });
   });

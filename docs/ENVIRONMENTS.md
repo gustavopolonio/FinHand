@@ -559,8 +559,21 @@ risk makes production-only validation insufficient.
 
 ## Observability and Host Safety
 
-- Forward structured API and worker logs to CloudWatch Logs with finite
-  retention.
+- API and worker processes write newline-delimited JSON logs to standard output.
+  Application records identify their service, environment, severity, event,
+  and time.
+- API completion and failure records share a server-generated request ID, which
+  is also returned in the `x-request-id` response header. Raw URLs, queries,
+  headers, and request bodies are not included in request logs.
+- Worker records use the upload ID as the job correlation ID. Successful and
+  failed processing, lease recovery, cleanup, startup, and shutdown use stable
+  event names; idle polling is emitted only at `debug` level.
+- Error serialization retains the error type, safe code, and stack frames while
+  omitting the error message. Logger redaction provides a second boundary for
+  credentials, OAuth data, cookies, request bodies, file names, financial
+  values, document content, prompts, and transcripts.
+- Forward structured API and worker logs to CloudWatch Logs with a 30-day
+  retention period in the observability task.
 - Keep sensitive financial data, document contents, transcripts, OAuth tokens,
   API keys, and database credentials out of logs.
 - Monitor instance status, CPU, memory, disk space, container health, PostgreSQL
@@ -621,7 +634,7 @@ Before provisioning application resources:
 - one public hostname with path routing or separate web and API hostnames;
 - PostgreSQL major version;
 - logical backup and snapshot retention;
-- CloudWatch log retention and alarm recipients;
+- CloudWatch alarm recipients;
 - exact SecureString versus Secrets Manager placement;
 - exact instance-role and GitHub OIDC deployment-role policies;
 - whether CloudFront provides enough benefit to add after the initial release.

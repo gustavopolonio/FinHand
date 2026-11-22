@@ -1,8 +1,9 @@
 export const documentCaptureSessionCleanupIntervalMilliseconds = 60_000;
 
 export interface CleanupWorkerLogger {
-  error(error: unknown, message: string): void;
-  info(context: { expiredSessionCount: number }, message: string): void;
+  debug(context: Record<string, unknown>, message: string): void;
+  error(context: { err: unknown; event: string }, message: string): void;
+  info(context: Record<string, unknown>, message: string): void;
 }
 
 interface StartCleanupWorkerOptions {
@@ -31,12 +32,21 @@ export function startDocumentCaptureSessionCleanupWorker({
   async function runCleanup(): Promise<void> {
     try {
       const expiredSessionCount = await cleanup();
-      logger.info(
-        { expiredSessionCount },
-        "Document capture session cleanup completed",
-      );
+      const context = {
+        event: "document.capture.cleanup.completed",
+        expiredSessionCount,
+      };
+
+      if (expiredSessionCount === 0) {
+        logger.debug(context, "Document capture session cleanup completed");
+      } else {
+        logger.info(context, "Document capture session cleanup completed");
+      }
     } catch (error) {
-      logger.error(error, "Document capture session cleanup failed");
+      logger.error(
+        { err: error, event: "document.capture.cleanup.failed" },
+        "Document capture session cleanup failed",
+      );
     } finally {
       if (!isStopped) {
         timer = setTimeout(() => {

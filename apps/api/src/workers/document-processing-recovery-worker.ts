@@ -3,8 +3,9 @@ import type { DocumentProcessingRecoveryResult } from "../services/document-proc
 export const documentProcessingRecoveryIntervalMilliseconds = 60_000;
 
 export interface DocumentProcessingRecoveryWorkerLogger {
-  error(error: unknown, message: string): void;
-  info(context: DocumentProcessingRecoveryResult, message: string): void;
+  debug(context: Record<string, unknown>, message: string): void;
+  error(context: { err: unknown; event: string }, message: string): void;
+  info(context: Record<string, unknown>, message: string): void;
 }
 
 interface StartDocumentProcessingRecoveryWorkerOptions {
@@ -37,9 +38,21 @@ export function startDocumentProcessingRecoveryWorker(
   async function runRecovery(): Promise<void> {
     try {
       const result = await recover();
-      logger.info(result, "Document processing recovery completed");
+      const context = {
+        ...result,
+        event: "document.processing.recovery.completed",
+      };
+
+      if (result.failedCount + result.requeuedCount === 0) {
+        logger.debug(context, "Document processing recovery completed");
+      } else {
+        logger.info(context, "Document processing recovery completed");
+      }
     } catch (error) {
-      logger.error(error, "Document processing recovery failed");
+      logger.error(
+        { err: error, event: "document.processing.recovery.failed" },
+        "Document processing recovery failed",
+      );
     } finally {
       if (!isStopped) {
         timer = setTimeout(() => {

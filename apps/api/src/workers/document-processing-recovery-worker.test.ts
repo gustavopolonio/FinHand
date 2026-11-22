@@ -6,7 +6,7 @@ import {
 } from "./document-processing-recovery-worker.js";
 
 function createLogger(): DocumentProcessingRecoveryWorkerLogger {
-  return { error: vi.fn(), info: vi.fn() };
+  return { debug: vi.fn(), error: vi.fn(), info: vi.fn() };
 }
 
 afterEach(() => {
@@ -29,7 +29,11 @@ describe("document processing recovery worker", () => {
 
     await vi.waitFor(() => expect(recover).toHaveBeenCalledOnce());
     expect(logger.info).toHaveBeenCalledWith(
-      { failedCount: 1, requeuedCount: 2 },
+      {
+        event: "document.processing.recovery.completed",
+        failedCount: 1,
+        requeuedCount: 2,
+      },
       "Document processing recovery completed",
     );
     await vi.advanceTimersByTimeAsync(1_000);
@@ -83,12 +87,30 @@ describe("document processing recovery worker", () => {
 
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
-        error,
+        { err: error, event: "document.processing.recovery.failed" },
         "Document processing recovery failed",
       ),
     );
     await vi.advanceTimersByTimeAsync(1_000);
     expect(recover).toHaveBeenCalledTimes(2);
+
+    await worker.stop();
+  });
+
+  it("logs idle recovery cycles at debug level", async () => {
+    const result = { failedCount: 0, requeuedCount: 0 };
+    const logger = createLogger();
+    const worker = startDocumentProcessingRecoveryWorker({
+      logger,
+      recover: vi.fn().mockResolvedValue(result),
+    });
+
+    await vi.waitFor(() => expect(logger.debug).toHaveBeenCalledOnce());
+    expect(logger.debug).toHaveBeenCalledWith(
+      { ...result, event: "document.processing.recovery.completed" },
+      "Document processing recovery completed",
+    );
+    expect(logger.info).not.toHaveBeenCalled();
 
     await worker.stop();
   });

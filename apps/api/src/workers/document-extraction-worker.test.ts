@@ -11,6 +11,7 @@ function createLogger(): DocumentExtractionWorkerLogger {
   return {
     error: vi.fn(),
     info: vi.fn(),
+    warn: vi.fn(),
   };
 }
 
@@ -58,8 +59,12 @@ describe("document extraction worker", () => {
 
     await vi.waitFor(() => expect(processNext).toHaveBeenCalledOnce());
     expect(logger.info).toHaveBeenCalledWith(
-      result,
-      "Document extraction completed",
+      {
+        ...result,
+        durationMs: expect.any(Number),
+        event: "document.processing.completed",
+      },
+      "Document processing completed",
     );
 
     await vi.advanceTimersByTimeAsync(0);
@@ -98,7 +103,7 @@ describe("document extraction worker", () => {
     await worker.stop();
   });
 
-  it("logs only a safe error name and continues polling after an unexpected failure", async () => {
+  it("logs an unexpected failure for safe serialization and continues polling", async () => {
     vi.useFakeTimers();
     const processNext = vi
       .fn()
@@ -113,16 +118,43 @@ describe("document extraction worker", () => {
 
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
-        { errorName: "TypeError" },
+        {
+          err: expect.any(TypeError),
+          event: "document.worker.iteration.failed",
+        },
         "Document extraction worker failed",
       ),
-    );
-    expect(JSON.stringify(vi.mocked(logger.error).mock.calls)).not.toContain(
-      "sensitive provider detail",
     );
 
     await vi.advanceTimersByTimeAsync(1_000);
     expect(processNext).toHaveBeenCalledTimes(2);
+
+    await worker.stop();
+  });
+
+  it("logs failed processing results as warnings", async () => {
+    vi.useFakeTimers();
+    const result = {
+      uploadId,
+      status: "failed" as const,
+      failureCode: "provider_unavailable",
+    };
+    const logger = createLogger();
+    const worker = startDocumentExtractionWorker({
+      logger,
+      pollIntervalMilliseconds: 1_000,
+      processNext: vi.fn().mockResolvedValueOnce(result).mockResolvedValue(null),
+    });
+
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledOnce());
+    expect(logger.warn).toHaveBeenCalledWith(
+      {
+        ...result,
+        durationMs: expect.any(Number),
+        event: "document.processing.completed",
+      },
+      "Document processing failed",
+    );
 
     await worker.stop();
   });

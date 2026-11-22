@@ -1,9 +1,22 @@
 import type { DocumentExtractionResult } from "../services/document-extraction.js";
 
 export interface DocumentExtractionWorkerLogger {
-  error(context: { errorName: string }, message: string): void;
+  error(context: { err: unknown; event: string }, message: string): void;
   info(
     context: {
+      durationMs: number;
+      event: string;
+      uploadId: string;
+      status: "processed" | "failed";
+      candidateCount?: number;
+      failureCode?: string;
+    },
+    message: string,
+  ): void;
+  warn(
+    context: {
+      durationMs: number;
+      event: string;
       uploadId: string;
       status: "processed" | "failed";
       candidateCount?: number;
@@ -21,10 +34,6 @@ interface StartDocumentExtractionWorkerOptions {
 
 export interface DocumentExtractionWorker {
   stop(): Promise<void>;
-}
-
-function getErrorName(error: unknown): string {
-  return error instanceof Error ? error.name : "UnknownError";
 }
 
 export function startDocumentExtractionWorker({
@@ -47,17 +56,28 @@ export function startDocumentExtractionWorker({
 
   async function run(): Promise<void> {
     let didProcessUpload = false;
+    const startedAt = performance.now();
 
     try {
       const result = await processNext();
 
       if (result) {
         didProcessUpload = true;
-        logger.info(result, "Document extraction completed");
+        const context = {
+          ...result,
+          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+          event: "document.processing.completed",
+        };
+
+        if (result.status === "failed") {
+          logger.warn(context, "Document processing failed");
+        } else {
+          logger.info(context, "Document processing completed");
+        }
       }
     } catch (error) {
       logger.error(
-        { errorName: getErrorName(error) },
+        { err: error, event: "document.worker.iteration.failed" },
         "Document extraction worker failed",
       );
     } finally {

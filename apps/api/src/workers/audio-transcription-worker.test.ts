@@ -8,7 +8,7 @@ import {
 const uploadId = "44444444-4444-4444-8444-444444444444";
 
 function createLogger(): AudioProcessingWorkerLogger {
-  return { error: vi.fn(), info: vi.fn() };
+  return { error: vi.fn(), info: vi.fn(), warn: vi.fn() };
 }
 
 afterEach(() => {
@@ -50,7 +50,11 @@ describe("audio processing worker", () => {
 
     await vi.waitFor(() => expect(processNext).toHaveBeenCalledOnce());
     expect(logger.info).toHaveBeenCalledWith(
-      result,
+      {
+        ...result,
+        durationMs: expect.any(Number),
+        event: "audio.processing.completed",
+      },
       "Audio processing completed",
     );
     await vi.advanceTimersByTimeAsync(0);
@@ -83,7 +87,7 @@ describe("audio processing worker", () => {
     await worker.stop();
   });
 
-  it("logs only a safe error name and continues", async () => {
+  it("logs unexpected failures for safe serialization and continues", async () => {
     vi.useFakeTimers();
     const processNext = vi
       .fn()
@@ -98,15 +102,42 @@ describe("audio processing worker", () => {
 
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
-        { errorName: "TypeError" },
+        {
+          err: expect.any(TypeError),
+          event: "audio.worker.iteration.failed",
+        },
         "Audio processing worker failed",
       ),
     );
-    expect(JSON.stringify(vi.mocked(logger.error).mock.calls)).not.toContain(
-      "private provider detail",
-    );
     await vi.advanceTimersByTimeAsync(1_000);
     expect(processNext).toHaveBeenCalledTimes(2);
+
+    await worker.stop();
+  });
+
+  it("logs failed audio processing results as warnings", async () => {
+    vi.useFakeTimers();
+    const result = {
+      uploadId,
+      status: "failed" as const,
+      failureCode: "transcription_timeout",
+    };
+    const logger = createLogger();
+    const worker = startAudioProcessingWorker({
+      logger,
+      pollIntervalMilliseconds: 1_000,
+      processNext: vi.fn().mockResolvedValueOnce(result).mockResolvedValue(null),
+    });
+
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledOnce());
+    expect(logger.warn).toHaveBeenCalledWith(
+      {
+        ...result,
+        durationMs: expect.any(Number),
+        event: "audio.processing.completed",
+      },
+      "Audio processing failed",
+    );
 
     await worker.stop();
   });

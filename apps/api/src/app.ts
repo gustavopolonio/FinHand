@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
+
 import fastifyCors from "@fastify/cors";
-import Fastify, { type FastifyServerOptions } from "fastify";
+import Fastify, { LogController, type FastifyServerOptions } from "fastify";
 
 import type { Authentication } from "./auth/authentication.js";
 import { registerAuthenticationGuard } from "./auth/require-authentication.js";
@@ -44,12 +46,40 @@ export function buildApplication({
   documentStorage,
   logger = false,
 }: BuildApplicationOptions) {
-  const application = Fastify({ logger });
+  const application = Fastify({
+    genReqId: () => randomUUID(),
+    logger,
+    logController: new LogController({
+      disableRequestLogging: true,
+      requestIdLogLabel: "requestId",
+    }),
+    requestIdHeader: false,
+  });
 
   registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", databaseConnection.database);
   registerAuthenticationGuard(application, authentication);
+  application.addHook("onRequest", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
+  application.addHook("onResponse", async (request, reply) => {
+    const context = {
+      durationMs: Math.round(reply.elapsedTime * 100) / 100,
+      event: "http.request.completed",
+      method: request.method,
+      requestId: request.id,
+      route: request.routeOptions.url,
+      statusCode: reply.statusCode,
+    };
+
+    if (request.routeOptions.url === "/health") {
+      request.log.debug(context, "HTTP request completed");
+      return;
+    }
+
+    request.log.info(context, "HTTP request completed");
+  });
   application.addHook("onClose", async () => {
     documentStorage.close();
     await databaseConnection.pool.end();
@@ -60,6 +90,7 @@ export function buildApplication({
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["x-request-id"],
     maxAge: 86_400,
   });
 

@@ -1,9 +1,21 @@
 import type { AudioProcessingResult } from "../services/audio-processing.js";
 
 export interface AudioProcessingWorkerLogger {
-  error(context: { errorName: string }, message: string): void;
+  error(context: { err: unknown; event: string }, message: string): void;
   info(
     context: {
+      durationMs: number;
+      event: string;
+      uploadId: string;
+      status: "transcribed" | "processed" | "failed";
+      failureCode?: string;
+    },
+    message: string,
+  ): void;
+  warn(
+    context: {
+      durationMs: number;
+      event: string;
       uploadId: string;
       status: "transcribed" | "processed" | "failed";
       failureCode?: string;
@@ -20,10 +32,6 @@ interface StartAudioProcessingWorkerOptions {
 
 export interface AudioProcessingWorker {
   stop(): Promise<void>;
-}
-
-function getErrorName(error: unknown): string {
-  return error instanceof Error ? error.name : "UnknownError";
 }
 
 export function startAudioProcessingWorker({
@@ -46,17 +54,28 @@ export function startAudioProcessingWorker({
 
   async function run(): Promise<void> {
     let didProcessUpload = false;
+    const startedAt = performance.now();
 
     try {
       const result = await processNext();
 
       if (result) {
         didProcessUpload = true;
-        logger.info(result, "Audio processing completed");
+        const context = {
+          ...result,
+          durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+          event: "audio.processing.completed",
+        };
+
+        if (result.status === "failed") {
+          logger.warn(context, "Audio processing failed");
+        } else {
+          logger.info(context, "Audio processing completed");
+        }
       }
     } catch (error) {
       logger.error(
-        { errorName: getErrorName(error) },
+        { err: error, event: "audio.worker.iteration.failed" },
         "Audio processing worker failed",
       );
     } finally {

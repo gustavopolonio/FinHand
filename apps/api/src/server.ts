@@ -6,6 +6,7 @@ import {
   getDocumentStorageEnvironment,
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
+import { createLoggerOptions } from "./logging/logger.js";
 import { createS3DocumentStorage } from "./storage/document-storage.js";
 
 const databaseConnection = createDatabase(environment.databaseUrl);
@@ -22,10 +23,11 @@ const application = buildApplication({
   corsOrigin: authenticationEnvironment.webUrl,
   databaseConnection,
   documentStorage,
-  logger: {
+  logger: createLoggerOptions({
+    environment: environment.nodeEnvironment,
     level: environment.logLevel,
-    redact: ["req.headers.authorization"],
-  },
+    service: "api",
+  }),
 });
 
 let isShuttingDown = false;
@@ -36,12 +38,22 @@ async function shutdown(signal: NodeJS.Signals) {
   }
 
   isShuttingDown = true;
-  application.log.info({ signal }, "Shutting down API");
+  application.log.info(
+    { event: "api.shutdown.started", signal },
+    "Shutting down API",
+  );
 
   try {
     await application.close();
+    application.log.info(
+      { event: "api.shutdown.completed", signal },
+      "API shut down cleanly",
+    );
   } catch (error) {
-    application.log.error(error, "Failed to shut down API cleanly");
+    application.log.error(
+      { err: error, event: "api.shutdown.failed", signal },
+      "Failed to shut down API cleanly",
+    );
     process.exitCode = 1;
   }
 }
@@ -54,8 +66,19 @@ try {
     host: environment.apiHost,
     port: environment.apiPort,
   });
+  application.log.info(
+    {
+      event: "api.started",
+      host: environment.apiHost,
+      port: environment.apiPort,
+    },
+    "API started",
+  );
 } catch (error) {
-  application.log.error(error, "Failed to start API");
+  application.log.error(
+    { err: error, event: "api.start.failed" },
+    "Failed to start API",
+  );
   await application.close();
   process.exitCode = 1;
 }

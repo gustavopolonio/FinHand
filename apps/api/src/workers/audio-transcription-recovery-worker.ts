@@ -1,8 +1,9 @@
 import type { AudioProcessingRecoveryResult } from "../services/audio-transcription-recovery.js";
 
 export interface AudioProcessingRecoveryWorkerLogger {
-  error(error: unknown, message: string): void;
-  info(context: AudioProcessingRecoveryResult, message: string): void;
+  debug(context: Record<string, unknown>, message: string): void;
+  error(context: { err: unknown; event: string }, message: string): void;
+  info(context: Record<string, unknown>, message: string): void;
 }
 
 interface StartAudioProcessingRecoveryWorkerOptions {
@@ -33,9 +34,21 @@ export function startAudioProcessingRecoveryWorker({
   async function runRecovery(): Promise<void> {
     try {
       const result = await recover();
-      logger.info(result, "Audio processing recovery completed");
+      const context = {
+        ...result,
+        event: "audio.processing.recovery.completed",
+      };
+
+      if (result.failedCount + result.requeuedCount === 0) {
+        logger.debug(context, "Audio processing recovery completed");
+      } else {
+        logger.info(context, "Audio processing recovery completed");
+      }
     } catch (error) {
-      logger.error(error, "Audio processing recovery failed");
+      logger.error(
+        { err: error, event: "audio.processing.recovery.failed" },
+        "Audio processing recovery failed",
+      );
     } finally {
       if (!isStopped) {
         timer = setTimeout(() => {
