@@ -107,6 +107,7 @@
   - [ ] Derive application and worker signals with cross-process correlation
   - [ ] Add safe AI latency, outcome, and usage observability
   - [ ] Configure actionable alarms, SNS notifications, and a production dashboard
+- [ ] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
 - [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [ ] Migrate existing private objects into the shared uploads bucket using opaque keys, update IAM and configuration, verify integrity, and retire the document-specific bucket paths
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
