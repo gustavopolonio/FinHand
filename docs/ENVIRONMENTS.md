@@ -218,7 +218,10 @@ Requirements:
 - never mount the Docker socket into application containers;
 - never bake secrets into images or commit them in the Compose file;
 - set CPU and memory limits so one process cannot trivially exhaust the host;
-- rotate local Docker logs even when logs are also forwarded to CloudWatch.
+- configure bounded logging for every container. Production services use the
+  non-blocking CloudWatch logging driver, while the Docker daemon retains a
+  rotated local default for administrative or one-off containers that do not
+  override it.
 
 The API and worker share an image but run different commands. They are isolated
 processes, but not separate failure domains because they share one host.
@@ -572,8 +575,10 @@ risk makes production-only validation insufficient.
   omitting the error message. Logger redaction provides a second boundary for
   credentials, OAuth data, cookies, request bodies, file names, financial
   values, document content, prompts, and transcripts.
-- Forward structured API and worker logs to CloudWatch Logs with a 30-day
-  retention period in the observability task.
+- CDK provisions a retained CloudWatch log group for each production Compose
+  service with a 30-day event-retention period. Docker sends output directly to
+  those groups in non-blocking mode, and the EC2 role can create streams and
+  publish events only inside the pre-created FinHand groups.
 - Keep sensitive financial data, document contents, transcripts, OAuth tokens,
   API keys, and database credentials out of logs.
 - Monitor instance status, CPU, memory, disk space, container health, PostgreSQL

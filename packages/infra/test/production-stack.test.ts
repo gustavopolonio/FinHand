@@ -217,6 +217,39 @@ describe("ProductionStack", () => {
     }
   });
 
+  it("creates retained container log groups with 30-day retention", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    const logGroupNames = [
+      "/finhand/production/proxy",
+      "/finhand/production/web",
+      "/finhand/production/api",
+      "/finhand/production/worker",
+      "/finhand/production/migrate",
+      "/finhand/production/postgres",
+    ];
+
+    template.resourceCountIs("AWS::Logs::LogGroup", logGroupNames.length);
+    for (const logGroupName of logGroupNames) {
+      template.hasResourceProperties("AWS::Logs::LogGroup", {
+        LogGroupName: logGroupName,
+        RetentionInDays: 30,
+      });
+    }
+
+    const logGroups = template.findResources("AWS::Logs::LogGroup");
+    for (const logGroup of Object.values(logGroups)) {
+      expect(logGroup).toMatchObject({
+        DeletionPolicy: "Retain",
+        UpdateReplacePolicy: "Retain",
+      });
+    }
+  });
+
   it("creates a least-privilege role for the production EC2 host", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -267,7 +300,7 @@ describe("ProductionStack", () => {
       Sid?: string;
     }>;
 
-    expect(statements).toHaveLength(6);
+    expect(statements).toHaveLength(7);
     expect(statements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -296,6 +329,16 @@ describe("ProductionStack", () => {
           Resource: {
             "Fn::GetAtt": [expect.stringMatching(/^ApiRepository/), "Arn"],
           },
+        }),
+        expect.objectContaining({
+          Action: ["logs:CreateLogStream", "logs:PutLogEvents"],
+          Effect: "Allow",
+          Resource: expect.arrayContaining([
+            expect.objectContaining({
+              "Fn::Join": expect.any(Array),
+            }),
+          ]),
+          Sid: "ContainerLogWrite",
         }),
         expect.objectContaining({
           Action: expect.arrayContaining([
@@ -355,6 +398,17 @@ describe("ProductionStack", () => {
     expect(runtimeParameterResources).toContain(
       ":parameter/finhand/production/*",
     );
+    const containerLogStatement = statements.find(
+      (statement) => statement.Sid === "ContainerLogWrite",
+    );
+    const containerLogResources = containerLogStatement?.Resource as unknown[];
+    expect(containerLogResources).toHaveLength(6);
+    for (const resource of containerLogResources) {
+      expect(resource).toEqual(
+        expect.objectContaining({ "Fn::Join": expect.any(Array) }),
+      );
+      expect(JSON.stringify(resource)).toContain('":*"');
+    }
   });
 
   it("creates a hardened ARM host with separate retained database storage", () => {

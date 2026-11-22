@@ -1,10 +1,11 @@
 name: finhand-production
 
-x-service-logging: &service-logging
-  driver: json-file
-  options:
-    max-file: "3"
-    max-size: 10m
+x-cloudwatch-log-options: &cloudwatch-log-options
+  awslogs-region: us-east-1
+  awslogs-create-group: "false"
+  mode: non-blocking
+  max-buffer-size: 4m
+  tag: "{{.Name}}-{{.ID}}"
 
 x-service-security: &service-security
   init: true
@@ -44,7 +45,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/proxy
     cpus: 0.25
     mem_limit: 128m
 
@@ -70,7 +75,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/web
     cpus: 0.75
     mem_limit: 384m
 
@@ -103,7 +112,11 @@ services:
       retries: 3
       start_period: 20s
     stop_grace_period: 30s
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/api
     cpus: 1.0
     mem_limit: 512m
 
@@ -132,7 +145,11 @@ services:
       retries: 3
       start_period: 20s
     stop_grace_period: 60s
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/worker
     cpus: 1.0
     mem_limit: 640m
 
@@ -151,7 +168,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/migrate
     cpus: 0.5
     mem_limit: 256m
 
@@ -175,7 +196,11 @@ services:
       retries: 10
       start_period: 30s
     stop_grace_period: 60s
-    logging: *service-logging
+    logging:
+      driver: awslogs
+      options:
+        <<: *cloudwatch-log-options
+        awslogs-group: /finhand/production/postgres
     cpus: 1.0
     mem_limit: 768m
 

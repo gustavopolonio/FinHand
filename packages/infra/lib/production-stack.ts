@@ -11,6 +11,7 @@ import {
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { existsSync, readFileSync } from "node:fs";
@@ -28,6 +29,14 @@ import {
 
 const PRODUCTION_REGION = "us-east-1";
 const PRODUCTION_AMI_ID = "ami-00b0d691a87846f99";
+const PRODUCTION_CONTAINER_LOG_GROUPS = [
+  { id: "ProxyLogGroup", name: "/finhand/production/proxy" },
+  { id: "WebLogGroup", name: "/finhand/production/web" },
+  { id: "ApiLogGroup", name: "/finhand/production/api" },
+  { id: "WorkerLogGroup", name: "/finhand/production/worker" },
+  { id: "MigrationLogGroup", name: "/finhand/production/migrate" },
+  { id: "PostgresLogGroup", name: "/finhand/production/postgres" },
+] as const;
 
 function readProductionDeploymentFile(fileName: string): string {
   const candidates = [
@@ -134,6 +143,14 @@ export class ProductionStack extends Stack {
       "ApiRepository",
       "finhand-prod-api-ecr",
     );
+    const containerLogGroups = PRODUCTION_CONTAINER_LOG_GROUPS.map(
+      ({ id, name }) =>
+        new logs.LogGroup(this, id, {
+          logGroupName: name,
+          removalPolicy: RemovalPolicy.RETAIN,
+          retention: logs.RetentionDays.ONE_MONTH,
+        }),
+    );
 
     const instanceRole = new iam.Role(this, "InstanceRole", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
@@ -148,6 +165,15 @@ export class ProductionStack extends Stack {
     });
     webRepository.grantPull(instanceRole);
     apiRepository.grantPull(instanceRole);
+    instanceRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ContainerLogWrite",
+        actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
+        resources: containerLogGroups.map(
+          (logGroup) => `${logGroup.logGroupArn}:*`,
+        ),
+      }),
+    );
     instanceRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "UploadObjectAccess",

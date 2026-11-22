@@ -101,7 +101,12 @@
 - [x] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
 - [x] Define and provision the cost-conscious AWS production environment on one EC2 host, including Docker Compose, secrets, OAuth, PostgreSQL, S3, OpenAI configuration, backups, and a least-privilege instance role; defer staging until operational risk justifies it
 - [x] Configure structured logging with request and job correlation IDs, safe error serialization, and sensitive-data redaction
-- [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts
+- [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts:
+  - [x] Define retained CloudWatch log groups, least-privilege log publishing, and production container log shipping
+  - [ ] Collect infrastructure and container-health metrics
+  - [ ] Derive application and worker signals with cross-process correlation
+  - [ ] Add safe AI latency, outcome, and usage observability
+  - [ ] Configure actionable alarms, SNS notifications, and a production dashboard
 - [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [ ] Migrate existing private objects into the shared uploads bucket using opaque keys, update IAM and configuration, verify integrity, and retire the document-specific bucket paths
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout

@@ -117,11 +117,39 @@ describe("production Compose deployment", () => {
       5,
     );
     expect(composeConfiguration.match(/healthcheck:/gu)).toHaveLength(5);
-    expect(composeConfiguration.match(/logging: \*service-logging/gu)).toHaveLength(
-      6,
-    );
+    expect(composeConfiguration.match(/driver: awslogs/gu)).toHaveLength(6);
     expect(composeConfiguration.match(/mem_limit:/gu)).toHaveLength(6);
     expect(composeConfiguration.match(/cpus:/gu)).toHaveLength(6);
+  });
+
+  it("ships each service log to its retained CloudWatch log group", () => {
+    expect(composeConfiguration).toContain(
+      "x-cloudwatch-log-options: &cloudwatch-log-options",
+    );
+    expect(composeConfiguration).toContain("awslogs-region: us-east-1");
+    expect(composeConfiguration).toContain('awslogs-create-group: "false"');
+    expect(composeConfiguration).toContain("mode: non-blocking");
+    expect(composeConfiguration).toContain("max-buffer-size: 4m");
+    expect(composeConfiguration).toContain('tag: "{{.Name}}-{{.ID}}"');
+    expect(composeConfiguration).not.toContain("driver: json-file");
+    expect(composeConfiguration).not.toContain("awslogs-stream-prefix");
+
+    for (const serviceName of [
+      "api",
+      "migrate",
+      "postgres",
+      "proxy",
+      "web",
+      "worker",
+    ]) {
+      const service = serviceConfiguration(serviceName);
+
+      expect(service).toContain("driver: awslogs");
+      expect(service).toContain("<<: *cloudwatch-log-options");
+      expect(service).toContain(
+        `awslogs-group: /finhand/production/${serviceName}`,
+      );
+    }
   });
 
   it("keeps application secrets outside version-controlled deployment files", () => {
