@@ -99,7 +99,7 @@
 ### Tasks
 - [x] Configure CI quality gates for backend and frontend tests, linting, type checking, production builds, and migration validation
 - [x] Add an isolated PostgreSQL integration-test database and cover worker lease expiry, recovery, `FOR UPDATE SKIP LOCKED`, and stale-lease rejection using concurrent connections
-- [ ] Define and provision the cost-conscious AWS production environment on one EC2 host, including Docker Compose, secrets, OAuth, PostgreSQL, S3, OpenAI configuration, backups, and a least-privilege instance role; defer staging until operational risk justifies it
+- [x] Define and provision the cost-conscious AWS production environment on one EC2 host, including Docker Compose, secrets, OAuth, PostgreSQL, S3, OpenAI configuration, backups, and a least-privilege instance role; defer staging until operational risk justifies it
 - [ ] Configure structured logging with request and job correlation IDs, safe error serialization, and sensitive-data redaction
 - [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts
 - [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
