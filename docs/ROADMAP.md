@@ -105,7 +105,7 @@
   - [x] Define retained CloudWatch log groups, least-privilege log publishing, and production container log shipping
   - [x] Collect infrastructure and container-health metrics
   - [x] Derive minimal unexpected API and worker failure signals from structured logs
-  - [ ] Add safe AI latency, outcome, and usage observability
+  - [x] Add a minimal safe AI provider-failure signal and use the production OpenAI project dashboard for usage and cost
   - [ ] Configure actionable alarms, SNS notifications, and a production dashboard
 - [ ] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
 - [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys

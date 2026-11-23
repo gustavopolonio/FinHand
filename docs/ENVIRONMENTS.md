@@ -581,6 +581,15 @@ risk makes production-only validation insufficient.
   recovery, and capture-cleanup exceptions. Expected user-document rejection,
   normal processing outcomes, latency, and success volume remain logs rather
   than V1 custom metrics.
+- `AiProviderFailureCount` is the only V1 AI-specific custom metric. It matches
+  safe worker `event`, `status`, and `failureCode` fields for OpenAI
+  authentication, network, rate-limit, service-availability, and timeout
+  failures. User-document validation outcomes do not increment it. Prompts,
+  documents, transcripts, extracted values, upload identifiers, and token data
+  are not part of the filter or metric.
+- Review token usage and cost in the restricted production OpenAI project
+  dashboard instead of duplicating detailed usage in CloudWatch. Whole-job
+  duration and outcomes remain available in redacted structured worker logs.
 - Error serialization retains the error type, safe code, and stack frames while
   omitting the error message. Logger redaction provides a second boundary for
   credentials, OAuth data, cookies, request bodies, file names, financial

@@ -41,6 +41,45 @@ const PRODUCTION_CONTAINER_LOG_GROUPS = [
 ] as const;
 const API_UNHANDLED_ERROR_METRIC_NAME = "ApiUnhandledErrorCount";
 const WORKER_UNEXPECTED_ERROR_METRIC_NAME = "WorkerUnexpectedErrorCount";
+const AI_PROVIDER_FAILURE_METRIC_NAME = "AiProviderFailureCount";
+const AI_PROVIDER_FAILURE_FILTERS = [
+  {
+    failureCodes: [
+      "ai_authentication_failed",
+      "ai_network_error",
+      "ai_rate_limited",
+      "ai_service_unavailable",
+      "ai_timeout",
+    ],
+    filterName: "finhand-prod-document-ai-provider-failures",
+    id: "DocumentAiProviderFailureMetricFilter",
+    processingEvent: "document.processing.completed",
+  },
+  {
+    failureCodes: [
+      "transcription_authentication_failed",
+      "transcription_network_error",
+      "transcription_rate_limited",
+      "transcription_service_unavailable",
+      "transcription_timeout",
+    ],
+    filterName: "finhand-prod-transcription-ai-provider-failures",
+    id: "TranscriptionAiProviderFailureMetricFilter",
+    processingEvent: "audio.processing.completed",
+  },
+  {
+    failureCodes: [
+      "audio_candidate_extraction_authentication_failed",
+      "audio_candidate_extraction_network_error",
+      "audio_candidate_extraction_rate_limited",
+      "audio_candidate_extraction_service_unavailable",
+      "audio_candidate_extraction_timeout",
+    ],
+    filterName: "finhand-prod-audio-extraction-ai-provider-failures",
+    id: "AudioExtractionAiProviderFailureMetricFilter",
+    processingEvent: "audio.processing.completed",
+  },
+] as const;
 const WORKER_UNEXPECTED_ERROR_EVENTS = [
   "audio.processing.recovery.failed",
   "audio.worker.iteration.failed",
@@ -203,6 +242,38 @@ export class ProductionStack extends Stack {
       metricValue: "1",
       unit: cloudwatch.Unit.COUNT,
     });
+    for (const {
+      failureCodes,
+      filterName,
+      id,
+      processingEvent,
+    } of AI_PROVIDER_FAILURE_FILTERS) {
+      new logs.MetricFilter(this, id, {
+        filterName,
+        filterPattern: logs.FilterPattern.all(
+          logs.FilterPattern.stringValue(
+            "$.event",
+            "=",
+            processingEvent,
+          ),
+          logs.FilterPattern.stringValue("$.status", "=", "failed"),
+          logs.FilterPattern.any(
+            ...failureCodes.map((failureCode) =>
+              logs.FilterPattern.stringValue(
+                "$.failureCode",
+                "=",
+                failureCode,
+              ),
+            ),
+          ),
+        ),
+        logGroup: workerLogGroup,
+        metricName: AI_PROVIDER_FAILURE_METRIC_NAME,
+        metricNamespace: FINHAND_METRICS_NAMESPACE,
+        metricValue: "1",
+        unit: cloudwatch.Unit.COUNT,
+      });
+    }
 
     const instanceRole = new iam.Role(this, "InstanceRole", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),

@@ -250,14 +250,13 @@ describe("ProductionStack", () => {
     }
   });
 
-  it("derives only critical API and worker failure metrics from structured logs", () => {
+  it("derives critical API and worker runtime failure metrics from structured logs", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
       env: productionEnvironment,
     });
 
     const template = Template.fromStack(stack);
-    template.resourceCountIs("AWS::Logs::MetricFilter", 2);
     template.hasResourceProperties("AWS::Logs::MetricFilter", {
       FilterName: "finhand-prod-api-unhandled-errors",
       FilterPattern: '{ $.event = "http.request.failed" }',
@@ -298,6 +297,81 @@ describe("ProductionStack", () => {
       expect(transformation).not.toHaveProperty("DefaultValue");
       expect(transformation).not.toHaveProperty("Dimensions");
     }
+  });
+
+  it("counts only technical AI provider failures from safe worker fields", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.resourceCountIs("AWS::Logs::MetricFilter", 5);
+    const metricFilters = template.findResources("AWS::Logs::MetricFilter");
+    const aiProviderFilters = Object.values(metricFilters).filter(
+      (metricFilter) =>
+        String(metricFilter.Properties.FilterName).includes(
+          "ai-provider-failures",
+        ),
+    );
+
+    expect(aiProviderFilters).toHaveLength(3);
+    for (const metricFilter of aiProviderFilters) {
+      expect(metricFilter.Properties.LogGroupName).toEqual({
+        Ref: expect.stringMatching(/^WorkerLogGroup/),
+      });
+      expect(metricFilter.Properties.MetricTransformations).toEqual([
+        {
+          MetricName: "AiProviderFailureCount",
+          MetricNamespace: "FinHand/Production",
+          MetricValue: "1",
+          Unit: "Count",
+        },
+      ]);
+    }
+
+    const filterPattern = aiProviderFilters
+      .map((metricFilter) => String(metricFilter.Properties.FilterPattern))
+      .join(" ");
+    for (const event of [
+      "audio.processing.completed",
+      "document.processing.completed",
+    ]) {
+      expect(filterPattern).toContain(`$.event = "${event}"`);
+    }
+    expect(filterPattern).toContain('$.status = "failed"');
+
+    for (const failureCode of [
+      "ai_authentication_failed",
+      "ai_network_error",
+      "ai_rate_limited",
+      "ai_service_unavailable",
+      "ai_timeout",
+      "audio_candidate_extraction_authentication_failed",
+      "audio_candidate_extraction_network_error",
+      "audio_candidate_extraction_rate_limited",
+      "audio_candidate_extraction_service_unavailable",
+      "audio_candidate_extraction_timeout",
+      "transcription_authentication_failed",
+      "transcription_network_error",
+      "transcription_rate_limited",
+      "transcription_service_unavailable",
+      "transcription_timeout",
+    ]) {
+      expect(filterPattern).toContain(`$.failureCode = "${failureCode}"`);
+    }
+
+    for (const expectedFailureCode of [
+      "no_transaction_candidates",
+      "no_usable_transaction_candidates",
+      "empty_audio_transcript",
+      "unsupported_document_type",
+    ]) {
+      expect(filterPattern).not.toContain(expectedFailureCode);
+    }
+    expect(filterPattern).not.toContain("uploadId");
+    expect(filterPattern).not.toContain("$.transcript");
+    expect(filterPattern).not.toContain("documentContent");
   });
 
   it("creates a least-privilege role for the production EC2 host", () => {
