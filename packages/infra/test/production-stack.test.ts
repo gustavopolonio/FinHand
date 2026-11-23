@@ -6,6 +6,10 @@ import {
   HOST_BOOTSTRAP_REVISION,
   HOST_BOOTSTRAP_SCRIPT,
 } from "../lib/host-bootstrap.js";
+import {
+  PRODUCTION_HOST_AMI_PARAMETER_NAME,
+  PRODUCTION_HOST_AMI_PARAMETER_VERSION,
+} from "../lib/production-ami.js";
 import { ProductionStack } from "../lib/production-stack.js";
 
 const productionEnvironment = {
@@ -555,7 +559,7 @@ describe("ProductionStack", () => {
     }
   });
 
-  it("creates a hardened ARM host with separate retained database storage", () => {
+  it("creates a hardened ARM host with a version-pinned AMI and separate retained database storage", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
       env: productionEnvironment,
@@ -577,7 +581,7 @@ describe("ProductionStack", () => {
         },
       ],
       InstanceType: "t4g.small",
-      ImageId: "ami-00b0d691a87846f99",
+      ImageId: `{{resolve:ssm:${PRODUCTION_HOST_AMI_PARAMETER_NAME}:${PRODUCTION_HOST_AMI_PARAMETER_VERSION}}}`,
       MetadataOptions: {
         HttpEndpoint: "enabled",
         HttpPutResponseHopLimit: 2,
@@ -594,6 +598,10 @@ describe("ProductionStack", () => {
     const [instance] = Object.values(instances);
     expect(instance.Properties).not.toHaveProperty("KeyName");
     expect(instance.Properties.Monitoring).not.toBe(true);
+    template.hasOutput("HostAmiSelection", {
+      Description: "Version-pinned Parameter Store selection for the host AMI",
+      Value: `${PRODUCTION_HOST_AMI_PARAMETER_NAME}:${PRODUCTION_HOST_AMI_PARAMETER_VERSION}`,
+    });
 
     template.resourceCountIs("AWS::IAM::InstanceProfile", 1);
     template.hasResourceProperties("AWS::IAM::InstanceProfile", {

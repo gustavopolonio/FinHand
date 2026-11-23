@@ -25,6 +25,10 @@ import {
 } from "./host-bootstrap.js";
 import { FINHAND_METRICS_NAMESPACE } from "./host-monitoring.js";
 import {
+  PRODUCTION_HOST_AMI_PARAMETER_NAME,
+  PRODUCTION_HOST_AMI_PARAMETER_VERSION,
+} from "./production-ami.js";
+import {
   createProductionObservability,
   PRODUCTION_ALERT_EMAIL_PARAMETER_NAME,
 } from "./production-observability.js";
@@ -34,7 +38,6 @@ import {
 } from "./runtime-configuration.js";
 
 const PRODUCTION_REGION = "us-east-1";
-const PRODUCTION_AMI_ID = "ami-00b0d691a87846f99";
 const PRODUCTION_CONTAINER_LOG_GROUPS = [
   { id: "ProxyLogGroup", name: "/finhand/production/proxy" },
   { id: "WebLogGroup", name: "/finhand/production/web" },
@@ -354,6 +357,11 @@ export class ProductionStack extends Stack {
       }),
     );
 
+    const productionHostAmiId = ssm.StringParameter.valueForStringParameter(
+      this,
+      PRODUCTION_HOST_AMI_PARAMETER_NAME,
+      PRODUCTION_HOST_AMI_PARAMETER_VERSION,
+    );
     const host = new ec2.Instance(this, "Host", {
       blockDevices: [
         {
@@ -373,13 +381,17 @@ export class ProductionStack extends Stack {
       instanceName: "finhand-prod-host",
       instanceType: new ec2.InstanceType("t4g.small"),
       machineImage: ec2.MachineImage.genericLinux({
-        [PRODUCTION_REGION]: PRODUCTION_AMI_ID,
+        [PRODUCTION_REGION]: productionHostAmiId,
       }),
       propagateTagsToVolumeOnCreation: true,
       role: instanceRole,
       securityGroup: hostSecurityGroup,
       vpc,
       vpcSubnets: { subnets: [vpc.publicSubnets[0]] },
+    });
+    new CfnOutput(this, "HostAmiSelection", {
+      description: "Version-pinned Parameter Store selection for the host AMI",
+      value: `${PRODUCTION_HOST_AMI_PARAMETER_NAME}:${PRODUCTION_HOST_AMI_PARAMETER_VERSION}`,
     });
     const alertEmail = ssm.StringParameter.valueForStringParameter(
       this,

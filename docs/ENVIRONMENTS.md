@@ -145,6 +145,49 @@ rotation, and a small encrypted swap file for brief memory spikes. Monitor
 memory before moving to a larger instance; swap must not be treated as normal
 application memory.
 
+### Controlled host AMI refresh
+
+The production host AMI is selected through the standard `String` parameter
+`/finhand/production/infrastructure/host-ami-id`. CDK pins an explicit version
+of this parameter in `packages/infra/lib/production-ami.ts`; it must never
+follow AWS's `ami-amazon-linux-latest` parameter directly. Consequently,
+publishing a new parameter version does not change the host until the pinned
+version is deliberately updated and deployed.
+
+Seed version 1 with the AMI already used by the production host:
+
+```bash
+aws ssm put-parameter \
+  --profile finhand-prod-admin \
+  --region us-east-1 \
+  --name /finhand/production/infrastructure/host-ami-id \
+  --description "Approved Amazon Linux 2023 ARM64 AMI for FinHand production" \
+  --type String \
+  --value ami-00b0d691a87846f99
+```
+
+Refreshing the host operating system is an intentional maintenance operation:
+
+1. Read AWS's current Amazon Linux 2023 ARM64 recommendation from
+   `/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64`.
+2. Verify that the candidate is owned by Amazon, is available in `us-east-1`,
+   uses the `arm64` architecture, and is compatible with the bootstrap and
+   production containers.
+3. Create a new version of the FinHand parameter with `put-parameter
+   --overwrite`; do not alter the pinned CDK version yet.
+4. Take and verify a current database backup, then increment
+   `PRODUCTION_HOST_AMI_PARAMETER_VERSION` to the new Parameter Store version.
+5. Run the infrastructure tests and `cdk diff`. An AMI change replaces the EC2
+   host, so perform the deployment in an announced maintenance window and
+   confirm that the retained database volume and Elastic IP reattach correctly.
+6. Re-run the host bootstrap, application deployment, health checks, OAuth,
+   upload, worker, metrics, and alarm verification before closing the change.
+
+Do not delete this parameter or publish enough revisions for a version still
+referenced by a deployed stack to age out of Parameter Store history. Rollback
+means restoring the previously pinned version and redeploying; the retained
+PostgreSQL volume remains the authoritative database storage.
+
 ### Host bootstrap
 
 Prepare the existing host with a version-controlled Systems Manager command
