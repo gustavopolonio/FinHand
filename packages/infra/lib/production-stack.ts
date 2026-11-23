@@ -25,6 +25,10 @@ import {
 } from "./host-bootstrap.js";
 import { FINHAND_METRICS_NAMESPACE } from "./host-monitoring.js";
 import {
+  createProductionObservability,
+  PRODUCTION_ALERT_EMAIL_PARAMETER_NAME,
+} from "./production-observability.js";
+import {
   createRuntimeConfigurationDocumentContent,
   runtimeParameterRoot,
 } from "./runtime-configuration.js";
@@ -377,6 +381,14 @@ export class ProductionStack extends Stack {
       vpc,
       vpcSubnets: { subnets: [vpc.publicSubnets[0]] },
     });
+    const alertEmail = ssm.StringParameter.valueForStringParameter(
+      this,
+      PRODUCTION_ALERT_EMAIL_PARAMETER_NAME,
+    );
+    const productionObservability = createProductionObservability(this, {
+      alertEmail,
+      hostInstanceId: host.instanceId,
+    });
 
     const databaseVolume = new ec2.Volume(this, "DatabaseVolume", {
       availabilityZone: vpc.publicSubnets[0].availabilityZone,
@@ -532,6 +544,16 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "HostInstanceId", {
       description: "Production EC2 host instance ID",
       value: host.instanceId,
+    });
+
+    new CfnOutput(this, "ProductionAlertTopicArn", {
+      description: "SNS topic that receives production alarm notifications",
+      value: productionObservability.alertTopic.topicArn,
+    });
+
+    new CfnOutput(this, "ProductionDashboardName", {
+      description: "CloudWatch dashboard for production health and failures",
+      value: productionObservability.dashboard.dashboardName,
     });
 
     new CfnOutput(this, "HostPublicIp", {

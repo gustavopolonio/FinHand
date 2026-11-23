@@ -265,9 +265,9 @@ created on the host with mode `0600`; they are never committed or copied into
 container images. The API and worker image values must use the same immutable
 Git commit SHA tag that passed CI.
 
-The `finhand-prod-render-runtime-config` Systems Manager document retrieves the
-following exact Parameter Store contract under `/finhand/production`. Standard
-`String` and `SecureString` parameters avoid a recurring Secrets Manager or
+The application runtime renderer and CloudFormation stack use the following
+exact Parameter Store contract under `/finhand/production`. Standard `String`
+and `SecureString` parameters avoid a recurring Secrets Manager or
 customer-managed KMS-key charge for this V1 environment.
 
 | Relative parameter name | Type | Consumer or purpose |
@@ -286,6 +286,7 @@ customer-managed KMS-key charge for this V1 environment.
 | `application/google-client-secret` | `SecureString` | Production Google OAuth client secret |
 | `application/openai-api-key` | `SecureString` | Restricted production OpenAI project key |
 | `application/openai-document-model` | `String` | Approved document and fallback audio extraction model |
+| `monitoring/alert-email` | `String` | CloudFormation-resolved SNS alarm recipient; not written to application runtime files |
 
 Create every parameter before invoking the renderer. Use standard-tier
 parameters and the default `alias/aws/ssm` key for `SecureString` values; do
@@ -611,10 +612,25 @@ risk makes production-only validation insufficient.
   namespace is `FinHand/Production`. Metric collection never reads application
   environment files or includes credentials, document contents, or financial
   values.
+- One `finhand-production-alerts` SNS topic sends alarm-state notifications to
+  the email resolved from `/finhand/production/monitoring/alert-email`. The
+  recipient must confirm the AWS subscription email before notifications are
+  delivered; the address is not committed to the repository.
+- V1 alarms cover EC2 status, missing or sustained high memory/disk metrics,
+  missing or unhealthy containers, unexpected API/worker failures, and three
+  technical AI provider failures within 15 minutes. Resource and container
+  alarms require consecutive bad datapoints to avoid transient notifications;
+  log-derived metrics treat missing data as non-breaching.
+- The `finhand-production` CloudWatch dashboard shows alarm state, CPU, memory,
+  root and PostgreSQL disk usage, container health, and critical application
+  failure counts. Alarm messages and dashboard metrics contain no document,
+  transcript, credential, or financial content.
 - Keep sensitive financial data, document contents, transcripts, OAuth tokens,
   API keys, and database credentials out of logs.
-- Monitor instance status, CPU, memory, disk space, container health, PostgreSQL
-  health, worker queue age, failed processing, and backup freshness.
+- Monitor instance status, CPU, memory, disk space, container health, unexpected
+  application failures, and repeated technical AI provider failures. Queue-age
+  and backup-freshness signals are deferred until usage and backup automation
+  justify their V1 operational cost.
 - Alert before disk exhaustion and before the host remains unhealthy long enough
   to interrupt worker leases.
 - Enable automatic operating-system security updates where safe and define a

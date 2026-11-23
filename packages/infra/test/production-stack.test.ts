@@ -902,6 +902,14 @@ describe("ProductionStack", () => {
       Description: "Production EC2 host instance ID",
       Value: Match.anyValue(),
     });
+    template.hasOutput("ProductionAlertTopicArn", {
+      Description: "SNS topic that receives production alarm notifications",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("ProductionDashboardName", {
+      Description: "CloudWatch dashboard for production health and failures",
+      Value: Match.anyValue(),
+    });
     template.hasOutput("HostPublicIp", {
       Description: "Stable public IPv4 address for the production EC2 host",
       Value: Match.anyValue(),
