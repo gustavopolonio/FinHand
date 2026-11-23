@@ -250,6 +250,56 @@ describe("ProductionStack", () => {
     }
   });
 
+  it("derives only critical API and worker failure metrics from structured logs", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.resourceCountIs("AWS::Logs::MetricFilter", 2);
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterName: "finhand-prod-api-unhandled-errors",
+      FilterPattern: '{ $.event = "http.request.failed" }',
+      LogGroupName: { Ref: Match.stringLikeRegexp("^ApiLogGroup") },
+      MetricTransformations: [
+        {
+          MetricName: "ApiUnhandledErrorCount",
+          MetricNamespace: "FinHand/Production",
+          MetricValue: "1",
+          Unit: "Count",
+        },
+      ],
+    });
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterName: "finhand-prod-worker-unexpected-errors",
+      FilterPattern:
+        '{ ($.event = "audio.processing.recovery.failed") || ' +
+        '($.event = "audio.worker.iteration.failed") || ' +
+        '($.event = "document.capture.cleanup.failed") || ' +
+        '($.event = "document.processing.recovery.failed") || ' +
+        '($.event = "document.worker.iteration.failed") }',
+      LogGroupName: { Ref: Match.stringLikeRegexp("^WorkerLogGroup") },
+      MetricTransformations: [
+        {
+          MetricName: "WorkerUnexpectedErrorCount",
+          MetricNamespace: "FinHand/Production",
+          MetricValue: "1",
+          Unit: "Count",
+        },
+      ],
+    });
+
+    const metricFilters = template.findResources("AWS::Logs::MetricFilter");
+    for (const metricFilter of Object.values(metricFilters)) {
+      const [transformation] = metricFilter.Properties
+        .MetricTransformations as Array<Record<string, unknown>>;
+
+      expect(transformation).not.toHaveProperty("DefaultValue");
+      expect(transformation).not.toHaveProperty("Dimensions");
+    }
+  });
+
   it("creates a least-privilege role for the production EC2 host", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {

@@ -9,6 +9,7 @@ import {
   type StackProps,
 } from "aws-cdk-lib";
 import * as ecr from "aws-cdk-lib/aws-ecr";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -37,6 +38,15 @@ const PRODUCTION_CONTAINER_LOG_GROUPS = [
   { id: "WorkerLogGroup", name: "/finhand/production/worker" },
   { id: "MigrationLogGroup", name: "/finhand/production/migrate" },
   { id: "PostgresLogGroup", name: "/finhand/production/postgres" },
+] as const;
+const API_UNHANDLED_ERROR_METRIC_NAME = "ApiUnhandledErrorCount";
+const WORKER_UNEXPECTED_ERROR_METRIC_NAME = "WorkerUnexpectedErrorCount";
+const WORKER_UNEXPECTED_ERROR_EVENTS = [
+  "audio.processing.recovery.failed",
+  "audio.worker.iteration.failed",
+  "document.capture.cleanup.failed",
+  "document.processing.recovery.failed",
+  "document.worker.iteration.failed",
 ] as const;
 
 function readProductionDeploymentFile(fileName: string): string {
@@ -144,14 +154,55 @@ export class ProductionStack extends Stack {
       "ApiRepository",
       "finhand-prod-api-ecr",
     );
-    const containerLogGroups = PRODUCTION_CONTAINER_LOG_GROUPS.map(
-      ({ id, name }) =>
+    const containerLogGroupsByName = new Map<string, logs.LogGroup>();
+    for (const { id, name } of PRODUCTION_CONTAINER_LOG_GROUPS) {
+      containerLogGroupsByName.set(
+        name,
         new logs.LogGroup(this, id, {
           logGroupName: name,
           removalPolicy: RemovalPolicy.RETAIN,
           retention: logs.RetentionDays.ONE_MONTH,
         }),
+      );
+    }
+    const containerLogGroups = Array.from(containerLogGroupsByName.values());
+    const apiLogGroup = containerLogGroupsByName.get(
+      "/finhand/production/api",
     );
+    const workerLogGroup = containerLogGroupsByName.get(
+      "/finhand/production/worker",
+    );
+
+    if (!apiLogGroup || !workerLogGroup) {
+      throw new Error("Required production application log groups are missing.");
+    }
+
+    new logs.MetricFilter(this, "ApiUnhandledErrorMetricFilter", {
+      filterName: "finhand-prod-api-unhandled-errors",
+      filterPattern: logs.FilterPattern.stringValue(
+        "$.event",
+        "=",
+        "http.request.failed",
+      ),
+      logGroup: apiLogGroup,
+      metricName: API_UNHANDLED_ERROR_METRIC_NAME,
+      metricNamespace: FINHAND_METRICS_NAMESPACE,
+      metricValue: "1",
+      unit: cloudwatch.Unit.COUNT,
+    });
+    new logs.MetricFilter(this, "WorkerUnexpectedErrorMetricFilter", {
+      filterName: "finhand-prod-worker-unexpected-errors",
+      filterPattern: logs.FilterPattern.any(
+        ...WORKER_UNEXPECTED_ERROR_EVENTS.map((event) =>
+          logs.FilterPattern.stringValue("$.event", "=", event),
+        ),
+      ),
+      logGroup: workerLogGroup,
+      metricName: WORKER_UNEXPECTED_ERROR_METRIC_NAME,
+      metricNamespace: FINHAND_METRICS_NAMESPACE,
+      metricValue: "1",
+      unit: cloudwatch.Unit.COUNT,
+    });
 
     const instanceRole = new iam.Role(this, "InstanceRole", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),

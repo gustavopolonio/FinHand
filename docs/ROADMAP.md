@@ -104,7 +104,7 @@
 - [ ] Implement application, worker, infrastructure, and AI observability with actionable alerts:
   - [x] Define retained CloudWatch log groups, least-privilege log publishing, and production container log shipping
   - [x] Collect infrastructure and container-health metrics
-  - [ ] Derive application and worker signals with cross-process correlation
+  - [x] Derive minimal unexpected API and worker failure signals from structured logs
   - [ ] Add safe AI latency, outcome, and usage observability
   - [ ] Configure actionable alarms, SNS notifications, and a production dashboard
 - [ ] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade

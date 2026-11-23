@@ -575,6 +575,12 @@ risk makes production-only validation insufficient.
 - Worker records use the upload ID as the job correlation ID. Successful and
   failed processing, lease recovery, cleanup, startup, and shutdown use stable
   event names; idle polling is emitted only at `debug` level.
+- Two deliberately narrow CloudWatch metric filters convert only unexpected
+  application failures into custom metrics. `ApiUnhandledErrorCount` matches
+  unhandled API errors, while `WorkerUnexpectedErrorCount` matches worker-loop,
+  recovery, and capture-cleanup exceptions. Expected user-document rejection,
+  normal processing outcomes, latency, and success volume remain logs rather
+  than V1 custom metrics.
 - Error serialization retains the error type, safe code, and stack frames while
   omitting the error message. Logger redaction provides a second boundary for
   credentials, OAuth data, cookies, request bodies, file names, financial
