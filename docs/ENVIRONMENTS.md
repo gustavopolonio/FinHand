@@ -155,6 +155,8 @@ the bootstrap definition changes.
 The bootstrap must be safe to run repeatedly and must:
 
 - install and enable the Amazon Linux 2023 Docker package;
+- install and configure the CloudWatch Agent to publish one-minute memory and
+  filesystem metrics;
 - install a pinned ARM64 Docker Compose CLI plugin only after verifying its
   SHA-256 checksum;
 - configure bounded local Docker logs without discarding unrelated daemon
@@ -170,7 +172,9 @@ The bootstrap must be safe to run repeatedly and must:
 - create root-owned deployment directories under `/opt/finhand`, with runtime
   configuration inaccessible to ordinary users;
 - create a 1 GiB swap file on the encrypted root disk with mode `0600` and low
-  swappiness for brief memory spikes.
+  swappiness for brief memory spikes;
+- install a persistent systemd timer that reports the aggregate health of the
+  five long-running production containers once per minute.
 
 CloudFormation waits for the association to report success. The association is
 also marked non-compliant when a later application of the desired host state
@@ -579,6 +583,19 @@ risk makes production-only validation insufficient.
   service with a 30-day event-retention period. Docker sends output directly to
   those groups in non-blocking mode, and the EC2 role can create streams and
   publish events only inside the pre-created FinHand groups.
+- The host publishes custom metrics only to the `FinHand/Production` namespace.
+  The CloudWatch Agent reports `mem_used_percent` plus `disk_used_percent` for
+  `/` and `/srv/finhand/postgres` every 60 seconds, while standard EC2 metrics
+  continue to provide CPU, network, and instance-status data without enabling
+  paid detailed monitoring.
+- A host-level systemd timer evaluates the Compose health checks for Caddy,
+  Next.js, Fastify, the asynchronous worker, and PostgreSQL. It publishes
+  `HealthyContainerCount` and `UnhealthyOrMissingContainerCount` every minute;
+  the one-off migration container is deliberately excluded.
+- The instance role may call `cloudwatch:PutMetricData` only when the target
+  namespace is `FinHand/Production`. Metric collection never reads application
+  environment files or includes credentials, document contents, or financial
+  values.
 - Keep sensitive financial data, document contents, transcripts, OAuth tokens,
   API keys, and database credentials out of logs.
 - Monitor instance status, CPU, memory, disk space, container health, PostgreSQL

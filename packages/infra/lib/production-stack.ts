@@ -22,6 +22,7 @@ import {
   createHostBootstrapDocumentContent,
   HOST_BOOTSTRAP_REVISION,
 } from "./host-bootstrap.js";
+import { FINHAND_METRICS_NAMESPACE } from "./host-monitoring.js";
 import {
   createRuntimeConfigurationDocumentContent,
   runtimeParameterRoot,
@@ -172,6 +173,18 @@ export class ProductionStack extends Stack {
         resources: containerLogGroups.map(
           (logGroup) => `${logGroup.logGroupArn}:*`,
         ),
+      }),
+    );
+    instanceRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ProductionMetricWrite",
+        actions: ["cloudwatch:PutMetricData"],
+        conditions: {
+          StringEquals: {
+            "cloudwatch:namespace": FINHAND_METRICS_NAMESPACE,
+          },
+        },
+        resources: ["*"],
       }),
     );
     instanceRole.addToPolicy(

@@ -296,11 +296,12 @@ describe("ProductionStack", () => {
     const [policy] = Object.values(policies);
     const statements = policy.Properties.PolicyDocument.Statement as Array<{
       Action: string | string[];
+      Condition?: unknown;
       Resource: unknown;
       Sid?: string;
     }>;
 
-    expect(statements).toHaveLength(7);
+    expect(statements).toHaveLength(8);
     expect(statements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -339,6 +340,17 @@ describe("ProductionStack", () => {
             }),
           ]),
           Sid: "ContainerLogWrite",
+        }),
+        expect.objectContaining({
+          Action: "cloudwatch:PutMetricData",
+          Condition: {
+            StringEquals: {
+              "cloudwatch:namespace": "FinHand/Production",
+            },
+          },
+          Effect: "Allow",
+          Resource: "*",
+          Sid: "ProductionMetricWrite",
         }),
         expect.objectContaining({
           Action: expect.arrayContaining([
@@ -385,6 +397,14 @@ describe("ProductionStack", () => {
       statements.filter((statement) => statement.Resource === "*"),
     ).toEqual([
       expect.objectContaining({ Action: "ecr:GetAuthorizationToken" }),
+      expect.objectContaining({
+        Action: "cloudwatch:PutMetricData",
+        Condition: {
+          StringEquals: {
+            "cloudwatch:namespace": "FinHand/Production",
+          },
+        },
+      }),
     ]);
     const runtimeParameterStatement = statements.find(
       (statement) => statement.Sid === "RuntimeParameterRead",
@@ -647,10 +667,19 @@ describe("ProductionStack", () => {
     expect(HOST_BOOTSTRAP_SCRIPT).not.toContain("mkfs.ext4 -F");
   });
 
+  it("uses only declared Systems Manager placeholders in the host script", () => {
+    const placeholders = Array.from(
+      HOST_BOOTSTRAP_SCRIPT.matchAll(/\{\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}\}/g),
+      (match) => match[1],
+    );
+
+    expect(placeholders).toEqual(["DatabaseVolumeId", "BootstrapRevision"]);
+  });
+
   it("pins and verifies Compose and configures bounded host resources", () => {
     expect(HOST_BOOTSTRAP_REVISION).toMatch(/^[0-9a-f]{16}$/);
     expect(HOST_BOOTSTRAP_SCRIPT).toContain(
-      "dnf install -y docker e2fsprogs jq",
+      "dnf install -y amazon-cloudwatch-agent docker e2fsprogs jq",
     );
     expect(HOST_BOOTSTRAP_SCRIPT).not.toContain("dnf install -y curl");
     expect(HOST_BOOTSTRAP_SCRIPT).toContain('COMPOSE_VERSION="v5.7.1"');
@@ -669,6 +698,16 @@ describe("ProductionStack", () => {
     );
     expect(HOST_BOOTSTRAP_SCRIPT).toContain(
       "install -d -o root -g root -m 0700 /opt/finhand/config",
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      "-a fetch-config \\\n    -m ec2 \\\n    -s \\\n    -c \"file:$config_path\"",
+    );
+    expect(HOST_BOOTSTRAP_SCRIPT).not.toContain("--action fetch-config");
+    expect(HOST_BOOTSTRAP_SCRIPT).toContain(
+      'systemctl enable --now "finhand-container-health.timer"',
     );
   });
 
