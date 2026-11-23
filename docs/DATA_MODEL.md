@@ -225,7 +225,7 @@ through a QR capture session enter the same document-processing pipeline.
 | `user_id` | `uuid` | No | Owning user |
 | `kind` | `text` | No | `document` or `audio`; Milestone 3 creates documents only |
 | `source` | `text` | No | `direct` or `qr_capture` |
-| `s3_object_key` | `text` | No | Unique private S3 object key |
+| `s3_object_key` | `text` | No | Unique private S3 object key; new uploads use a type prefix and an independent random storage ID |
 | `original_file_name` | `text` | No | Original client filename, treated as untrusted metadata |
 | `mime_type` | `text` | No | Validated media type |
 | `byte_size` | `bigint` | No | Positive object size in bytes |
@@ -264,6 +264,13 @@ stored. File contents remain in private S3 storage; database and application
 logs must not contain document or audio bytes or public object URLs. Documents
 and audio recordings may share the existing private bucket because ownership is
 enforced through application data and storage keys, not the bucket name.
+
+New objects use opaque keys shaped as `documents/<random-storage-id>` or
+`audio/<random-storage-id>`. The random storage ID is independent of both the
+owning user ID and the upload row ID. Ownership and kind remain authoritative in
+PostgreSQL; application code must use the stored `s3_object_key` without deriving
+or parsing it. Existing user-prefixed keys remain readable until the separate
+storage-migration task moves them.
 
 During candidate review, the authenticated API may issue a five-minute S3
 presigned `GET` URL after verifying the upload belongs to the requesting user.

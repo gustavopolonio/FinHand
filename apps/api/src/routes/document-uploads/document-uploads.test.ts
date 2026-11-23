@@ -270,7 +270,7 @@ describe("POST /api/uploads/documents", () => {
         userId,
         source: "direct",
         s3ObjectKey: expect.stringMatching(
-          new RegExp(`^${userId}/documents/[0-9a-f-]+$`),
+          /^documents\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
         ),
       }),
     );

@@ -171,10 +171,16 @@ describe("uploadDocumentForUser", () => {
     expect(Buffer.concat(storageFixture.storedContent)).toEqual(
       fixture.content,
     );
+    const objectKey = storageFixture.storeDocument.mock.calls[0]?.[0].objectKey;
+    expect(objectKey).toMatch(
+      /^documents\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(objectKey).not.toContain(userId);
+    expect(objectKey).not.toContain(result.id);
     expect(storageFixture.storeDocument).toHaveBeenCalledWith({
       body: expect.any(Readable),
       contentType: fixture.mimeType,
-      objectKey: `${userId}/documents/${result.id}`,
+      objectKey,
     });
     expect(databaseFixture.insert).toHaveBeenCalledWith(uploads);
     expect(databaseFixture.values).toHaveBeenCalledWith({
@@ -182,7 +188,7 @@ describe("uploadDocumentForUser", () => {
       userId,
       kind: "document",
       source: "direct",
-      s3ObjectKey: `${userId}/documents/${result.id}`,
+      s3ObjectKey: objectKey,
       originalFileName: fixture.fileName,
       mimeType: fixture.mimeType,
       byteSize: BigInt(fixture.content.length),

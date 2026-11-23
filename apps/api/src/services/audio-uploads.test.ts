@@ -162,10 +162,17 @@ describe("uploadAudioRecordingForUser", () => {
         content,
         normalizedMimeType,
       );
+      const objectKey =
+        storageFixture.storeDocument.mock.calls[0]?.[0].objectKey;
+      expect(objectKey).toMatch(
+        /^audio\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(objectKey).not.toContain(userId);
+      expect(objectKey).not.toContain(result.id);
       expect(storageFixture.storeDocument).toHaveBeenCalledWith({
         body: expect.any(Readable),
         contentType: normalizedMimeType,
-        objectKey: `${userId}/audio/${result.id}`,
+        objectKey,
       });
       expect(Buffer.concat(storageFixture.storedContent)).toEqual(content);
       expect(databaseFixture.insert).toHaveBeenCalledWith(uploads);
@@ -174,7 +181,7 @@ describe("uploadAudioRecordingForUser", () => {
         userId,
         kind: "audio",
         source: "direct",
-        s3ObjectKey: `${userId}/audio/${result.id}`,
+        s3ObjectKey: objectKey,
         originalFileName: fileName,
         mimeType: normalizedMimeType,
         byteSize: BigInt(content.length),

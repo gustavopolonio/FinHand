@@ -108,7 +108,7 @@
   - [x] Add a minimal safe AI provider-failure signal and use the production OpenAI project dashboard for usage and cost
   - [x] Configure actionable alarms, SNS email notifications, and a compact production dashboard
 - [x] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
-- [ ] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
+- [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [ ] Migrate existing private objects into the shared uploads bucket using opaque keys, update IAM and configuration, verify integrity, and retire the document-specific bucket paths
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
 - [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets

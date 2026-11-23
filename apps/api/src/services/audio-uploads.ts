@@ -11,6 +11,7 @@ import {
   PayloadTooLargeError,
 } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
+import { createUploadObjectKey } from "../storage/upload-object-key.js";
 
 export const maximumAudioRecordingBytes = 5 * 1024 * 1024;
 export const maximumAudioRecordingSeconds = 30;
@@ -226,7 +227,7 @@ async function validateAndStoreAudioRecording({
   }
 
   const id = randomUUID();
-  const objectKey = `${userId}/audio/${id}`;
+  const objectKey = createUploadObjectKey("audio");
   const checksumSha256 = createHash("sha256").update(content).digest("hex");
 
   try {

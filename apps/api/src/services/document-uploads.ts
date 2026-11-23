@@ -12,6 +12,7 @@ import {
   PayloadTooLargeError,
 } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
+import { createUploadObjectKey } from "../storage/upload-object-key.js";
 
 export const maximumDocumentUploadBytes = 10 * 1024 * 1024; // 10 MiB
 
@@ -229,7 +230,7 @@ export async function storeValidatedDocument({
   const mimeType = normalizeMimeType(declaredMimeType);
   const originalFileName = normalizeFileName(fileName);
   const id = randomUUID();
-  const objectKey = `${userId}/documents/${id}`;
+  const objectKey = createUploadObjectKey("document");
   const validatedDocument = createValidatedDocumentStream(source, mimeType);
 
   try {

@@ -413,7 +413,10 @@ Requirements:
 - object access granted only through the scoped EC2 instance role;
 - CORS omitted unless a future direct-browser upload flow requires it;
 - no development or test objects;
-- opaque object keys after the storage-namespace migration task;
+- opaque `documents/<random-storage-id>` and `audio/<random-storage-id>` keys
+  for new objects, without user IDs or upload-row IDs;
+- backward-compatible reads of existing user-prefixed keys until the separate
+  storage-migration task moves them;
 - retention and deletion rules added only after the retention task defines
   their safe behavior.
 
