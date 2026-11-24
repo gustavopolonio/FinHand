@@ -110,7 +110,6 @@
 - [x] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
 - [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [x] Provision a correctly named shared development uploads bucket, update development IAM and configuration, discard disposable pre-V1 upload data without migration, and retire the document-specific bucket; retain the existing production uploads bucket
-- [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
 - [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets
 - [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
@@ -124,7 +123,7 @@
 - Every change passes automated quality gates before deployment.
 - Production uses dedicated credentials and least-privilege access that are isolated from local development and CI.
 - Logs, traces, metrics, and alerts diagnose API, worker, database, storage, and AI failures without exposing financial data or credentials.
-- Upload storage uses the shared bucket and opaque object keys, and retention cleanup cannot delete active user data.
+- Upload storage uses the shared bucket and opaque object keys.
 - Database migrations, backups, restores, worker deployment, and application rollback have verified procedures.
 - Security, accessibility, and representative load checks have no unresolved release-blocking findings.
 - The production deployment passes non-destructive end-to-end smoke tests for authentication, financial CRUD, document processing, QR capture, and voice input.
@@ -133,6 +132,10 @@
 
 Backlog items are intentionally excluded from the V1 release scope and are not
 required to complete Production Readiness.
+
+### Storage Lifecycle
+
+- [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects without deleting active user data
 
 ### RAG Financial Assistant
 
