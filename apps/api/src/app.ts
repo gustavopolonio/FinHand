@@ -77,6 +77,10 @@ export function buildApplication({
   registerAuthenticationGuard(application, authentication);
   application.addHook("onRequest", async (request, reply) => {
     reply.header("x-request-id", request.id);
+
+    if (request.url === "/api" || request.url.startsWith("/api/")) {
+      reply.header("Cache-Control", "private, no-store");
+    }
   });
   application.addHook("onResponse", async (request, reply) => {
     const context = {

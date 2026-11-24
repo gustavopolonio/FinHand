@@ -3,7 +3,21 @@
 	admin 127.0.0.1:2019
 }
 
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Content-Security-Policy "frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=()"
+		-Server
+		-X-Powered-By
+	}
+}
+
 {$WEB_DOMAIN} {
+	import security_headers
 	encode zstd gzip
 
 	handle /api/* {
@@ -16,6 +30,7 @@
 }
 
 {$API_DOMAIN} {
+	import security_headers
 	encode zstd gzip
 	reverse_proxy api:3001
 }

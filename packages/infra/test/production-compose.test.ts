@@ -72,6 +72,34 @@ describe("production Compose deployment", () => {
     );
   });
 
+  it("applies a shared browser security policy to both public origins", () => {
+    expect(caddyConfiguration.match(/import security_headers/gu)).toHaveLength(
+      2,
+    );
+    expect(caddyConfiguration).toContain(
+      'Strict-Transport-Security "max-age=31536000"',
+    );
+    expect(caddyConfiguration).not.toContain("includeSubDomains");
+    expect(caddyConfiguration).not.toContain("preload");
+    expect(caddyConfiguration).toContain(
+      'Content-Security-Policy "frame-ancestors \'none\'"',
+    );
+    expect(caddyConfiguration).toContain('X-Frame-Options "DENY"');
+    expect(caddyConfiguration).toContain(
+      'X-Content-Type-Options "nosniff"',
+    );
+    expect(caddyConfiguration).toContain(
+      'Referrer-Policy "strict-origin-when-cross-origin"',
+    );
+    expect(caddyConfiguration).toContain(
+      'Permissions-Policy "camera=(self), microphone=(self), geolocation=()"',
+    );
+    expect(caddyConfiguration).toContain("-Server");
+    expect(caddyConfiguration).toContain("-X-Powered-By");
+    expect(caddyConfiguration).not.toContain("script-src");
+    expect(caddyConfiguration).not.toContain("Cross-Origin-Embedder-Policy");
+  });
+
   it("runs migrations as an explicit one-off database-only service", () => {
     const migrationConfiguration = serviceConfiguration("migrate");
 

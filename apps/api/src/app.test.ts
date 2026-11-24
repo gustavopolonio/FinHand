@@ -297,6 +297,31 @@ describe("buildApplication", () => {
     await application.close();
   });
 
+  it("prevents normal API responses from being stored", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    const apiResponse = await application.inject({
+      method: "GET",
+      url: "/api/me",
+    });
+    const healthResponse = await application.inject({
+      method: "GET",
+      url: "/health",
+    });
+
+    expect(apiResponse.headers["cache-control"]).toBe("private, no-store");
+    expect(healthResponse.headers["cache-control"]).toBeUndefined();
+    await application.close();
+  });
+
   it("logs safe request completion data without the raw URL or query", async () => {
     const { authentication, databaseConnection, documentStorage } =
       createDependencies();
