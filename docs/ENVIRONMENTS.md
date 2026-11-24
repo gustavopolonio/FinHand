@@ -169,6 +169,32 @@ retains its specialized `private, no-cache, no-transform` streaming policy, and
 versioned Next.js assets remain cacheable because the API policy is not applied
 globally at the edge.
 
+### Request constraints
+
+Caddy rejects request headers larger than 16 KiB and applies a 12 MB absolute
+request-body ceiling before proxying API traffic. Fastify then limits ordinary
+JSON and other buffered request bodies to 64 KiB, request URLs to 4,096
+characters, and individual route parameters to 100 characters. These values
+comfortably fit current OAuth callbacks, session cookies, filters, and JSON
+commands without permitting unbounded parser input.
+
+Fastify allows 120 seconds to receive a complete request and closes an inactive
+connection after 60 seconds. The 25-second SSE heartbeat keeps legitimate event
+streams active, while document and audio processing remains asynchronous after
+the original upload request completes.
+
+Multipart bodies use the plugin's streaming parser rather than the global JSON
+limit. Document and capture uploads accept one file of at most 10 MiB; audio
+accepts one recording of at most 5 MiB. Every upload accepts zero additional
+fields and one total multipart part. The service layer independently counts
+bytes and checks parser truncation, while Caddy bounds the complete multipart
+envelope.
+
+Unsupported upload content types return HTTP 415. Oversized JSON, document, and
+audio inputs return HTTP 413 with stable `REQUEST_BODY_TOO_LARGE`,
+`DOCUMENT_TOO_LARGE`, and `AUDIO_TOO_LARGE` codes respectively. Oversized URLs
+return HTTP 414 without reflecting their contents or sensitive request data.
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to

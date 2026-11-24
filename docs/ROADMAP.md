@@ -114,7 +114,7 @@
 - [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection:
   - [x] Define the production proxy trust boundary and endpoint security policy; enforce exact-origin CORS and origin validation without breaking OAuth, capture links, or SSE
   - [x] Add production security headers at the public edge while preserving Google OAuth, camera capture, microphone recording, document previews, and SSE
-  - [ ] Enforce route-appropriate body, multipart, content-type, header, and timeout limits with consistent safe errors
+  - [x] Enforce route-appropriate body, multipart, content-type, header, and timeout limits with consistent safe errors
   - [ ] Add tiered IP and authenticated-user rate limits, upload/job quotas, capture-token protection, and per-user SSE connection caps
   - [ ] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
