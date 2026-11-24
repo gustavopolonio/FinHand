@@ -269,8 +269,9 @@ New objects use opaque keys shaped as `documents/<random-storage-id>` or
 `audio/<random-storage-id>`. The random storage ID is independent of both the
 owning user ID and the upload row ID. Ownership and kind remain authoritative in
 PostgreSQL; application code must use the stored `s3_object_key` without deriving
-or parsing it. Existing user-prefixed keys remain readable until the separate
-storage-migration task moves them.
+or parsing it. Existing user-prefixed objects contain disposable pre-V1 data and
+will not be migrated. They remain readable only until their database records and
+objects are deliberately discarded during the development storage cutover.
 
 During candidate review, the authenticated API may issue a five-minute S3
 presigned `GET` URL after verifying the upload belongs to the requesting user.

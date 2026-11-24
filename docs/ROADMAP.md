@@ -109,7 +109,7 @@
   - [x] Configure actionable alarms, SNS email notifications, and a compact production dashboard
 - [x] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
 - [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
-- [ ] Migrate existing private objects into the shared uploads bucket using opaque keys, update IAM and configuration, verify integrity, and retire the document-specific bucket paths
+- [x] Provision a correctly named shared development uploads bucket, update development IAM and configuration, discard disposable pre-V1 upload data without migration, and retire the document-specific bucket; retain the existing production uploads bucket
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects against the final storage layout
 - [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets
 - [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection

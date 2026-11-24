@@ -415,8 +415,9 @@ Requirements:
 - no development or test objects;
 - opaque `documents/<random-storage-id>` and `audio/<random-storage-id>` keys
   for new objects, without user IDs or upload-row IDs;
-- backward-compatible reads of existing user-prefixed keys until the separate
-  storage-migration task moves them;
+- no migration of disposable pre-V1 user-prefixed objects; development cuts
+  over to a correctly named shared uploads bucket, while production keeps its
+  existing shared uploads bucket;
 - retention and deletion rules added only after the retention task defines
   their safe behavior.
 
