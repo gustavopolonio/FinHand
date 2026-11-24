@@ -416,9 +416,12 @@ describe("POST /api/document-capture-session/document", () => {
       payload: { document: "not-a-file" },
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(415);
     expect(response.json()).toEqual({
-      error: "Document upload must use multipart/form-data.",
+      statusCode: 415,
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      error: "Unsupported Media Type",
+      message: "Document upload must use multipart/form-data.",
     });
   });
 });

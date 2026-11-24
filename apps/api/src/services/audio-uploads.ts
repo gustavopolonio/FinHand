@@ -153,6 +153,7 @@ async function readAudioContent(
     if (byteSize > maximumAudioRecordingBytes) {
       throw new PayloadTooLargeError(
         "Audio recording must be at most 5 MB.",
+        "AUDIO_TOO_LARGE",
       );
     }
 
@@ -160,7 +161,10 @@ async function readAudioContent(
   }
 
   if (wasTruncated()) {
-    throw new PayloadTooLargeError("Audio recording must be at most 5 MB.");
+    throw new PayloadTooLargeError(
+      "Audio recording must be at most 5 MB.",
+      "AUDIO_TOO_LARGE",
+    );
   }
 
   if (byteSize === 0) {

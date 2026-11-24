@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Authentication } from "../../auth/authentication.js";
 import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
 import type { Database } from "../../db/index.js";
+import { PayloadTooLargeError } from "../../errors/application-errors.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
@@ -197,9 +198,12 @@ describe("POST /api/uploads/audio", () => {
       payload: { recording: "not audio" },
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(415);
     expect(response.json()).toEqual({
-      error: "Audio recording upload must use multipart/form-data.",
+      statusCode: 415,
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      error: "Unsupported Media Type",
+      message: "Audio recording upload must use multipart/form-data.",
     });
   });
 
@@ -271,5 +275,29 @@ describe("POST /api/uploads/audio", () => {
         wasTruncated: expect.any(Function),
       }),
     );
+  });
+
+  it("returns an audio-specific code for an oversized recording", async () => {
+    const { application } = createApplication(userId);
+    serviceMocks.uploadAudioRecordingForUser.mockRejectedValueOnce(
+      new PayloadTooLargeError(
+        "Audio recording must be at most 5 MB.",
+        "AUDIO_TOO_LARGE",
+      ),
+    );
+    const multipart = createMultipartPayload();
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/uploads/audio",
+      headers: { "content-type": multipart.contentType },
+      payload: multipart.payload,
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      code: "AUDIO_TOO_LARGE",
+      message: "Audio recording must be at most 5 MB.",
+    });
   });
 });

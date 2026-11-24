@@ -2,7 +2,10 @@ import fastifyMultipart from "@fastify/multipart";
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
-import { InputError } from "../../errors/application-errors.js";
+import {
+  InputError,
+  UnsupportedMediaTypeError,
+} from "../../errors/application-errors.js";
 import { getAudioPreviewForUser } from "../../services/document-previews.js";
 import {
   maximumAudioRecordingBytes,
@@ -20,6 +23,7 @@ export async function audioUploadRoutes(
   { documentStorage }: AudioUploadRoutesOptions,
 ) {
   await application.register(fastifyMultipart, {
+    throwFileSizeLimit: false,
     limits: {
       fields: 0,
       fileSize: maximumAudioRecordingBytes,
@@ -48,7 +52,7 @@ export async function audioUploadRoutes(
 
   application.post("/api/uploads/audio", async (request, reply) => {
     if (!request.isMultipart()) {
-      throw new InputError(
+      throw new UnsupportedMediaTypeError(
         "Audio recording upload must use multipart/form-data.",
       );
     }

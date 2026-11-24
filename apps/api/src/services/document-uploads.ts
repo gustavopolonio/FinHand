@@ -123,7 +123,10 @@ function createValidatedDocumentStream(
     byteSize += chunk.length;
 
     if (byteSize > maximumDocumentUploadBytes) {
-      throw new PayloadTooLargeError("Document must be at most 10 MB.");
+      throw new PayloadTooLargeError(
+        "Document must be at most 10 MB.",
+        "DOCUMENT_TOO_LARGE",
+      );
     }
 
     hash.update(chunk);
@@ -241,7 +244,10 @@ export async function storeValidatedDocument({
     });
 
     if (wasTruncated()) {
-      throw new PayloadTooLargeError("Document must be at most 10 MB.");
+      throw new PayloadTooLargeError(
+        "Document must be at most 10 MB.",
+        "DOCUMENT_TOO_LARGE",
+      );
     }
 
     const { byteSize, checksumSha256 } = validatedDocument.result();

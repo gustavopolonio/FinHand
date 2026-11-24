@@ -3,9 +3,15 @@ export class InputError extends Error {
 }
 
 export class PayloadTooLargeError extends Error {
-  readonly code = "DOCUMENT_TOO_LARGE";
   override readonly name = "PayloadTooLargeError";
   readonly statusCode = 413;
+
+  constructor(
+    message: string,
+    readonly code: "AUDIO_TOO_LARGE" | "DOCUMENT_TOO_LARGE",
+  ) {
+    super(message);
+  }
 }
 
 export class ConflictError extends Error {
@@ -38,4 +44,20 @@ export class OriginNotAllowedError extends Error {
   constructor() {
     super("Request origin is not allowed.");
   }
+}
+
+export class RequestUriTooLongError extends Error {
+  readonly code = "REQUEST_URI_TOO_LONG";
+  override readonly name = "RequestUriTooLongError";
+  readonly statusCode = 414;
+
+  constructor() {
+    super("Request URL is too long.");
+  }
+}
+
+export class UnsupportedMediaTypeError extends Error {
+  readonly code = "UNSUPPORTED_MEDIA_TYPE";
+  override readonly name = "UnsupportedMediaTypeError";
+  readonly statusCode = 415;
 }

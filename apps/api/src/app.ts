@@ -27,6 +27,10 @@ import {
   UserEventHub,
 } from "./realtime/user-events.js";
 import { registerRequestOriginGuard } from "./security/request-origin.js";
+import {
+  enforceRequestUrlLimit,
+  requestLimits,
+} from "./security/request-limits.js";
 import type { DocumentStorage } from "./storage/document-storage.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
@@ -58,6 +62,8 @@ export function buildApplication({
   userEventListener = createNoopUserEventListener(),
 }: BuildApplicationOptions) {
   const application = Fastify({
+    bodyLimit: requestLimits.bodyBytes,
+    connectionTimeout: requestLimits.connectionTimeoutMilliseconds,
     genReqId: () => randomUUID(),
     logger,
     logController: new LogController({
@@ -65,6 +71,10 @@ export function buildApplication({
       requestIdLogLabel: "requestId",
     }),
     requestIdHeader: false,
+    requestTimeout: requestLimits.requestTimeoutMilliseconds,
+    routerOptions: {
+      maxParamLength: requestLimits.maximumParameterCharacters,
+    },
     trustProxy:
       trustProxyHops === 0
         ? false
@@ -77,6 +87,7 @@ export function buildApplication({
   registerAuthenticationGuard(application, authentication);
   application.addHook("onRequest", async (request, reply) => {
     reply.header("x-request-id", request.id);
+    enforceRequestUrlLimit(request.url);
 
     if (request.url === "/api" || request.url.startsWith("/api/")) {
       reply.header("Cache-Control", "private, no-store");

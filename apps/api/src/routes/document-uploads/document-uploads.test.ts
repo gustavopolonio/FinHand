@@ -195,9 +195,12 @@ describe("POST /api/uploads/documents", () => {
       payload: { document: "not a file" },
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(415);
     expect(response.json()).toEqual({
-      error: "Document upload must use multipart/form-data.",
+      statusCode: 415,
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      error: "Unsupported Media Type",
+      message: "Document upload must use multipart/form-data.",
     });
   });
 
@@ -323,6 +326,10 @@ describe("POST /api/uploads/documents", () => {
     });
 
     expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      code: "DOCUMENT_TOO_LARGE",
+      message: "Document must be at most 10 MB.",
+    });
     expect(insert).not.toHaveBeenCalled();
     expect(storageFixture.storage.deleteDocument).toHaveBeenCalledOnce();
   });

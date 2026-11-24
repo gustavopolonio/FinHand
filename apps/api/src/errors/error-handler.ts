@@ -14,6 +14,15 @@ interface ClientHttpError extends Error {
   statusCode: number;
 }
 
+function hasErrorCode(error: unknown): error is { code: string } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  );
+}
+
 function isClientHttpError(error: unknown): error is ClientHttpError {
   return (
     error instanceof Error &&
@@ -28,6 +37,24 @@ export function registerApplicationErrorHandler(
   application: FastifyInstance,
 ) {
   application.setErrorHandler((error, request, reply) => {
+    if (hasErrorCode(error) && error.code === "FST_ERR_CTP_BODY_TOO_LARGE") {
+      return reply.status(413).send({
+        statusCode: 413,
+        code: "REQUEST_BODY_TOO_LARGE",
+        error: "Payload Too Large",
+        message: "Request body is too large.",
+      });
+    }
+
+    if (hasErrorCode(error) && error.code === "FST_ERR_CTP_INVALID_MEDIA_TYPE") {
+      return reply.status(415).send({
+        statusCode: 415,
+        code: "UNSUPPORTED_MEDIA_TYPE",
+        error: "Unsupported Media Type",
+        message: "Request content type is not supported.",
+      });
+    }
+
     if (error instanceof InputError) {
       return reply.status(400).send({ error: error.message });
     }

@@ -2,7 +2,10 @@ import fastifyMultipart from "@fastify/multipart";
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyInstance } from "fastify";
 
-import { InputError } from "../../errors/application-errors.js";
+import {
+  InputError,
+  UnsupportedMediaTypeError,
+} from "../../errors/application-errors.js";
 import {
   cancelDocumentCaptureSession,
   captureTokenFromAuthorization,
@@ -37,6 +40,7 @@ export async function documentCaptureSessionRoutes(
   }: DocumentCaptureSessionRoutesOptions,
 ) {
   await application.register(fastifyMultipart, {
+    throwFileSizeLimit: false,
     limits: {
       fields: 0,
       fileSize: maximumDocumentUploadBytes,
@@ -136,7 +140,7 @@ export async function documentCaptureSessionRoutes(
       );
 
       if (!request.isMultipart()) {
-        throw new InputError(
+        throw new UnsupportedMediaTypeError(
           "Document upload must use multipart/form-data.",
         );
       }

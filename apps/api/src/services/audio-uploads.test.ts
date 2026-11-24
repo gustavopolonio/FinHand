@@ -234,13 +234,19 @@ describe("uploadAudioRecordingForUser", () => {
     const oversized = Buffer.alloc(maximumAudioRecordingBytes + 1);
     recordingContent("audio/webm").copy(oversized);
     await expect(upload({ content: oversized })).rejects.toEqual(
-      new PayloadTooLargeError("Audio recording must be at most 5 MB."),
+      new PayloadTooLargeError(
+        "Audio recording must be at most 5 MB.",
+        "AUDIO_TOO_LARGE",
+      ),
     );
 
     await expect(
       upload({ wasTruncated: () => true }),
     ).rejects.toEqual(
-      new PayloadTooLargeError("Audio recording must be at most 5 MB."),
+      new PayloadTooLargeError(
+        "Audio recording must be at most 5 MB.",
+        "AUDIO_TOO_LARGE",
+      ),
     );
   });
 

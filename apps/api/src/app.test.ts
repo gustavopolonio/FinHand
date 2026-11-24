@@ -7,6 +7,7 @@ import type { Authentication } from "./auth/authentication.js";
 import type { DatabaseConnection } from "./db/index.js";
 import { createLoggerOptions } from "./logging/logger.js";
 import type { UserEventListener } from "./realtime/user-events.js";
+import { requestLimits } from "./security/request-limits.js";
 import { createTestDocumentStorage } from "./test/document-storage.js";
 
 function createDependencies() {
@@ -56,6 +57,96 @@ describe("buildApplication", () => {
 
     expect(end).toHaveBeenCalledOnce();
     expect(documentStorage.close).toHaveBeenCalledOnce();
+  });
+
+  it("configures bounded request parsing and connection time", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    expect(application.initialConfig).toMatchObject({
+      bodyLimit: requestLimits.bodyBytes,
+      connectionTimeout: requestLimits.connectionTimeoutMilliseconds,
+      requestTimeout: requestLimits.requestTimeoutMilliseconds,
+      routerOptions: {
+        maxParamLength: requestLimits.maximumParameterCharacters,
+      },
+    });
+    await application.close();
+  });
+
+  it("accepts JSON at the body limit and rejects larger JSON safely", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+    application.post("/api/test-json-limit", async () => ({ accepted: true }));
+    const exactBody = `"${"a".repeat(requestLimits.bodyBytes - 2)}"`;
+    const oversizedBody = `${exactBody} `;
+
+    const acceptedResponse = await application.inject({
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      payload: exactBody,
+      url: "/api/test-json-limit",
+    });
+    const rejectedResponse = await application.inject({
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      payload: oversizedBody,
+      url: "/api/test-json-limit",
+    });
+
+    expect(Buffer.byteLength(exactBody)).toBe(requestLimits.bodyBytes);
+    expect(acceptedResponse.statusCode).toBe(200);
+    expect(rejectedResponse.statusCode).toBe(413);
+    expect(rejectedResponse.json()).toEqual({
+      statusCode: 413,
+      code: "REQUEST_BODY_TOO_LARGE",
+      error: "Payload Too Large",
+      message: "Request body is too large.",
+    });
+    await application.close();
+  });
+
+  it("rejects an oversized request URL with a stable error", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+    application.get("/api/test-url-limit", async () => ({ accepted: true }));
+    const prefix = "/api/test-url-limit?value=";
+    const oversizedUrl = `${prefix}${"a".repeat(
+      requestLimits.maximumUrlCharacters - prefix.length + 1,
+    )}`;
+
+    const response = await application.inject({
+      method: "GET",
+      url: oversizedUrl,
+    });
+
+    expect(response.statusCode).toBe(414);
+    expect(response.json()).toMatchObject({
+      code: "REQUEST_URI_TOO_LONG",
+      message: "Request URL is too long.",
+    });
+    await application.close();
   });
 
   it("starts and closes the realtime database listener with the application", async () => {

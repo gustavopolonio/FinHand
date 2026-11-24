@@ -284,7 +284,10 @@ describe("uploadDocumentForUser", () => {
         storage: storageFixture.storage,
       }),
     ).rejects.toThrow(
-      new PayloadTooLargeError("Document must be at most 10 MB."),
+      new PayloadTooLargeError(
+        "Document must be at most 10 MB.",
+        "DOCUMENT_TOO_LARGE",
+      ),
     );
     expect(databaseFixture.insert).not.toHaveBeenCalled();
     expect(storageFixture.deleteDocument).toHaveBeenCalledOnce();
@@ -322,7 +325,10 @@ describe("uploadDocumentForUser", () => {
         wasTruncated: () => true,
       }),
     ).rejects.toThrow(
-      new PayloadTooLargeError("Document must be at most 10 MB."),
+      new PayloadTooLargeError(
+        "Document must be at most 10 MB.",
+        "DOCUMENT_TOO_LARGE",
+      ),
     );
     expect(databaseFixture.insert).not.toHaveBeenCalled();
     expect(storageFixture.deleteDocument).toHaveBeenCalledOnce();
