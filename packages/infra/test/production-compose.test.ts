@@ -65,11 +65,19 @@ describe("production Compose deployment", () => {
     expect(webSiteStart).toBeGreaterThanOrEqual(0);
     expect(apiSiteStart).toBeGreaterThan(webSiteStart);
     expect(webSiteConfiguration).toContain(
-      "handle /api/* {\n\t\treverse_proxy api:3001\n\t}",
+      "handle /api/* {\n\t\timport api_request_limits\n\t\treverse_proxy api:3001\n\t}",
     );
     expect(webSiteConfiguration).toContain(
       "handle {\n\t\treverse_proxy web:3000\n\t}",
     );
+  });
+
+  it("rejects unreasonable headers and request bodies at the public edge", () => {
+    expect(caddyConfiguration).toContain("max_header_size 16KB");
+    expect(
+      caddyConfiguration.match(/import api_request_limits/gu),
+    ).toHaveLength(2);
+    expect(caddyConfiguration).toContain("max_size 12MB");
   });
 
   it("applies a shared browser security policy to both public origins", () => {

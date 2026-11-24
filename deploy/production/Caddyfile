@@ -1,6 +1,9 @@
 {
 	email {$ACME_EMAIL}
 	admin 127.0.0.1:2019
+	servers {
+		max_header_size 16KB
+	}
 }
 
 (security_headers) {
@@ -16,11 +19,18 @@
 	}
 }
 
+(api_request_limits) {
+	request_body {
+		max_size 12MB
+	}
+}
+
 {$WEB_DOMAIN} {
 	import security_headers
 	encode zstd gzip
 
 	handle /api/* {
+		import api_request_limits
 		reverse_proxy api:3001
 	}
 
@@ -31,6 +41,7 @@
 
 {$API_DOMAIN} {
 	import security_headers
+	import api_request_limits
 	encode zstd gzip
 	reverse_proxy api:3001
 }
