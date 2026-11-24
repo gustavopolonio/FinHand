@@ -28,7 +28,6 @@ interface DocumentReviewRowsProps {
 
 type DocumentReviewsListProps = DocumentReviewRowsProps;
 
-const pollingIntervalMilliseconds = 2_000;
 const expandedPreferenceKey = "finhand:pending-documents-expanded";
 
 function isProcessing(review: DocumentReview): boolean {
@@ -39,7 +38,9 @@ function isProcessing(review: DocumentReview): boolean {
   );
 }
 
-export function shouldPollDocumentReviews(reviews: DocumentReview[]): boolean {
+export function hasProcessingDocumentReviews(
+  reviews: DocumentReview[],
+): boolean {
   return reviews.some(isProcessing);
 }
 
@@ -207,7 +208,7 @@ export function DocumentReviewsList({
           type="button"
         >
           <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive">
-            {shouldPollDocumentReviews(reviews) ? (
+            {hasProcessingDocumentReviews(reviews) ? (
               <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
             ) : (
               <FileCheck2 aria-hidden="true" className="size-4" />
@@ -273,24 +274,6 @@ export function DocumentReviewsSection({
   useEffect(() => {
     let active = true;
     let isReading = false;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    function clearScheduledPoll() {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-        timeoutId = undefined;
-      }
-    }
-
-    function schedulePoll() {
-      clearScheduledPoll();
-      if (document.visibilityState === "visible") {
-        timeoutId = setTimeout(
-          () => void readReviews(),
-          pollingIntervalMilliseconds,
-        );
-      }
-    }
 
     async function readReviews() {
       if (!active || isReading || document.visibilityState !== "visible") {
@@ -319,15 +302,9 @@ export function DocumentReviewsSection({
           void onMissingReview(missingReview.uploadId);
         }
       }
-
-      if (nextReviews === null || shouldPollDocumentReviews(nextReviews)) {
-        schedulePoll();
-      }
     }
 
     function handleVisibilityChange() {
-      clearScheduledPoll();
-
       if (document.visibilityState === "visible") {
         void readReviews();
       }
@@ -338,7 +315,6 @@ export function DocumentReviewsSection({
 
     return () => {
       active = false;
-      clearScheduledPoll();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [onLoad, onMissingReview, refreshKey]);

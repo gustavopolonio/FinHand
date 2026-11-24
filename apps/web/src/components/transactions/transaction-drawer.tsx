@@ -77,6 +77,7 @@ interface TransactionDrawerProps {
     candidateId: string,
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
+  realtimeRefreshKey?: number;
   transaction: Transaction | null;
 }
 
@@ -102,6 +103,7 @@ export function TransactionDrawer({
   onUploadAudio,
   onUploadDocument,
   onUpdateCandidate,
+  realtimeRefreshKey = 0,
   transaction,
 }: TransactionDrawerProps) {
   const [creationMode, setCreationMode] =
@@ -194,6 +196,7 @@ export function TransactionDrawer({
           onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
+          refreshKey={realtimeRefreshKey}
         />
       ) : !transaction && creationMode === "camera" ? (
         <ReceiptCameraForm
@@ -208,6 +211,7 @@ export function TransactionDrawer({
           onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
           onUpload={onUploadDocument}
+          refreshKey={realtimeRefreshKey}
         />
       ) : !transaction && creationMode === "qr" ? (
         <QrCaptureForm
@@ -224,6 +228,7 @@ export function TransactionDrawer({
           onGetReview={onGetCandidateReview}
           onRejectCandidate={onRejectCandidate}
           onUpdateCandidate={onUpdateCandidate}
+          refreshKey={realtimeRefreshKey}
         />
       ) : !transaction && creationMode === "voice" ? (
         <VoiceRecordingForm
@@ -238,6 +243,7 @@ export function TransactionDrawer({
           onRejectCandidate={onRejectCandidate}
           onUpload={onUploadAudio}
           onUpdateCandidate={onUpdateCandidate}
+          refreshKey={realtimeRefreshKey}
           uploadError={error}
         />
       ) : (

@@ -27,10 +27,7 @@ import type {
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
-import {
-  shouldContinueCaptureSessionPolling,
-  startCaptureSessionPolling,
-} from "./capture-session-polling";
+import { isCaptureSessionProcessing } from "./capture-session-status";
 import { TransactionCandidateReviewPanel } from "./transaction-candidate-review";
 
 interface QrCaptureFormProps {
@@ -59,6 +56,7 @@ interface QrCaptureFormProps {
     candidateId: string,
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
+  refreshKey?: number;
 }
 
 interface ActiveCaptureSession extends DocumentCaptureSession {
@@ -120,6 +118,7 @@ export function QrCaptureForm({
   onGetReview,
   onRejectCandidate,
   onUpdateCandidate,
+  refreshKey = 0,
 }: QrCaptureFormProps) {
   const [session, setSession] = useState<ActiveCaptureSession | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -147,9 +146,10 @@ export function QrCaptureForm({
   useEffect(() => {
     if (!sessionId) return;
 
-    const polling = startCaptureSessionPolling({
-      readProgress: () => onGetProgress(sessionId),
-      onProgress(progress) {
+    let active = true;
+
+    void onGetProgress(sessionId).then((progress) => {
+      if (active && progress) {
         onClearError();
         setSession((currentSession) =>
           currentSession?.id === sessionId
@@ -160,11 +160,13 @@ export function QrCaptureForm({
         if (progress.status !== "pending") {
           sessionRef.current = null;
         }
-      },
+      }
     });
 
-    return polling.stop;
-  }, [onClearError, onGetProgress, sessionId]);
+    return () => {
+      active = false;
+    };
+  }, [onClearError, onGetProgress, refreshKey, sessionId]);
 
   useEffect(
     () => () => {
@@ -224,6 +226,7 @@ export function QrCaptureForm({
         onReject={onRejectCandidate}
         onUpdate={onUpdateCandidate}
         panelId="transaction-qr-panel"
+        refreshKey={refreshKey}
         tabId="transaction-qr-tab"
         uploadId={progress.upload.id}
       />
@@ -258,7 +261,7 @@ export function QrCaptureForm({
             <p className="mt-2 max-w-sm text-sm leading-6 text-finhand-muted">
               {progressMessage.description}
             </p>
-            {shouldContinueCaptureSessionPolling(progress) ? (
+            {isCaptureSessionProcessing(progress) ? (
               <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-finhand-accent-border bg-finhand-accent-soft px-3 py-1 text-xs font-semibold text-finhand-interactive">
                 <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
                 Checking status

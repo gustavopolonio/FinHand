@@ -41,6 +41,7 @@ interface DocumentUploadFormProps {
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
   onUpload: (file: File) => Promise<DocumentUpload | null>;
+  refreshKey?: number;
 }
 
 export function DocumentUploadForm({
@@ -55,6 +56,7 @@ export function DocumentUploadForm({
   onRejectCandidate,
   onUpdateCandidate,
   onUpload,
+  refreshKey = 0,
 }: DocumentUploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -91,6 +93,7 @@ export function DocumentUploadForm({
         }}
         onUpdate={onUpdateCandidate}
         panelId="transaction-document-panel"
+        refreshKey={refreshKey}
         tabId="transaction-document-tab"
         uploadId={uploadedDocument.id}
       />

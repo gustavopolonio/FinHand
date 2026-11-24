@@ -43,6 +43,7 @@ import {
   updateTransactionCandidate,
   type UpdateTransactionCandidateInput,
 } from "@/lib/api";
+import { startUserEventStream } from "@/lib/user-events";
 
 import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
@@ -92,6 +93,7 @@ export function TransactionsPanel() {
   const [reviewTarget, setReviewTarget] = useState<DocumentReview | null>(null);
   const [documentReviewRefreshKey, setDocumentReviewRefreshKey] = useState(0);
   const [documentIssueRefreshKey, setDocumentIssueRefreshKey] = useState(0);
+  const [realtimeRefreshKey, setRealtimeRefreshKey] = useState(0);
   const [documentFailureNotices, setDocumentFailureNotices] = useState<
     DocumentFailureNotice[]
   >([]);
@@ -132,6 +134,20 @@ export function TransactionsPanel() {
     [router],
   );
   const clearError = useCallback(() => setError(null), []);
+
+  useEffect(() => {
+    const refreshRealtimeViews = () => {
+      setDocumentReviewRefreshKey((key) => key + 1);
+      setDocumentIssueRefreshKey((key) => key + 1);
+      setRealtimeRefreshKey((key) => key + 1);
+    };
+    const stream = startUserEventStream({
+      onEvent: refreshRealtimeViews,
+      onOpen: refreshRealtimeViews,
+    });
+
+    return stream.close;
+  }, []);
 
   const loadReferences = useCallback(async () => {
     try {
@@ -681,6 +697,7 @@ export function TransactionsPanel() {
           }
           isUploadingAudio={isUploadingAudio}
           isUploadingDocument={isUploadingDocument}
+          realtimeRefreshKey={realtimeRefreshKey}
           initialCreationMode={
             editor.kind === "create" ? editor.initialMode : undefined
           }
@@ -739,6 +756,7 @@ export function TransactionsPanel() {
             onReject={rejectCandidate}
             onUpdate={saveCandidate}
             panelId="pending-document-review-panel"
+            refreshKey={realtimeRefreshKey}
             uploadId={reviewTarget.uploadId}
           />
         </WorkspaceModal>

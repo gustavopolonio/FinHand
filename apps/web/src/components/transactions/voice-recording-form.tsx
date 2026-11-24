@@ -65,6 +65,7 @@ interface VoiceRecordingFormProps {
     candidateId: string,
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
+  refreshKey?: number;
   uploadError: string | null;
 }
 
@@ -97,6 +98,7 @@ export function VoiceRecordingForm({
   onRecordingChange,
   onUpload,
   onUpdateCandidate,
+  refreshKey = 0,
   uploadError,
 }: VoiceRecordingFormProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
@@ -529,6 +531,7 @@ export function VoiceRecordingForm({
         }}
         onUpdate={onUpdateCandidate}
         panelId="transaction-voice-panel"
+        refreshKey={refreshKey}
         tabId="transaction-voice-tab"
         uploadId={uploadedAudio.id}
       />

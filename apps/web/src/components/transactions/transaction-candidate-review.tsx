@@ -46,21 +46,9 @@ interface TransactionCandidateReviewPanelProps {
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
   panelId: string;
+  refreshKey?: number;
   tabId?: string;
   uploadId: string;
-}
-
-const pollingIntervalMilliseconds = 2_000;
-
-export function shouldPollCandidateReview(
-  review: TransactionCandidateReview | null,
-): boolean {
-  return (
-    review === null ||
-    review.upload.status === "pending" ||
-    review.upload.status === "uploaded" ||
-    review.upload.status === "processing"
-  );
 }
 
 export function TransactionCandidateReviewPanel({
@@ -74,6 +62,7 @@ export function TransactionCandidateReviewPanel({
   onReset,
   onUpdate,
   panelId,
+  refreshKey = 0,
   tabId,
   uploadId,
 }: TransactionCandidateReviewPanelProps) {
@@ -82,37 +71,19 @@ export function TransactionCandidateReviewPanel({
 
   useEffect(() => {
     let active = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     async function readReview() {
       const nextReview = await onGetReview(uploadId);
       if (!active) return;
-
-      if (!nextReview) {
-        timeoutId = setTimeout(
-          () => void readReview(),
-          pollingIntervalMilliseconds,
-        );
-        return;
-      }
-
-      setReview(nextReview);
-
-      if (shouldPollCandidateReview(nextReview)) {
-        timeoutId = setTimeout(
-          () => void readReview(),
-          pollingIntervalMilliseconds,
-        );
-      }
+      if (nextReview) setReview(nextReview);
     }
 
     void readReview();
 
     return () => {
       active = false;
-      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [onGetReview, uploadId]);
+  }, [onGetReview, refreshKey, uploadId]);
 
   const candidate = review?.candidates[activeIndex];
 

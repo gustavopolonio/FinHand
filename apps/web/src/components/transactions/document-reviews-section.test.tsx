@@ -6,7 +6,7 @@ import type { DocumentReview } from "@/lib/api";
 import {
   DocumentReviewRows,
   DocumentReviewsList,
-  shouldPollDocumentReviews,
+  hasProcessingDocumentReviews,
 } from "./document-reviews-section";
 
 function review(
@@ -34,8 +34,8 @@ describe("document reviews section", () => {
     [[review("processed")], false],
     [[review("failed")], false],
     [[], false],
-  ])("decides whether the list should poll", (reviews, expected) => {
-    expect(shouldPollDocumentReviews(reviews)).toBe(expected);
+  ])("identifies whether the list has active processing", (reviews, expected) => {
+    expect(hasProcessingDocumentReviews(reviews)).toBe(expected);
   });
 
   it("renders a compact collapsed summary by default", () => {

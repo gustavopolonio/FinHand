@@ -41,6 +41,7 @@ interface ReceiptCameraFormProps {
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
   onUpload: (file: File) => Promise<DocumentUpload | null>;
+  refreshKey?: number;
 }
 
 export function ReceiptCameraForm({
@@ -55,6 +56,7 @@ export function ReceiptCameraForm({
   onRejectCandidate,
   onUpdateCandidate,
   onUpload,
+  refreshKey = 0,
 }: ReceiptCameraFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function ReceiptCameraForm({
         onReset={reset}
         onUpdate={onUpdateCandidate}
         panelId="transaction-camera-panel"
+        refreshKey={refreshKey}
         tabId="transaction-camera-tab"
         uploadId={uploadedDocument.id}
       />
