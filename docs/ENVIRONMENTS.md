@@ -147,6 +147,28 @@ capture-token authenticated rather than session-cookie authenticated.
 | Other authenticated reads | Session authentication and exact browser CORS |
 | Other state-changing routes | Session authentication, exact browser CORS, and exact origin validation when a cookie is present |
 
+### Production browser security headers
+
+Caddy applies one shared response-header policy to the web and API hostnames.
+It enables one-year HTTPS-only browser memory without preload or subdomain
+scope, disables content-type sniffing and framing, limits cross-origin referrer
+detail, and removes unnecessary server-identification headers. The narrow
+content security policy contains only `frame-ancestors 'none'` so it prevents
+clickjacking without imposing script or style rules that would require Next.js
+nonces.
+
+The permissions policy allows camera and microphone access only to FinHand's
+own origin for receipt capture and voice recording. Geolocation is disabled
+because it has no approved product use. Cross-origin opener, embedder, and
+resource policies remain unset until they can be verified against Google OAuth
+and private S3 previews.
+
+Normal `/api` responses use `Cache-Control: private, no-store` so browsers and
+intermediaries do not retain financial JSON or authentication responses. SSE
+retains its specialized `private, no-cache, no-transform` streaming policy, and
+versioned Next.js assets remain cacheable because the API policy is not applied
+globally at the edge.
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to
