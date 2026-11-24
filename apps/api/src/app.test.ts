@@ -121,6 +121,162 @@ describe("buildApplication", () => {
     await application.close();
   });
 
+  it("ignores a spoofed forwarded address without a trusted proxy", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+    application.get("/test-client-ip", async (request) => ({
+      ip: request.ip,
+    }));
+
+    const response = await application.inject({
+      headers: { "x-forwarded-for": "203.0.113.20" },
+      method: "GET",
+      remoteAddress: "198.51.100.30",
+      url: "/test-client-ip",
+    });
+
+    expect(response.json()).toEqual({ ip: "198.51.100.30" });
+    await application.close();
+  });
+
+  it.each([
+    {
+      description: "production Caddy",
+      forwardedFor: "203.0.113.20",
+      hops: 1,
+      remoteAddress: "172.20.0.4",
+    },
+    {
+      description: "the local ngrok development proxy",
+      forwardedFor: "203.0.113.20, 127.0.0.1",
+      hops: 2,
+      remoteAddress: "127.0.0.1",
+    },
+  ])(
+    "derives the client address through $description",
+    async ({ forwardedFor, hops, remoteAddress }) => {
+      const { authentication, databaseConnection, documentStorage } =
+        createDependencies();
+      const application = buildApplication({
+        authentication,
+        authenticationBaseUrl: "http://localhost:3001",
+        corsOrigin: "http://localhost:3000",
+        databaseConnection,
+        documentStorage,
+        trustProxyHops: hops,
+      });
+      application.get("/test-client-ip", async (request) => ({
+        ip: request.ip,
+      }));
+
+      const response = await application.inject({
+        headers: { "x-forwarded-for": forwardedFor },
+        method: "GET",
+        remoteAddress,
+        url: "/test-client-ip",
+      });
+
+      expect(response.json()).toEqual({ ip: "203.0.113.20" });
+      await application.close();
+    },
+  );
+
+  it.each([
+    { description: "missing origin", origin: undefined },
+    {
+      description: "lookalike origin",
+      origin: "https://finhand.example.evil.test",
+    },
+  ])(
+    "rejects a cookie-authenticated mutation with a $description",
+    async ({ origin }) => {
+      const { authentication, databaseConnection, documentStorage } =
+        createDependencies();
+      const application = buildApplication({
+        authentication,
+        authenticationBaseUrl: "http://localhost:3001",
+        corsOrigin: "http://localhost:3000",
+        databaseConnection,
+        documentStorage,
+      });
+
+      const response = await application.inject({
+        headers: {
+          cookie: "better-auth.session_token=test-session",
+          ...(origin ? { origin } : {}),
+        },
+        method: "POST",
+        payload: { name: "Cash", type: "cash" },
+        url: "/api/accounts",
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        code: "ORIGIN_NOT_ALLOWED",
+        message: "Request origin is not allowed.",
+      });
+      await application.close();
+    },
+  );
+
+  it("allows the configured origin to reach normal authentication", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    const response = await application.inject({
+      headers: {
+        cookie: "better-auth.session_token=test-session",
+        origin: "http://localhost:3000",
+      },
+      method: "POST",
+      payload: { name: "Cash", type: "cash" },
+      url: "/api/accounts",
+    });
+    expect(response.statusCode).toBe(401);
+    await application.close();
+  });
+
+  it.each([
+    "/api/auth/test",
+    "/api/document-capture-session/document",
+  ])("leaves the specialized origin policy for %s intact", async (url) => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    const response = await application.inject({
+      headers: {
+        cookie: "better-auth.session_token=test-session",
+        origin: "https://untrusted.example",
+      },
+      method: "POST",
+      url,
+    });
+
+    expect(response.statusCode).not.toBe(403);
+    await application.close();
+  });
+
   it("requires authentication before opening the realtime event stream", async () => {
     const { authentication, databaseConnection, documentStorage } =
       createDependencies();

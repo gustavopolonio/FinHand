@@ -29,3 +29,13 @@ export class UnauthorizedError extends Error {
     super("Unauthorized");
   }
 }
+
+export class OriginNotAllowedError extends Error {
+  readonly code = "ORIGIN_NOT_ALLOWED";
+  override readonly name = "OriginNotAllowedError";
+  readonly statusCode = 403;
+
+  constructor() {
+    super("Request origin is not allowed.");
+  }
+}

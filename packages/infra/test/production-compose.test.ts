@@ -45,6 +45,15 @@ describe("production Compose deployment", () => {
     expect(caddyConfiguration).toContain("handle /api/*");
   });
 
+  it("trusts exactly the private Caddy hop before deriving client IPs", () => {
+    const apiConfiguration = serviceConfiguration("api");
+
+    expect(apiConfiguration).toContain("API_TRUST_PROXY_HOPS: 1");
+    expect(apiConfiguration).not.toContain("ports:");
+    expect(serviceConfiguration("proxy")).toContain("- frontend");
+    expect(apiConfiguration).toContain("- frontend");
+  });
+
   it("serves browser API requests from the web origin", () => {
     const webSiteStart = caddyConfiguration.indexOf("{$WEB_DOMAIN} {");
     const apiSiteStart = caddyConfiguration.indexOf("{$API_DOMAIN} {");

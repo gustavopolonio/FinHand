@@ -26,6 +26,7 @@ import {
   type UserEventListener,
   UserEventHub,
 } from "./realtime/user-events.js";
+import { registerRequestOriginGuard } from "./security/request-origin.js";
 import type { DocumentStorage } from "./storage/document-storage.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
@@ -42,6 +43,7 @@ interface BuildApplicationOptions {
   databaseConnection: DatabaseConnection;
   documentStorage: DocumentStorage;
   logger?: FastifyServerOptions["logger"];
+  trustProxyHops?: number;
   userEventListener?: UserEventListener;
 }
 
@@ -52,6 +54,7 @@ export function buildApplication({
   databaseConnection,
   documentStorage,
   logger = false,
+  trustProxyHops = 0,
   userEventListener = createNoopUserEventListener(),
 }: BuildApplicationOptions) {
   const application = Fastify({
@@ -62,6 +65,10 @@ export function buildApplication({
       requestIdLogLabel: "requestId",
     }),
     requestIdHeader: false,
+    trustProxy:
+      trustProxyHops === 0
+        ? false
+        : (_address, hop) => hop < trustProxyHops,
   });
 
   registerSchemaCompilers(application);
@@ -108,6 +115,7 @@ export function buildApplication({
     exposedHeaders: ["x-request-id"],
     maxAge: 86_400,
   });
+  registerRequestOriginGuard(application, corsOrigin);
 
   application.register(healthRoutes);
   application.register(accountRoutes);

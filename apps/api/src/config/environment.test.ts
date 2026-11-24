@@ -22,6 +22,7 @@ function stubValidEnvironment() {
 
   vi.stubEnv("API_HOST", "");
   vi.stubEnv("API_PORT", "");
+  vi.stubEnv("API_TRUST_PROXY_HOPS", "");
   vi.stubEnv("LOG_LEVEL", "");
   vi.stubEnv("NODE_ENV", "");
   vi.stubEnv("DOCUMENT_EXTRACTION_POLL_INTERVAL_MS", "");
@@ -55,6 +56,7 @@ describe("environment configuration", () => {
     expect(environment).toEqual({
       apiHost: "127.0.0.1",
       apiPort: 3001,
+      apiTrustProxyHops: 0,
       databaseUrl: validEnvironment.DATABASE_URL,
       logLevel: "info",
       nodeEnvironment: "development",
@@ -71,6 +73,7 @@ describe("environment configuration", () => {
   it("accepts explicit server settings", async () => {
     vi.stubEnv("API_HOST", " 0.0.0.0 ");
     vi.stubEnv("API_PORT", "4000");
+    vi.stubEnv("API_TRUST_PROXY_HOPS", "1");
     vi.stubEnv("LOG_LEVEL", "debug");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -79,6 +82,7 @@ describe("environment configuration", () => {
     expect(environment).toMatchObject({
       apiHost: "0.0.0.0",
       apiPort: 4000,
+      apiTrustProxyHops: 1,
       logLevel: "debug",
       nodeEnvironment: "production",
     });
@@ -172,6 +176,16 @@ describe("environment configuration", () => {
       "API_PORT",
       "1.5",
       "API_PORT must be an integer between 1 and 65535.",
+    ],
+    [
+      "API_TRUST_PROXY_HOPS",
+      "-1",
+      "API_TRUST_PROXY_HOPS must be a non-negative integer.",
+    ],
+    [
+      "API_TRUST_PROXY_HOPS",
+      "1.5",
+      "API_TRUST_PROXY_HOPS must be a non-negative integer.",
     ],
     [
       "LOG_LEVEL",

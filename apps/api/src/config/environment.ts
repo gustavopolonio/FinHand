@@ -62,6 +62,22 @@ function positiveInteger(name: string, fallback: number): number {
   return parsedValue;
 }
 
+function nonNegativeInteger(name: string, fallback: number): number {
+  const value = process.env[name];
+
+  if (!value) {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+    throw new Error(`${name} must be a non-negative integer.`);
+  }
+
+  return parsedValue;
+}
+
 function enumeration<const Values extends readonly string[]>(
   name: string,
   values: Values,
@@ -95,6 +111,7 @@ const nodeEnvironments = ["development", "test", "production"] as const;
 export const environment = Object.freeze({
   apiHost: process.env.API_HOST?.trim() || "127.0.0.1",
   apiPort: port("API_PORT", 3001),
+  apiTrustProxyHops: nonNegativeInteger("API_TRUST_PROXY_HOPS", 0),
   databaseUrl: required("DATABASE_URL"),
   logLevel: enumeration("LOG_LEVEL", logLevels, "info"),
   nodeEnvironment: enumeration(

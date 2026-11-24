@@ -29,6 +29,7 @@ const application = buildApplication({
     level: environment.logLevel,
     service: "api",
   }),
+  trustProxyHops: environment.apiTrustProxyHops,
   userEventListener: createPostgresUserEventListener(databaseConnection.pool),
 });
 
