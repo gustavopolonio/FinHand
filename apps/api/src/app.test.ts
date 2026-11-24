@@ -6,6 +6,7 @@ import { buildApplication } from "./app.js";
 import type { Authentication } from "./auth/authentication.js";
 import type { DatabaseConnection } from "./db/index.js";
 import { createLoggerOptions } from "./logging/logger.js";
+import type { UserEventListener } from "./realtime/user-events.js";
 import { createTestDocumentStorage } from "./test/document-storage.js";
 
 function createDependencies() {
@@ -57,6 +58,29 @@ describe("buildApplication", () => {
     expect(documentStorage.close).toHaveBeenCalledOnce();
   });
 
+  it("starts and closes the realtime database listener with the application", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const userEventListener = {
+      close: vi.fn().mockResolvedValue(undefined),
+      start: vi.fn().mockResolvedValue(undefined),
+    } satisfies UserEventListener;
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+      userEventListener,
+    });
+
+    await application.ready();
+    expect(userEventListener.start).toHaveBeenCalledOnce();
+
+    await application.close();
+    expect(userEventListener.close).toHaveBeenCalledOnce();
+  });
+
   it("generates and returns a trusted request ID for every request", async () => {
     const { authentication, databaseConnection, documentStorage } =
       createDependencies();
@@ -94,6 +118,26 @@ describe("buildApplication", () => {
       firstResponse.headers["x-request-id"],
     );
 
+    await application.close();
+  });
+
+  it("requires authentication before opening the realtime event stream", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/api/events",
+    });
+
+    expect(response.statusCode).toBe(401);
     await application.close();
   });
 

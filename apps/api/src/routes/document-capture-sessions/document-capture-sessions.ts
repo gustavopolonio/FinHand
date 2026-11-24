@@ -12,12 +12,14 @@ import {
   uploadDocumentForCaptureSession,
 } from "../../services/document-capture-sessions.js";
 import { maximumDocumentUploadBytes } from "../../services/document-uploads.js";
+import { publishCaptureSessionChangedForUpload } from "../../realtime/user-events.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
 import { documentCaptureSessionParamsSchema } from "../../validation/document-capture-session-schemas.js";
 
 interface DocumentCaptureSessionRoutesOptions {
   captureBaseUrl: string;
   documentStorage: DocumentStorage;
+  publishCaptureChange?: typeof publishCaptureSessionChangedForUpload;
 }
 
 function createCaptureUrl(baseUrl: string, token: string): string {
@@ -28,7 +30,11 @@ function createCaptureUrl(baseUrl: string, token: string): string {
 
 export async function documentCaptureSessionRoutes(
   application: FastifyInstance,
-  { captureBaseUrl, documentStorage }: DocumentCaptureSessionRoutesOptions,
+  {
+    captureBaseUrl,
+    documentStorage,
+    publishCaptureChange = publishCaptureSessionChangedForUpload,
+  }: DocumentCaptureSessionRoutesOptions,
 ) {
   await application.register(fastifyMultipart, {
     limits: {
@@ -157,6 +163,15 @@ export async function documentCaptureSessionRoutes(
         token,
         wasTruncated: () => document.file.truncated,
       });
+
+      try {
+        await publishCaptureChange(application.database, upload.id);
+      } catch (error) {
+        request.log.error(
+          { err: error, event: "realtime.user-event.publish.failed" },
+          "Failed to publish capture session change",
+        );
+      }
 
       return reply.status(201).send({ upload });
     },

@@ -21,6 +21,7 @@ const captureMocks = vi.hoisted(() => ({
   getProgress: vi.fn(),
   tokenFromAuthorization: vi.fn(),
   upload: vi.fn(),
+  publishCaptureChange: vi.fn(),
 }));
 
 vi.mock("../../services/document-capture-sessions.js", () => ({
@@ -89,6 +90,7 @@ function createApplication(authenticatedUserId: string | null) {
   application.register(documentCaptureSessionRoutes, {
     captureBaseUrl: "https://finhand.example",
     documentStorage,
+    publishCaptureChange: captureMocks.publishCaptureChange,
   });
   applications.push(application);
 
@@ -96,6 +98,7 @@ function createApplication(authenticatedUserId: string | null) {
 }
 
 beforeEach(() => {
+  captureMocks.publishCaptureChange.mockResolvedValue(undefined);
   captureMocks.tokenFromAuthorization.mockImplementation(
     (authorization: string | undefined) => {
       if (authorization !== `Bearer ${token}`) {
@@ -384,6 +387,10 @@ describe("POST /api/document-capture-session/document", () => {
         fileName: "receipt.jpg",
         mimeType: "image/jpeg",
       }),
+    );
+    expect(captureMocks.publishCaptureChange).toHaveBeenCalledWith(
+      expect.anything(),
+      "55555555-5555-4555-8555-555555555555",
     );
   });
 

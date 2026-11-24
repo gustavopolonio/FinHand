@@ -19,7 +19,13 @@ import { financialSummaryRoutes } from "./routes/financial-summary/financial-sum
 import { healthRoutes } from "./routes/health/health.js";
 import { transactionCandidateRoutes } from "./routes/transaction-candidates/transaction-candidates.js";
 import { transactionRoutes } from "./routes/transactions/transactions.js";
+import { userEventRoutes } from "./routes/user-events/user-events.js";
 import { userRoutes } from "./routes/users/users.js";
+import {
+  createNoopUserEventListener,
+  type UserEventListener,
+  UserEventHub,
+} from "./realtime/user-events.js";
 import type { DocumentStorage } from "./storage/document-storage.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
@@ -36,6 +42,7 @@ interface BuildApplicationOptions {
   databaseConnection: DatabaseConnection;
   documentStorage: DocumentStorage;
   logger?: FastifyServerOptions["logger"];
+  userEventListener?: UserEventListener;
 }
 
 export function buildApplication({
@@ -45,6 +52,7 @@ export function buildApplication({
   databaseConnection,
   documentStorage,
   logger = false,
+  userEventListener = createNoopUserEventListener(),
 }: BuildApplicationOptions) {
   const application = Fastify({
     genReqId: () => randomUUID(),
@@ -79,7 +87,15 @@ export function buildApplication({
 
     request.log.info(context, "HTTP request completed");
   });
+  const userEventHub = new UserEventHub();
+  application.addHook("onReady", async () => {
+    await userEventListener.start(
+      (event) => userEventHub.publish(event),
+      application.log,
+    );
+  });
   application.addHook("onClose", async () => {
+    await userEventListener.close();
     documentStorage.close();
     await databaseConnection.pool.end();
   });
@@ -98,6 +114,7 @@ export function buildApplication({
   application.register(audioUploadRoutes, { documentStorage });
   application.register(categoryRoutes);
   application.register(transactionRoutes, { documentStorage });
+  application.register(userEventRoutes, { eventHub: userEventHub });
   application.register(transactionCandidateRoutes);
   application.register(financialSummaryRoutes);
   application.register(documentUploadRoutes, { documentStorage });

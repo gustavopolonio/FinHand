@@ -9,6 +9,7 @@ import {
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
 import { createApplicationLogger } from "./logging/logger.js";
+import { publishUploadChanged } from "./realtime/user-events.js";
 import { processNextAudioUpload } from "./services/audio-processing.js";
 import { recoverExpiredAudioProcessingLeases } from "./services/audio-transcription-recovery.js";
 import { expirePendingDocumentCaptureSessions } from "./services/document-capture-session-cleanup.js";
@@ -51,33 +52,55 @@ const cleanupWorker = startDocumentCaptureSessionCleanupWorker({
   logger: cleanupLogger,
 });
 const extractionLogger = logger.child({ component: "document-extraction" });
+async function publishUploadResult(
+  result: { uploadId: string } | null,
+  processingLogger: typeof extractionLogger,
+) {
+  if (!result) return;
+
+  try {
+    await publishUploadChanged(databaseConnection.database, result.uploadId);
+  } catch (error) {
+    processingLogger.error(
+      { err: error, event: "realtime.user-event.publish.failed" },
+      "Failed to publish upload status change",
+    );
+  }
+}
+
 const extractionWorker = startDocumentExtractionWorker({
   logger: extractionLogger,
   pollIntervalMilliseconds:
     documentExtractionEnvironment.pollIntervalMilliseconds,
-  processNext: () =>
-    processNextDocumentUpload({
+  processNext: async () => {
+    const result = await processNextDocumentUpload({
       database: databaseConnection.database,
       documentStorage,
       extractor,
       leaseDurationMilliseconds:
         documentExtractionEnvironment.leaseDurationMilliseconds,
-    }),
+    });
+    await publishUploadResult(result, extractionLogger);
+    return result;
+  },
 });
 const audioProcessingLogger = logger.child({ component: "audio-processing" });
 const audioProcessingWorker = startAudioProcessingWorker({
   logger: audioProcessingLogger,
   pollIntervalMilliseconds:
     audioTranscriptionEnvironment.pollIntervalMilliseconds,
-  processNext: () =>
-    processNextAudioUpload({
+  processNext: async () => {
+    const result = await processNextAudioUpload({
       database: databaseConnection.database,
       documentStorage,
       extractor: audioExtractor,
       leaseDurationMilliseconds:
         audioTranscriptionEnvironment.leaseDurationMilliseconds,
       transcriber: audioTranscriber,
-    }),
+    });
+    await publishUploadResult(result, audioProcessingLogger);
+    return result;
+  },
 });
 const audioProcessingRecoveryLogger = logger.child({
   component: "audio-processing-recovery",

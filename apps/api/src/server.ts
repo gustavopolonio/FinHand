@@ -7,6 +7,7 @@ import {
 } from "./config/environment.js";
 import { createDatabase } from "./db/index.js";
 import { createLoggerOptions } from "./logging/logger.js";
+import { createPostgresUserEventListener } from "./realtime/user-events.js";
 import { createS3DocumentStorage } from "./storage/document-storage.js";
 
 const databaseConnection = createDatabase(environment.databaseUrl);
@@ -28,6 +29,7 @@ const application = buildApplication({
     level: environment.logLevel,
     service: "api",
   }),
+  userEventListener: createPostgresUserEventListener(databaseConnection.pool),
 });
 
 let isShuttingDown = false;
