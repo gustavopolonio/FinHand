@@ -111,7 +111,12 @@
 - [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [x] Provision a correctly named shared development uploads bucket, update development IAM and configuration, discard disposable pre-V1 upload data without migration, and retire the document-specific bucket; retain the existing production uploads bucket
 - [x] Replace document- and audio-status polling with authenticated SSE updates backed by PostgreSQL `LISTEN`/`NOTIFY`, while retaining authoritative API reads after every event and reconnect
-- [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection
+- [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection:
+  - [x] Define the production proxy trust boundary and endpoint security policy; enforce exact-origin CORS and origin validation without breaking OAuth, capture links, or SSE
+  - [ ] Add production security headers at the public edge while preserving Google OAuth, camera capture, microphone recording, document previews, and SSE
+  - [ ] Enforce route-appropriate body, multipart, content-type, header, and timeout limits with consistent safe errors
+  - [ ] Add tiered IP and authenticated-user rate limits, upload/job quotas, capture-token protection, and per-user SSE connection caps
+  - [ ] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application

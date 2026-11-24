@@ -116,6 +116,37 @@ when CDN caching, edge controls, or a stable AWS-owned public hostname provides
 enough value to justify the extra configuration. It is not required for the
 initial single-server deployment.
 
+### Proxy trust and request origins
+
+Only Caddy publishes production ports. The API container remains private and
+trusts exactly one forwarding hop, configured with
+`API_TRUST_PROXY_HOPS=1`. This lets Fastify derive the original client address
+from Caddy's forwarding headers without trusting an arbitrary header supplied
+directly by a client. If another public proxy or load balancer is introduced,
+review the complete path before changing this value.
+
+Local development uses zero trusted hops for direct browser-to-API requests.
+The version-controlled ngrok flow has two local forwarding hops—the ngrok agent
+and the FinHand development proxy—so the API must be restarted with
+`API_TRUST_PROXY_HOPS=2` while testing through that tunnel. Proxy trust affects
+client-IP attribution and future IP rate limits; OAuth and CORS still depend on
+the matching `BETTER_AUTH_URL`, `WEB_URL`, and `NEXT_PUBLIC_API_URL` values.
+
+Browser access uses exact-origin credentialed CORS. In addition, a
+cookie-bearing `POST`, `PUT`, `PATCH`, or `DELETE` request to a normal
+application route must carry the configured web origin. Better Auth retains its
+own trusted-origin validation, and the mobile capture upload remains
+capture-token authenticated rather than session-cookie authenticated.
+
+| Endpoint group | Authentication and origin policy |
+| --- | --- |
+| `/health` | Public read-only health check; no origin requirement |
+| `/api/auth/*` | Better Auth and Google OAuth with Better Auth trusted origins |
+| `/api/document-capture-session/*` | Short-lived capture bearer token and exact browser CORS |
+| `/api/events` | Authenticated read-only SSE with exact browser CORS |
+| Other authenticated reads | Session authentication and exact browser CORS |
+| Other state-changing routes | Session authentication, exact browser CORS, and exact origin validation when a cookie is present |
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to
@@ -482,6 +513,7 @@ other users, or persist them in Docker images, Git, CI logs, or shell history.
 | `NODE_ENV` | API, worker, web | Compose environment | No | `production` |
 | `API_HOST` | API | Compose environment | No | `0.0.0.0` inside the container |
 | `API_PORT` | API | Compose environment | No | Internal container port |
+| `API_TRUST_PROXY_HOPS` | API | Compose environment | No | `1`; only Caddy can reach the private API container |
 | `LOG_LEVEL` | API, worker | Parameter Store or Compose | No | Start with `info` |
 | `DATABASE_URL` | API, worker, migration | SecureString | Yes | Internal Compose hostname and restricted database role |
 | `BETTER_AUTH_SECRET` | API | SecureString | Yes | Independent production secret, at least 32 characters |
