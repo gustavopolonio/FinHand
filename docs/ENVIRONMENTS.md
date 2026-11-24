@@ -116,6 +116,34 @@ when CDN caching, edge controls, or a stable AWS-owned public hostname provides
 enough value to justify the extra configuration. It is not required for the
 initial single-server deployment.
 
+### Realtime upload status
+
+The Transactions page opens one authenticated Server-Sent Events connection to
+`GET /api/events`. This connection carries only small change notifications for
+the current user; it does not carry document contents, extracted financial
+values, or authoritative transaction data.
+
+The asynchronous document and audio workers publish a PostgreSQL `NOTIFY` only
+after the corresponding database change commits. Each API process keeps one
+dedicated `LISTEN` connection, validates every notification, and forwards it
+only to the in-memory SSE subscribers belonging to that upload owner. The API
+removes the internal user ID before writing the browser event.
+
+An SSE event is only an invalidation signal. After receiving one, the browser
+reads the normal authenticated review and capture-session endpoints again. The
+same reads run when the stream opens or reconnects, so a notification missed
+during a temporary disconnection cannot leave the interface permanently stale.
+The API sends a heartbeat every 25 seconds and rotates each connection after 15
+minutes; the browser's native `EventSource` reconnect behavior then opens a new
+stream. Caddy streams the `text/event-stream` response through the existing
+same-origin `/api/*` reverse proxy.
+
+This design consumes one long-lived HTTP connection for each open Transactions
+page and one PostgreSQL listener connection per API process, not one database
+connection per user. If the API is replicated later, every replica must retain
+its own PostgreSQL listener so its local browser subscribers receive the same
+notifications.
+
 ## EC2 Host
 
 Start with one ARM-based `t4g.small` instance:

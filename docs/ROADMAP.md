@@ -110,7 +110,7 @@
 - [x] Replace the hardcoded production AMI ID with an explicitly controlled refresh strategy before the next EC2 replacement or operating-system upgrade
 - [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [x] Provision a correctly named shared development uploads bucket, update development IAM and configuration, discard disposable pre-V1 upload data without migration, and retire the document-specific bucket; retain the existing production uploads bucket
-- [ ] Replace document- and audio-status polling with server-pushed updates using SSE or WebSockets
+- [x] Replace document- and audio-status polling with authenticated SSE updates backed by PostgreSQL `LISTEN`/`NOTIFY`, while retaining authoritative API reads after every event and reconnect
 - [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
