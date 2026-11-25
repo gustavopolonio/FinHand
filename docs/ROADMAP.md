@@ -120,7 +120,7 @@
     - [x] Add PostgreSQL-backed upload and processing-job quotas
     - [x] Harden public capture-token verification and submission against abuse
   - [x] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
-- [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
+- [x] Define and verify safe same-host PostgreSQL migration and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
 - [ ] Configure a manually approved production deployment pipeline that publishes immutable images and updates the EC2 Docker Compose application through AWS Systems Manager

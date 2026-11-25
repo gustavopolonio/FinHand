@@ -787,25 +787,44 @@ Every production release must follow this sequence:
 4. Require explicit manual approval for production deployment.
 5. Invoke a version-controlled deployment script through Systems Manager.
 6. Refresh the protected runtime environment file and pull the approved images.
-7. Create and verify a pre-migration logical database backup.
-8. Run backward-compatible migrations in a one-off Compose container.
-9. Update the web, API, and worker containers with `docker compose up -d`.
-10. Run non-destructive production smoke checks with a controlled test user.
-11. Monitor application health, worker progress, database health, disk space,
+7. Record the exact running API, web, and worker images, then stop the worker
+   gracefully before changing the schema.
+8. Create and verify a pre-migration logical database backup.
+9. Run backward-compatible migrations under the application advisory lock in a
+   one-off Compose container.
+10. Update the web, API, and worker containers with `docker compose up -d`.
+11. Run non-destructive production smoke checks with a controlled test user.
+12. Monitor application health, worker progress, database health, disk space,
     memory, backup freshness, and AI failures.
-12. Roll back to the previous image SHA when release health fails. Database
+13. Roll back to the previous image SHA when release health fails. Database
     migrations require the separate forward-compatible migration and recovery
     procedure.
 
 The `finhand-prod-deploy-application` Systems Manager document performs steps
-5-9 on the EC2 host. It prevents concurrent deployments, embeds the reviewed
+5-10 on the EC2 host. It prevents concurrent deployments, embeds the reviewed
 Compose and Caddy configuration, pulls only the image URIs already validated by
-the runtime renderer, starts PostgreSQL, creates and validates a custom-format
-`pg_dump`, uploads it under `database/` in the private retained backup bucket,
-runs the one-off migration container, and waits for every long-running service
-to become healthy. If container health checks fail, it restores the previous
-release symlink and attempts to restart the previous containers; applied
-database migrations are not automatically reversed.
+the runtime renderer, and records the exact image references used by the
+running release. It ensures PostgreSQL is healthy, gracefully stops the old
+worker, creates and validates a custom-format `pg_dump`, uploads it under
+`database/` in the private retained backup bucket, runs the one-off migration
+container, and waits for every long-running service to become healthy.
+
+The migration entry point takes a PostgreSQL advisory lock before applying any
+Drizzle migration. A second deployment or manually started migration fails
+without modifying the schema while that lock is held; PostgreSQL automatically
+releases the lock if the migration process loses its connection. Standard
+deployments may contain only backward-compatible expand migrations because the
+old API remains available during the backup and migration. Renames, column or
+table removal, incompatible type changes, and immediate new `NOT NULL`
+constraints require a multi-release expand/backfill/contract plan.
+
+If image pulling, backup, or migration fails after the worker stops, the exit
+handler restarts the exact stopped worker container. If the new containers fail
+their health checks, rollback pins the exact previous API and web image
+references rather than resolving the newly rendered deployment values. The
+worker lease-recovery loops remain the fallback for work interrupted after its
+graceful 60-second stop window. Applied database migrations are never reversed
+automatically.
 
 After updating image parameters and successfully running
 `finhand-prod-render-runtime-config`, invoke the deployment without supplying
