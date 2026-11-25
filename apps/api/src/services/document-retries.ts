@@ -10,6 +10,7 @@ import {
   getDocumentProcessingFailure,
   maximumDocumentProcessingAttempts,
 } from "./document-processing-failures.js";
+import { lockAndAssertProcessingJobQuotaAvailable } from "./upload-quotas.js";
 
 interface FailedDocumentRecord {
   id: string;
@@ -55,8 +56,10 @@ export async function retryFailedDocumentUploadForUser(
     throw new ConflictError("Only failed document uploads can be retried.");
   }
 
+  const failureCode = upload.failureCode;
+
   const failure = getDocumentProcessingFailure(
-    upload.failureCode,
+    failureCode,
     upload.processingAttempts,
   );
 
@@ -67,31 +70,36 @@ export async function retryFailedDocumentUploadForUser(
   }
 
   const updatedAt = new Date();
-  const [retriedUpload] = await database
-    .update(uploads)
-    .set({
-      status: "uploaded",
-      failureCode: null,
-      failureDismissedAt: null,
-      updatedAt,
-    })
-    .where(
-      and(
-        eq(uploads.id, uploadId),
-        eq(uploads.userId, userId),
-        eq(uploads.kind, "document"),
-        eq(uploads.status, "failed"),
-        eq(uploads.failureCode, upload.failureCode),
-        lt(uploads.processingAttempts, maximumDocumentProcessingAttempts),
-      ),
-    )
-    .returning({
-      id: uploads.id,
-      status: uploads.status,
-      failureCode: uploads.failureCode,
-      processingAttempts: uploads.processingAttempts,
-      updatedAt: uploads.updatedAt,
-    });
+  const retriedUpload = await database.transaction(async (transaction) => {
+    await lockAndAssertProcessingJobQuotaAvailable(transaction, userId);
+    const [updatedUpload] = await transaction
+      .update(uploads)
+      .set({
+        status: "uploaded",
+        failureCode: null,
+        failureDismissedAt: null,
+        updatedAt,
+      })
+      .where(
+        and(
+          eq(uploads.id, uploadId),
+          eq(uploads.userId, userId),
+          eq(uploads.kind, "document"),
+          eq(uploads.status, "failed"),
+          eq(uploads.failureCode, failureCode),
+          lt(uploads.processingAttempts, maximumDocumentProcessingAttempts),
+        ),
+      )
+      .returning({
+        id: uploads.id,
+        status: uploads.status,
+        failureCode: uploads.failureCode,
+        processingAttempts: uploads.processingAttempts,
+        updatedAt: uploads.updatedAt,
+      });
+
+    return updatedUpload;
+  });
 
   if (!retriedUpload) {
     throw new ConflictError(

@@ -12,6 +12,10 @@ import {
 } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
 import { createUploadObjectKey } from "../storage/upload-object-key.js";
+import {
+  assertNewUploadQuotaAvailable,
+  runWithinNewUploadQuota,
+} from "./upload-quotas.js";
 
 export const maximumAudioRecordingBytes = 5 * 1024 * 1024;
 export const maximumAudioRecordingSeconds = 30;
@@ -257,7 +261,7 @@ async function validateAndStoreAudioRecording({
 }
 
 async function persistAudioUpload(
-  database: Database,
+  database: Pick<Database, "insert">,
   recording: StoredAudioRecording,
 ): Promise<UploadedAudioRecording> {
   const [createdUpload] = await database
@@ -309,10 +313,16 @@ async function persistAudioUpload(
 export async function uploadAudioRecordingForUser(
   input: UploadAudioRecordingInput,
 ): Promise<UploadedAudioRecording> {
+  await assertNewUploadQuotaAvailable(input.database, input.userId);
+
   const recording = await validateAndStoreAudioRecording(input);
 
   try {
-    return await persistAudioUpload(input.database, recording);
+    return await runWithinNewUploadQuota(
+      input.database,
+      input.userId,
+      async (transaction) => persistAudioUpload(transaction, recording),
+    );
   } catch (error) {
     return removeStoredAudioAfterFailure(
       input.documentStorage,

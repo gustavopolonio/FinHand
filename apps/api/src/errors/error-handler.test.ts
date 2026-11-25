@@ -6,6 +6,7 @@ import {
   InputError,
   NotFoundError,
   UnauthorizedError,
+  UploadQuotaExceededError,
 } from "./application-errors.js";
 import { registerApplicationErrorHandler } from "./error-handler.js";
 
@@ -91,6 +92,26 @@ describe("application error handler", () => {
       code: "FST_ERR_CTP_EMPTY_JSON_BODY",
       error: "Bad Request",
       message: "Body cannot be empty when content-type is set to 'application/json'",
+    });
+  });
+
+  it("returns stable upload quota errors as 429", async () => {
+    const application = createApplication();
+    application.get("/failure", async () => {
+      throw new UploadQuotaExceededError(
+        "Hourly upload limit reached. Try again later.",
+        "HOURLY_UPLOAD_LIMIT_EXCEEDED",
+      );
+    });
+
+    const response = await application.inject("/failure");
+
+    expect(response.statusCode).toBe(429);
+    expect(response.json()).toEqual({
+      statusCode: 429,
+      code: "HOURLY_UPLOAD_LIMIT_EXCEEDED",
+      error: "Too Many Requests",
+      message: "Hourly upload limit reached. Try again later.",
     });
   });
 

@@ -13,6 +13,25 @@ import type {
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
 import { documentUploadRoutes } from "./document-uploads.js";
 
+const quotaMocks = vi.hoisted(() => ({
+  assertAvailable: vi.fn().mockResolvedValue(undefined),
+  lockAndAssertProcessingAvailable: vi.fn().mockResolvedValue(undefined),
+  runWithin: vi.fn(
+    async (
+      database: Database,
+      _userId: string,
+      operation: (transaction: Database) => Promise<unknown>,
+    ) => operation(database),
+  ),
+}));
+
+vi.mock("../../services/upload-quotas.js", () => ({
+  assertNewUploadQuotaAvailable: quotaMocks.assertAvailable,
+  lockAndAssertProcessingJobQuotaAvailable:
+    quotaMocks.lockAndAssertProcessingAvailable,
+  runWithinNewUploadQuota: quotaMocks.runWithin,
+}));
+
 const applications: ReturnType<typeof Fastify>[] = [];
 const userId = "33333333-3333-4333-8333-333333333333";
 
@@ -103,6 +122,10 @@ function createApplication(options: {
     query: {
       uploads: { findFirst: options.findFirst ?? vi.fn() },
     },
+    transaction: vi.fn(
+      async (operation: (transaction: Database) => unknown) =>
+        operation(database),
+    ),
   } as unknown as Database;
   const documentStorage = options.documentStorage ?? createStorage().storage;
 
@@ -160,6 +183,9 @@ function createInsert() {
 }
 
 afterEach(async () => {
+  quotaMocks.assertAvailable.mockClear();
+  quotaMocks.lockAndAssertProcessingAvailable.mockClear();
+  quotaMocks.runWithin.mockClear();
   await Promise.all(
     applications.splice(0).map((application) => application.close()),
   );

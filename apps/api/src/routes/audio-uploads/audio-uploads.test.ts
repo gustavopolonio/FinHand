@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Authentication } from "../../auth/authentication.js";
 import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
 import type { Database } from "../../db/index.js";
-import { PayloadTooLargeError } from "../../errors/application-errors.js";
+import {
+  PayloadTooLargeError,
+  UploadQuotaExceededError,
+} from "../../errors/application-errors.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
 import { registerSchemaCompilers } from "../../validation/schema-compilers.js";
@@ -298,6 +301,31 @@ describe("POST /api/uploads/audio", () => {
     expect(response.json()).toMatchObject({
       code: "AUDIO_TOO_LARGE",
       message: "Audio recording must be at most 5 MB.",
+    });
+  });
+
+  it("returns a stable error when the user's active upload quota is full", async () => {
+    const { application } = createApplication(userId);
+    serviceMocks.uploadAudioRecordingForUser.mockRejectedValueOnce(
+      new UploadQuotaExceededError(
+        "Too many uploads are waiting to be processed. Try again after processing finishes.",
+        "ACTIVE_UPLOAD_LIMIT_EXCEEDED",
+      ),
+    );
+    const multipart = createMultipartPayload();
+
+    const response = await application.inject({
+      method: "POST",
+      url: "/api/uploads/audio",
+      headers: { "content-type": multipart.contentType },
+      payload: multipart.payload,
+    });
+
+    expect(response.statusCode).toBe(429);
+    expect(response.json()).toMatchObject({
+      code: "ACTIVE_UPLOAD_LIMIT_EXCEEDED",
+      message:
+        "Too many uploads are waiting to be processed. Try again after processing finishes.",
     });
   });
 });

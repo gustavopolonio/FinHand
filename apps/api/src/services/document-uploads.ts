@@ -13,6 +13,10 @@ import {
 } from "../errors/application-errors.js";
 import type { DocumentStorage } from "../storage/document-storage.js";
 import { createUploadObjectKey } from "../storage/upload-object-key.js";
+import {
+  assertNewUploadQuotaAvailable,
+  runWithinNewUploadQuota,
+} from "./upload-quotas.js";
 
 export const maximumDocumentUploadBytes = 10 * 1024 * 1024; // 10 MiB
 
@@ -330,6 +334,8 @@ export async function uploadDocumentForUser({
   wasTruncated,
   userId,
 }: UploadDocumentInput): Promise<UploadedDocument> {
+  await assertNewUploadQuotaAvailable(database, userId);
+
   const storedDocument = await storeValidatedDocument({
     documentStorage,
     fileName,
@@ -340,7 +346,12 @@ export async function uploadDocumentForUser({
   });
 
   try {
-    return await persistDocumentUpload(database, storedDocument, "direct");
+    return await runWithinNewUploadQuota(
+      database,
+      userId,
+      async (transaction) =>
+        persistDocumentUpload(transaction, storedDocument, "direct"),
+    );
   } catch (error) {
     return discardStoredDocument(documentStorage, storedDocument, error);
   }

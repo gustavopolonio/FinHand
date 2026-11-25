@@ -22,6 +22,10 @@ import {
   storeValidatedDocument,
   type UploadedDocument,
 } from "./document-uploads.js";
+import {
+  assertNewUploadQuotaAvailable,
+  lockAndAssertNewUploadQuotaAvailable,
+} from "./upload-quotas.js";
 
 export const documentCaptureSessionLifetimeMs = 5 * 60 * 1_000; // 5 min
 
@@ -298,6 +302,7 @@ export async function uploadDocumentForCaptureSession({
     tokenHash,
   );
   assertCaptureSessionAvailable(preliminarySession, now());
+  await assertNewUploadQuotaAvailable(database, preliminarySession.userId);
 
   const storedDocument = await storeValidatedDocument({
     documentStorage,
@@ -323,6 +328,10 @@ export async function uploadDocumentForCaptureSession({
         .for("update");
 
       assertCaptureSessionAvailable(lockedSession, now());
+      await lockAndAssertNewUploadQuotaAvailable(
+        transaction,
+        lockedSession.userId,
+      );
 
       const upload = await persistDocumentUpload(
         transaction,

@@ -8,6 +8,7 @@ import { uploads } from "../db/schema/index.js";
 import {
   InputError,
   PayloadTooLargeError,
+  UploadQuotaExceededError,
 } from "../errors/application-errors.js";
 import type {
   DocumentStorage,
@@ -17,6 +18,22 @@ import {
   maximumDocumentUploadBytes,
   uploadDocumentForUser,
 } from "./document-uploads.js";
+
+const quotaMocks = vi.hoisted(() => ({
+  assertAvailable: vi.fn().mockResolvedValue(undefined),
+  runWithin: vi.fn(
+    async (
+      database: Database,
+      _userId: string,
+      operation: (transaction: Database) => Promise<unknown>,
+    ) => operation(database),
+  ),
+}));
+
+vi.mock("./upload-quotas.js", () => ({
+  assertNewUploadQuotaAvailable: quotaMocks.assertAvailable,
+  runWithinNewUploadQuota: quotaMocks.runWithin,
+}));
 
 const userId = "33333333-3333-4333-8333-333333333333";
 const createdAt = new Date("2026-11-05T12:00:00.000Z");
@@ -115,10 +132,33 @@ async function upload(options: {
 }
 
 afterEach(() => {
+  quotaMocks.assertAvailable.mockClear();
+  quotaMocks.runWithin.mockClear();
   vi.restoreAllMocks();
 });
 
 describe("uploadDocumentForUser", () => {
+  it("rejects before storage when the user's upload quota is already full", async () => {
+    const quotaError = new UploadQuotaExceededError(
+      "Hourly upload limit reached. Try again later.",
+      "HOURLY_UPLOAD_LIMIT_EXCEEDED",
+    );
+    quotaMocks.assertAvailable.mockRejectedValueOnce(quotaError);
+    const databaseFixture = createDatabaseFixture();
+    const storageFixture = createStorageFixture();
+
+    await expect(
+      upload({
+        content: Buffer.from("%PDF-1.7"),
+        database: databaseFixture.database,
+        storage: storageFixture.storage,
+      }),
+    ).rejects.toEqual(quotaError);
+
+    expect(storageFixture.storeDocument).not.toHaveBeenCalled();
+    expect(databaseFixture.insert).not.toHaveBeenCalled();
+  });
+
   it.each([
     {
       mimeType: "application/pdf",

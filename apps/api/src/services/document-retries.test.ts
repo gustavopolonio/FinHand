@@ -1,15 +1,32 @@
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
-import { ConflictError, NotFoundError } from "../errors/application-errors.js";
+import {
+  ConflictError,
+  NotFoundError,
+  UploadQuotaExceededError,
+} from "../errors/application-errors.js";
 import { retryFailedDocumentUploadForUser } from "./document-retries.js";
+
+const quotaMocks = vi.hoisted(() => ({
+  lockAndAssertAvailable: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("./upload-quotas.js", () => ({
+  lockAndAssertProcessingJobQuotaAvailable:
+    quotaMocks.lockAndAssertAvailable,
+}));
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const uploadId = "22222222-2222-4222-8222-222222222222";
 const updatedAt = new Date("2026-11-13T12:00:00.000Z");
 const postgresDialect = new PgDialect();
+
+afterEach(() => {
+  quotaMocks.lockAndAssertAvailable.mockClear();
+});
 
 function createDatabaseFixture(
   upload: Record<string, unknown> | undefined,
@@ -31,6 +48,9 @@ function createDatabaseFixture(
   const database = {
     query: { uploads: { findFirst } },
     update,
+    transaction: vi.fn(async (operation: (transaction: Database) => unknown) =>
+      operation(database as unknown as Database),
+    ),
   } as unknown as Database;
 
   return { database, findFirst, returning, set, update, where };
@@ -60,6 +80,10 @@ describe("retryFailedDocumentUploadForUser", () => {
       failureDismissedAt: null,
       updatedAt: expect.any(Date),
     });
+    expect(quotaMocks.lockAndAssertAvailable).toHaveBeenCalledWith(
+      fixture.database,
+      userId,
+    );
 
     const findConfiguration = fixture.findFirst.mock.calls[0]?.[0];
     const findConditions = findConfiguration.where(
@@ -179,5 +203,24 @@ describe("retryFailedDocumentUploadForUser", () => {
         "The document upload changed before it could be retried.",
       ),
     );
+  });
+
+  it("does not retry a failed document when all processing slots are occupied", async () => {
+    const quotaError = new UploadQuotaExceededError(
+      "Too many uploads are waiting to be processed. Try again after processing finishes.",
+      "ACTIVE_UPLOAD_LIMIT_EXCEEDED",
+    );
+    quotaMocks.lockAndAssertAvailable.mockRejectedValueOnce(quotaError);
+    const fixture = createDatabaseFixture({
+      id: uploadId,
+      status: "failed",
+      failureCode: "ai_timeout",
+      processingAttempts: 1,
+    });
+
+    await expect(
+      retryFailedDocumentUploadForUser(fixture.database, userId, uploadId),
+    ).rejects.toEqual(quotaError);
+    expect(fixture.update).not.toHaveBeenCalled();
   });
 });

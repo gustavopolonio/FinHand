@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "../db/index.js";
 import { uploads } from "../db/schema/index.js";
 import {
   InputError,
   PayloadTooLargeError,
+  UploadQuotaExceededError,
 } from "../errors/application-errors.js";
 import type {
   DocumentStorage,
@@ -19,9 +20,31 @@ import {
   type AudioDurationReader,
 } from "./audio-uploads.js";
 
+const quotaMocks = vi.hoisted(() => ({
+  assertAvailable: vi.fn().mockResolvedValue(undefined),
+  runWithin: vi.fn(
+    async (
+      database: Database,
+      _userId: string,
+      operation: (transaction: Database) => Promise<unknown>,
+    ) => operation(database),
+  ),
+}));
+
+vi.mock("./upload-quotas.js", () => ({
+  assertNewUploadQuotaAvailable: quotaMocks.assertAvailable,
+  runWithinNewUploadQuota: quotaMocks.runWithin,
+}));
+
 const userId = "11111111-1111-4111-8111-111111111111";
 const createdAt = new Date("2026-11-16T12:00:00.000Z");
 const updatedAt = new Date("2026-11-16T12:00:01.000Z");
+
+afterEach(() => {
+  quotaMocks.assertAvailable.mockClear();
+  quotaMocks.runWithin.mockClear();
+  vi.restoreAllMocks();
+});
 
 function createDatabaseFixture(error?: Error) {
   let insertedValues: Record<string, unknown> | undefined;
@@ -128,6 +151,27 @@ async function upload(options: {
 }
 
 describe("uploadAudioRecordingForUser", () => {
+  it("removes stored audio if the authoritative quota check loses a race", async () => {
+    const quotaError = new UploadQuotaExceededError(
+      "Too many uploads are waiting to be processed. Try again after processing finishes.",
+      "ACTIVE_UPLOAD_LIMIT_EXCEEDED",
+    );
+    quotaMocks.runWithin.mockRejectedValueOnce(quotaError);
+    const databaseFixture = createDatabaseFixture();
+    const storageFixture = createStorageFixture();
+
+    await expect(
+      upload({
+        database: databaseFixture.database,
+        storage: storageFixture.storage,
+      }),
+    ).rejects.toEqual(quotaError);
+
+    expect(storageFixture.storeDocument).toHaveBeenCalledOnce();
+    expect(storageFixture.deleteDocument).toHaveBeenCalledOnce();
+    expect(databaseFixture.insert).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["audio/webm;codecs=opus", "audio/webm", "voice-recording.webm"],
     ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "voice-recording.m4a"],

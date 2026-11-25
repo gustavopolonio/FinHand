@@ -26,6 +26,16 @@ import {
   uploadDocumentForCaptureSession,
 } from "./document-capture-sessions.js";
 
+const quotaMocks = vi.hoisted(() => ({
+  assertAvailable: vi.fn().mockResolvedValue(undefined),
+  lockAndAssertAvailable: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("./upload-quotas.js", () => ({
+  assertNewUploadQuotaAvailable: quotaMocks.assertAvailable,
+  lockAndAssertNewUploadQuotaAvailable: quotaMocks.lockAndAssertAvailable,
+}));
+
 const postgresDialect = new PgDialect();
 const userId = "33333333-3333-4333-8333-333333333333";
 const sessionId = "44444444-4444-4444-8444-444444444444";
@@ -105,6 +115,8 @@ function getSqlParameters(expression: unknown) {
 }
 
 afterEach(() => {
+  quotaMocks.assertAvailable.mockClear();
+  quotaMocks.lockAndAssertAvailable.mockClear();
   vi.restoreAllMocks();
 });
 
@@ -503,6 +515,14 @@ describe("uploadDocumentForCaptureSession", () => {
       }),
     );
     expect(databaseFixture.lock).toHaveBeenCalledOnce();
+    expect(quotaMocks.assertAvailable).toHaveBeenCalledWith(
+      databaseFixture.database,
+      userId,
+    );
+    expect(quotaMocks.lockAndAssertAvailable).toHaveBeenCalledWith(
+      expect.anything(),
+      userId,
+    );
     expect(storageFixture.storage.deleteDocument).not.toHaveBeenCalled();
   });
 

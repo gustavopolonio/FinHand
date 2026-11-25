@@ -61,3 +61,17 @@ export class UnsupportedMediaTypeError extends Error {
   override readonly name = "UnsupportedMediaTypeError";
   readonly statusCode = 415;
 }
+
+export class UploadQuotaExceededError extends Error {
+  override readonly name = "UploadQuotaExceededError";
+  readonly statusCode = 429;
+
+  constructor(
+    message: string,
+    readonly code:
+      | "ACTIVE_UPLOAD_LIMIT_EXCEEDED"
+      | "HOURLY_UPLOAD_LIMIT_EXCEEDED",
+  ) {
+    super(message);
+  }
+}
