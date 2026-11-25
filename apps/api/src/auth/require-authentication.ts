@@ -1,6 +1,8 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type {
+  FastifyReply,
   FastifyInstance,
+  FastifyRequest,
   preHandlerHookHandler,
 } from "fastify";
 
@@ -20,11 +22,15 @@ declare module "fastify" {
 export function registerAuthenticationGuard(
   application: FastifyInstance,
   authentication: Authentication,
+  afterAuthentication?: (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => Promise<void>,
 ) {
   application.decorateRequest("authenticatedUserId", "");
   application.decorate(
     "requireAuthentication",
-    async function requireAuthentication(request) {
+    async function requireAuthentication(request, reply) {
       const session = await authentication.api.getSession({
         headers: fromNodeHeaders(request.headers),
       });
@@ -34,6 +40,7 @@ export function registerAuthenticationGuard(
       }
 
       request.authenticatedUserId = session.user.id;
+      await afterAuthentication?.(request, reply);
     },
   );
 }

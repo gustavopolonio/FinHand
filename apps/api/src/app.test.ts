@@ -203,7 +203,7 @@ describe("buildApplication", () => {
       "untrusted-client-id",
     );
     expect(firstResponse.headers["access-control-expose-headers"]).toBe(
-      "x-request-id",
+      "Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, x-request-id",
     );
     expect(secondResponse.headers["x-request-id"]).not.toBe(
       firstResponse.headers["x-request-id"],

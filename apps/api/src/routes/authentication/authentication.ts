@@ -2,6 +2,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 
 import type { Authentication } from "../../auth/authentication.js";
+import { authenticationIpRateLimitOptions } from "../../security/request-rate-limits.js";
 
 interface AuthenticationRoutesOptions {
   authentication: Authentication;
@@ -13,6 +14,9 @@ export async function authenticationRoutes(
   options: AuthenticationRoutesOptions,
 ) {
   application.route({
+    config: {
+      rateLimit: authenticationIpRateLimitOptions(),
+    },
     method: ["GET", "POST"],
     url: "/api/auth/*",
     async handler(request, reply) {

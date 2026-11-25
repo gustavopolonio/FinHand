@@ -31,6 +31,7 @@ import {
   enforceRequestUrlLimit,
   requestLimits,
 } from "./security/request-limits.js";
+import { registerRequestRateLimits } from "./security/request-rate-limits.js";
 import type { DocumentStorage } from "./storage/document-storage.js";
 import { registerSchemaCompilers } from "./validation/schema-compilers.js";
 
@@ -84,7 +85,14 @@ export function buildApplication({
   registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
   application.decorate("database", databaseConnection.database);
-  registerAuthenticationGuard(application, authentication);
+  registerRequestRateLimits(application);
+  registerAuthenticationGuard(
+    application,
+    authentication,
+    async (request, reply) => {
+      await application.authenticatedUserRateLimit(request, reply);
+    },
+  );
   application.addHook("onRequest", async (request, reply) => {
     reply.header("x-request-id", request.id);
     enforceRequestUrlLimit(request.url);
@@ -127,7 +135,13 @@ export function buildApplication({
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["x-request-id"],
+    exposedHeaders: [
+      "Retry-After",
+      "X-RateLimit-Limit",
+      "X-RateLimit-Remaining",
+      "X-RateLimit-Reset",
+      "x-request-id",
+    ],
     maxAge: 86_400,
   });
   registerRequestOriginGuard(application, corsOrigin);

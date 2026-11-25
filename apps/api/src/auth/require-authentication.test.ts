@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Authentication } from "./authentication.js";
 import { registerApplicationErrorHandler } from "../errors/error-handler.js";
@@ -13,7 +13,10 @@ afterEach(async () => {
   );
 });
 
-function createApplication(userId: string | null) {
+function createApplication(
+  userId: string | null,
+  afterAuthentication?: Parameters<typeof registerAuthenticationGuard>[2],
+) {
   const authentication = {
     handler: async () => new Response(null, { status: 404 }),
     api: {
@@ -29,7 +32,11 @@ function createApplication(userId: string | null) {
   const application = Fastify();
 
   registerApplicationErrorHandler(application);
-  registerAuthenticationGuard(application, authentication);
+  registerAuthenticationGuard(
+    application,
+    authentication,
+    afterAuthentication,
+  );
   application.get(
     "/protected",
     { preHandler: application.requireAuthentication },
@@ -67,5 +74,37 @@ describe("requireAuthentication", () => {
     expect(response.json()).toEqual({
       userId: "11111111-1111-4111-8111-111111111111",
     });
+  });
+
+  it("runs authenticated request policies only after resolving the user", async () => {
+    const afterAuthentication = vi.fn();
+    const application = createApplication(
+      "11111111-1111-4111-8111-111111111111",
+      afterAuthentication,
+    );
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/protected",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(afterAuthentication).toHaveBeenCalledOnce();
+    expect(afterAuthentication.mock.calls[0]?.[0]).toMatchObject({
+      authenticatedUserId: "11111111-1111-4111-8111-111111111111",
+    });
+  });
+
+  it("does not run authenticated request policies for invalid sessions", async () => {
+    const afterAuthentication = vi.fn();
+    const application = createApplication(null, afterAuthentication);
+
+    const response = await application.inject({
+      method: "GET",
+      url: "/protected",
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(afterAuthentication).not.toHaveBeenCalled();
   });
 });
