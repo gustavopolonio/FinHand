@@ -115,7 +115,11 @@
   - [x] Define the production proxy trust boundary and endpoint security policy; enforce exact-origin CORS and origin validation without breaking OAuth, capture links, or SSE
   - [x] Add production security headers at the public edge while preserving Google OAuth, camera capture, microphone recording, document previews, and SSE
   - [x] Enforce route-appropriate body, multipart, content-type, header, and timeout limits with consistent safe errors
-  - [ ] Add tiered IP and authenticated-user rate limits, upload/job quotas, capture-token protection, and per-user SSE connection caps
+  - [ ] Add tiered IP and authenticated-user rate limits, upload/job quotas, capture-token protection, and per-user SSE connection caps:
+    - [x] Add short-window IP and authenticated-user request rate limits with stricter authentication-route protection
+    - [ ] Add PostgreSQL-backed upload and processing-job quotas
+    - [ ] Harden public capture-token verification and submission against abuse
+    - [ ] Cap active SSE connections per authenticated user
   - [ ] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur

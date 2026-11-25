@@ -195,6 +195,27 @@ audio inputs return HTTP 413 with stable `REQUEST_BODY_TOO_LARGE`,
 `DOCUMENT_TOO_LARGE`, and `AUDIO_TOO_LARGE` codes respectively. Oversized URLs
 return HTTP 414 without reflecting their contents or sensitive request data.
 
+### Request rate limits
+
+The API uses `@fastify/rate-limit` to enforce short-window request limits. The
+general public ceiling is 300 requests per minute per resolved client IP.
+Better Auth endpoints have a separate, stricter ceiling of 20 requests per
+minute per IP, and requests with a valid application session additionally share
+a ceiling of 180 requests per minute per authenticated user. Browser `OPTIONS`
+preflight requests do not consume these budgets.
+
+Rejected requests return HTTP 429 with a stable `RATE_LIMIT_EXCEEDED` code and
+a `Retry-After` header. Rate-limit headers are exposed through CORS so the web
+client can respond without parsing error-message text. Invalid sessions never
+reach the user-level limiter; they remain bounded by the IP policies.
+
+The V1 limiter uses process memory because production runs exactly one API
+container. Its counters intentionally reset when that container restarts. A
+shared rate-limit store such as Redis is required before running more than one
+API container; otherwise each container would enforce an independent budget.
+Durable upload and AI-processing quotas remain PostgreSQL-backed work and are
+not provided by these short-window request limits.
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to
