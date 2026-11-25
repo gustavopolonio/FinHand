@@ -111,7 +111,7 @@
 - [x] Introduce opaque random storage namespaces for new uploads while retaining backward-compatible access to existing object keys
 - [x] Provision a correctly named shared development uploads bucket, update development IAM and configuration, discard disposable pre-V1 upload data without migration, and retire the document-specific bucket; retain the existing production uploads bucket
 - [x] Replace document- and audio-status polling with authenticated SSE updates backed by PostgreSQL `LISTEN`/`NOTIFY`, while retaining authoritative API reads after every event and reconnect
-- [ ] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection:
+- [x] Harden public endpoints with production CORS, security headers, rate limits, request limits, and abuse protection:
   - [x] Define the production proxy trust boundary and endpoint security policy; enforce exact-origin CORS and origin validation without breaking OAuth, capture links, or SSE
   - [x] Add production security headers at the public edge while preserving Google OAuth, camera capture, microphone recording, document previews, and SSE
   - [x] Enforce route-appropriate body, multipart, content-type, header, and timeout limits with consistent safe errors
@@ -119,7 +119,7 @@
     - [x] Add short-window IP and authenticated-user request rate limits with stricter authentication-route protection
     - [x] Add PostgreSQL-backed upload and processing-job quotas
     - [x] Harden public capture-token verification and submission against abuse
-  - [ ] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
+  - [x] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [ ] Define safe same-host PostgreSQL migration, connection-pool, encrypted backup, restore, and worker deployment procedures
 - [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
 - [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
