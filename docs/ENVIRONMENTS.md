@@ -260,6 +260,51 @@ hashes, valid for five minutes, scoped to upload-only access, and atomically
 consumable once. In-memory counters may reset with the single API container,
 but the session expiry and one-use PostgreSQL transition remain authoritative.
 
+### Security rejection telemetry and smoke checks
+
+API-enforced origin, size, content-type, rate-limit, and upload-quota
+rejections emit a structured `security.request.rejected` warning. Each event
+contains only the stable rejection `code`, route template, HTTP method, status,
+and the existing request ID. It deliberately excludes client IPs, raw URLs,
+queries, headers, cookies, bearer tokens, bodies, file names, and error
+messages. The API container already ships these JSON events to its retained
+CloudWatch log group, where they can be summarized safely with Logs Insights:
+
+```text
+fields @timestamp, code, route, statusCode
+| filter event = "security.request.rejected"
+| stats count() by code, route, bin(5m)
+```
+
+After a production deployment, run the non-mutating automated smoke command
+against both public origins:
+
+```bash
+npm run security:smoke:production -- \
+  --web-url=https://finhand.duckdns.org \
+  --api-url=https://finhand-api.duckdns.org
+```
+
+The command verifies HTTPS security headers, API health, request IDs,
+credentialed exact-origin CORS, unsafe cookie-origin rejection, and Fastify URL
+and buffered-body limits. Its two `POST` requests are intentionally rejected
+before authentication or business logic, so it cannot create application
+records. It does not intentionally exhaust production rate-limit windows.
+
+Complete the stateful smoke coverage manually with a controlled test user:
+
+1. Sign in and sign out through Google in a fresh private browser window.
+2. Open Transactions and confirm the authenticated SSE stream reconnects
+   without exposing another user's events.
+3. Upload one small document and one sub-30-second voice recording; confirm
+   processing completes and review candidates appear without polling.
+4. Generate a QR capture session, upload one receipt from a phone, confirm the
+   desktop receives it, and confirm the same QR token cannot upload again.
+5. Open an original private document/audio preview and confirm its presigned URL
+   expires as documented.
+6. Confirm CloudWatch contains safe rejection codes from the automated smoke
+   run without cookies, authorization values, request bodies, or financial data.
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to
