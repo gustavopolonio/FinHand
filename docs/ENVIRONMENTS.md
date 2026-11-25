@@ -213,8 +213,30 @@ The V1 limiter uses process memory because production runs exactly one API
 container. Its counters intentionally reset when that container restarts. A
 shared rate-limit store such as Redis is required before running more than one
 API container; otherwise each container would enforce an independent budget.
-Durable upload and AI-processing quotas remain PostgreSQL-backed work and are
-not provided by these short-window request limits.
+Durable upload and AI-processing quotas are enforced separately in PostgreSQL
+and are not provided by these short-window request limits.
+
+### Upload and processing quotas
+
+PostgreSQL is the authoritative quota store for document, QR-capture, and audio
+submissions. A user may have at most five uploads in `pending`, `uploaded`, or
+`processing` state at once and may create at most 30 uploads in a rolling
+one-hour window. Retrying a failed document consumes an active processing slot
+but does not count as a new hourly upload.
+
+Each submission performs an early usage check before writing to S3. The final
+database insert runs in a transaction that obtains a transaction-scoped
+PostgreSQL advisory lock derived from the user ID, recounts usage, and inserts
+only while both budgets remain available. Direct documents, audio, and QR
+captures use the same lock and counters. Therefore concurrent requests cannot
+all consume the final available slot. If a request stored an object before
+losing this final quota race, the service deletes that object during its normal
+failure cleanup.
+
+Quota rejection returns HTTP 429 with either
+`ACTIVE_UPLOAD_LIMIT_EXCEEDED` or `HOURLY_UPLOAD_LIMIT_EXCEEDED`. Existing
+indexes on `(user_id, status)` and `(user_id, created_at)` support the quota
+counts, so this policy does not require another table or database migration.
 
 ### Realtime upload status
 
