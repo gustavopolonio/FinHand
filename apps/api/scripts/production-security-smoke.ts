@@ -188,7 +188,10 @@ export async function runProductionSecuritySmoke(
     request,
     new URL("/api/accounts", apiUrl),
     {
-      body: "{}",
+      body: JSON.stringify({
+        name: "Production security smoke",
+        type: "cash",
+      }),
       headers: {
         "content-type": "application/json",
         cookie: "finhand_security_smoke=invalid",

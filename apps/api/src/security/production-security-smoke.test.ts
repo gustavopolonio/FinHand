@@ -102,5 +102,11 @@ describe("production security smoke script", () => {
         String(input).endsWith("/api/accounts"),
       ),
     ).toBe(true);
+    expect(mutatingCalls[0]?.[1]?.body).toBe(
+      JSON.stringify({
+        name: "Production security smoke",
+        type: "cash",
+      }),
+    );
   });
 });
