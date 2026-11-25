@@ -238,6 +238,28 @@ Quota rejection returns HTTP 429 with either
 indexes on `(user_id, status)` and `(user_id, created_at)` support the quota
 counts, so this policy does not require another table or database migration.
 
+### Capture-token abuse protection
+
+The public mobile capture endpoints apply independent IP and token budgets in
+addition to the general request limit. Session verification permits 30 requests
+per minute per IP and 30 requests per five minutes per capture token. Document
+submission permits 10 attempts per five minutes per IP and five attempts per
+five minutes per capture token. Rejections return HTTP 429 with the stable
+`CAPTURE_RATE_LIMIT_EXCEEDED` code.
+
+The secondary limiter derives its key from a SHA-256 digest of a syntactically
+valid bearer token; raw capture tokens are never retained by the limiter or
+written to logs. Malformed credentials share an IP-derived key instead of
+attacker-controlled header text, preventing arbitrary invalid values from
+creating unbounded in-memory keys. Both submission checks run during
+`onRequest`, before Fastify parses or streams the multipart body.
+
+These short-window counters complement rather than replace the database
+guarantees. Capture tokens remain cryptographically random, stored only as
+hashes, valid for five minutes, scoped to upload-only access, and atomically
+consumable once. In-memory counters may reset with the single API container,
+but the session expiry and one-use PostgreSQL transition remain authoritative.
+
 ### Realtime upload status
 
 The Transactions page opens one authenticated Server-Sent Events connection to
