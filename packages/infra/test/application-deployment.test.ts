@@ -45,8 +45,11 @@ describe("production application deployment", () => {
     expect(script).not.toContain(options.composeConfiguration);
   });
 
-  it("pulls images, verifies a backup, migrates, and then starts services", () => {
+  it("stops the worker, verifies a backup, migrates, and then starts services", () => {
     const pullPosition = script.indexOf('"${compose[@]}" --profile deployment pull');
+    const workerStopPosition = script.indexOf(
+      'docker stop --time 60 "$previous_worker_container"',
+    );
     const backupPosition = script.indexOf("pg_dump --format=custom");
     const verifyPosition = script.indexOf("pg_restore --list");
     const uploadPosition = script.indexOf('aws s3 cp "$backup_path"');
@@ -58,12 +61,30 @@ describe("production application deployment", () => {
     );
 
     expect(pullPosition).toBeGreaterThan(-1);
-    expect(backupPosition).toBeGreaterThan(pullPosition);
+    expect(workerStopPosition).toBeGreaterThan(pullPosition);
+    expect(backupPosition).toBeGreaterThan(workerStopPosition);
     expect(verifyPosition).toBeGreaterThan(backupPosition);
     expect(uploadPosition).toBeGreaterThan(verifyPosition);
     expect(migrationPosition).toBeGreaterThan(uploadPosition);
     expect(startPosition).toBeGreaterThan(migrationPosition);
     expect(script).toContain('s3://${BACKUP_BUCKET}/${backup_key}');
+  });
+
+  it("restarts the exact previous worker if backup or migration fails", () => {
+    expect(script).toContain(
+      'previous_worker_container=$("${previous_compose[@]}" ps --quiet worker)',
+    );
+    expect(script).toContain(
+      'previous_api_image=$(docker inspect --format \'{{.Config.Image}}\' "$previous_api_container")',
+    );
+    expect(script).toContain(
+      'docker start "$previous_worker_container" > /dev/null 2>&1',
+    );
+    expect(script).toContain(
+      'FINHAND_API_IMAGE="$previous_api_image" "${rollback_worker_compose[@]}" up --detach --no-deps worker',
+    );
+    expect(script).toContain('if [[ "$deployment_succeeded" != "true" ]]');
+    expect(script).toContain('deployment_succeeded=true');
   });
 
   it("restores the previous container release when health checks fail", () => {
@@ -76,6 +97,9 @@ describe("production application deployment", () => {
     );
     expect(script).toContain(
       '"${rollback_compose[@]}" up --detach --no-deps --force-recreate --wait --wait-timeout 180 proxy',
+    );
+    expect(script).toContain(
+      'FINHAND_WEB_IMAGE="$previous_web_image" FINHAND_API_IMAGE="$previous_api_image" "${rollback_compose[@]}" up --detach --remove-orphans',
     );
   });
 
