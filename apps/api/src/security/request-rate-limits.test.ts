@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   authenticationIpRateLimitOptions,
+  captureSubmissionIpRateLimitOptions,
+  captureVerificationIpRateLimitOptions,
   registerRequestRateLimits,
   type RequestRateLimitPolicies,
 } from "./request-rate-limits.js";
@@ -18,10 +20,18 @@ afterEach(async () => {
 function createPolicies({
   authenticatedUser = 20,
   authenticationIp = 10,
+  captureSubmissionIp = 10,
+  captureSubmissionToken = 10,
+  captureVerificationIp = 10,
+  captureVerificationToken = 10,
   generalIp = 10,
 }: {
   authenticatedUser?: number;
   authenticationIp?: number;
+  captureSubmissionIp?: number;
+  captureSubmissionToken?: number;
+  captureVerificationIp?: number;
+  captureVerificationToken?: number;
   generalIp?: number;
 } = {}): RequestRateLimitPolicies {
   return {
@@ -32,6 +42,22 @@ function createPolicies({
     authenticationIp: {
       maximumRequests: authenticationIp,
       timeWindowMilliseconds: 60_000,
+    },
+    captureSubmissionIp: {
+      maximumRequests: captureSubmissionIp,
+      timeWindowMilliseconds: 300_000,
+    },
+    captureSubmissionToken: {
+      maximumRequests: captureSubmissionToken,
+      timeWindowMilliseconds: 300_000,
+    },
+    captureVerificationIp: {
+      maximumRequests: captureVerificationIp,
+      timeWindowMilliseconds: 60_000,
+    },
+    captureVerificationToken: {
+      maximumRequests: captureVerificationToken,
+      timeWindowMilliseconds: 300_000,
     },
     generalIp: {
       maximumRequests: generalIp,
@@ -140,20 +166,22 @@ describe("request rate limits", () => {
       createPolicies({ authenticatedUser: 2, generalIp: 20 }),
     );
     application.decorateRequest("authenticatedUserId", "");
-    application.get(
-      "/protected",
-      {
-        preHandler: [
-          async (request) => {
-            request.authenticatedUserId = String(
-              request.headers["x-test-user-id"],
-            );
-          },
-          application.authenticatedUserRateLimit,
-        ],
-      },
-      async () => ({ accepted: true }),
-    );
+    application.register(async (routes) => {
+      routes.get(
+        "/protected",
+        {
+          preHandler: [
+            async (request) => {
+              request.authenticatedUserId = String(
+                request.headers["x-test-user-id"],
+              );
+            },
+            application.authenticatedUserRateLimit,
+          ],
+        },
+        async () => ({ accepted: true }),
+      );
+    });
     const userHeaders = { "x-test-user-id": "user-a" };
 
     expect(
@@ -234,5 +262,141 @@ describe("request rate limits", () => {
         })
       ).statusCode,
     ).toBe(429);
+  });
+
+  it("limits capture submissions by a hash-derived token key across IP addresses", async () => {
+    const policies = createPolicies({
+      captureSubmissionIp: 10,
+      captureSubmissionToken: 1,
+      generalIp: 20,
+    });
+    const application = createApplication(policies);
+    application.register(async (routes) => {
+      routes.post(
+        "/capture-document",
+        {
+          config: {
+            rateLimit: captureSubmissionIpRateLimitOptions(
+              policies.captureSubmissionIp,
+            ),
+          },
+          onRequest: application.captureSubmissionTokenRateLimit,
+        },
+        async () => ({ accepted: true }),
+      );
+    });
+    const firstToken = "a".repeat(43);
+    const secondToken = "b".repeat(43);
+
+    const acceptedResponse = await application.inject({
+      headers: { authorization: `Bearer ${firstToken}` },
+      method: "POST",
+      remoteAddress: "203.0.113.30",
+      url: "/capture-document",
+    });
+    const limitedResponse = await application.inject({
+      headers: { authorization: `Bearer ${firstToken}` },
+      method: "POST",
+      remoteAddress: "203.0.113.31",
+      url: "/capture-document",
+    });
+    const otherTokenResponse = await application.inject({
+      headers: { authorization: `Bearer ${secondToken}` },
+      method: "POST",
+      remoteAddress: "203.0.113.31",
+      url: "/capture-document",
+    });
+
+    expect(acceptedResponse.statusCode).toBe(200);
+    expect(limitedResponse.statusCode).toBe(429);
+    expect(limitedResponse.body).not.toContain(firstToken);
+    expect(limitedResponse.json()).toEqual({
+      statusCode: 429,
+      code: "CAPTURE_RATE_LIMIT_EXCEEDED",
+      error: "Too Many Requests",
+      message: "Too many capture attempts. Try again later.",
+    });
+    expect(otherTokenResponse.statusCode).toBe(200);
+  });
+
+  it("limits capture verification independently by client IP", async () => {
+    const policies = createPolicies({
+      captureVerificationIp: 1,
+      captureVerificationToken: 10,
+      generalIp: 20,
+    });
+    const application = createApplication(policies);
+    application.register(async (routes) => {
+      routes.get(
+        "/capture-session",
+        {
+          config: {
+            rateLimit: captureVerificationIpRateLimitOptions(
+              policies.captureVerificationIp,
+            ),
+          },
+          onRequest: application.captureVerificationTokenRateLimit,
+        },
+        async () => ({ accepted: true }),
+      );
+    });
+    const address = "203.0.113.40";
+    const token = "a".repeat(43);
+
+    const acceptedResponse = await application.inject({
+      headers: { authorization: `Bearer ${token}` },
+      method: "GET",
+      remoteAddress: address,
+      url: "/capture-session",
+    });
+    const limitedResponse = await application.inject({
+      headers: { authorization: `Bearer ${token}` },
+      method: "GET",
+      remoteAddress: address,
+      url: "/capture-session",
+    });
+
+    expect(acceptedResponse.statusCode).toBe(200);
+    expect(limitedResponse.statusCode).toBe(429);
+  });
+
+  it("groups malformed capture credentials by IP instead of attacker-controlled text", async () => {
+    const policies = createPolicies({
+      captureSubmissionIp: 10,
+      captureSubmissionToken: 1,
+      generalIp: 20,
+    });
+    const application = createApplication(policies);
+    application.register(async (routes) => {
+      routes.post(
+        "/capture-document",
+        {
+          config: {
+            rateLimit: captureSubmissionIpRateLimitOptions(
+              policies.captureSubmissionIp,
+            ),
+          },
+          onRequest: application.captureSubmissionTokenRateLimit,
+        },
+        async () => ({ accepted: true }),
+      );
+    });
+    const address = "203.0.113.50";
+
+    const firstResponse = await application.inject({
+      headers: { authorization: "Bearer invalid-one" },
+      method: "POST",
+      remoteAddress: address,
+      url: "/capture-document",
+    });
+    const secondResponse = await application.inject({
+      headers: { authorization: "Bearer invalid-two" },
+      method: "POST",
+      remoteAddress: address,
+      url: "/capture-document",
+    });
+
+    expect(firstResponse.statusCode).toBe(200);
+    expect(secondResponse.statusCode).toBe(429);
   });
 });

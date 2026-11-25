@@ -16,6 +16,10 @@ import {
 } from "../../services/document-capture-sessions.js";
 import { maximumDocumentUploadBytes } from "../../services/document-uploads.js";
 import { publishCaptureSessionChangedForUpload } from "../../realtime/user-events.js";
+import {
+  captureSubmissionIpRateLimitOptions,
+  captureVerificationIpRateLimitOptions,
+} from "../../security/request-rate-limits.js";
 import type { DocumentStorage } from "../../storage/document-storage.js";
 import { documentCaptureSessionParamsSchema } from "../../validation/document-capture-session-schemas.js";
 
@@ -108,6 +112,12 @@ export async function documentCaptureSessionRoutes(
 
   captureApplication.get(
     "/api/document-capture-session",
+    {
+      config: {
+        rateLimit: captureVerificationIpRateLimitOptions(),
+      },
+      onRequest: application.captureVerificationTokenRateLimit,
+    },
     async (request) => {
       const token = captureTokenFromAuthorization(
         request.headers.authorization,
@@ -134,6 +144,12 @@ export async function documentCaptureSessionRoutes(
 
   captureApplication.post(
     "/api/document-capture-session/document",
+    {
+      config: {
+        rateLimit: captureSubmissionIpRateLimitOptions(),
+      },
+      onRequest: application.captureSubmissionTokenRateLimit,
+    },
     async (request, reply) => {
       const token = captureTokenFromAuthorization(
         request.headers.authorization,

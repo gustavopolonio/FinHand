@@ -5,6 +5,7 @@ import type { Authentication } from "../../auth/authentication.js";
 import { registerAuthenticationGuard } from "../../auth/require-authentication.js";
 import type { Database } from "../../db/index.js";
 import { registerApplicationErrorHandler } from "../../errors/error-handler.js";
+import { registerRequestRateLimits } from "../../security/request-rate-limits.js";
 import {
   ConflictError,
   GoneError,
@@ -82,6 +83,7 @@ function createApplication(authenticatedUserId: string | null) {
 
   registerSchemaCompilers(application);
   registerApplicationErrorHandler(application);
+  registerRequestRateLimits(application);
   application.decorate("database", {} as Database);
   registerAuthenticationGuard(
     application,
@@ -359,6 +361,32 @@ describe("GET /api/document-capture-session", () => {
       error: "This capture session is no longer available.",
     });
   });
+
+  it("limits repeated public verification attempts", async () => {
+    const application = createApplication(null);
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await application.inject({
+        method: "GET",
+        url: "/api/document-capture-session",
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    const limitedResponse = await application.inject({
+      method: "GET",
+      url: "/api/document-capture-session",
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(limitedResponse.statusCode).toBe(429);
+    expect(limitedResponse.json()).toMatchObject({
+      code: "CAPTURE_RATE_LIMIT_EXCEEDED",
+    });
+    expect(captureMocks.getAvailable).toHaveBeenCalledTimes(30);
+  });
 });
 
 describe("POST /api/document-capture-session/document", () => {
@@ -423,5 +451,36 @@ describe("POST /api/document-capture-session/document", () => {
       error: "Unsupported Media Type",
       message: "Document upload must use multipart/form-data.",
     });
+  });
+
+  it("limits a capture token before parsing another multipart body", async () => {
+    const application = createApplication(null);
+    const multipart = createMultipartPayload();
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await application.inject({
+        method: "POST",
+        url: "/api/document-capture-session/document",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": multipart.contentType,
+        },
+        payload: multipart.payload,
+      });
+
+      expect(response.statusCode).toBe(201);
+    }
+
+    const limitedResponse = await application.inject({
+      method: "POST",
+      url: "/api/document-capture-session/document",
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(limitedResponse.statusCode).toBe(429);
+    expect(limitedResponse.json()).toMatchObject({
+      code: "CAPTURE_RATE_LIMIT_EXCEEDED",
+    });
+    expect(captureMocks.upload).toHaveBeenCalledTimes(5);
   });
 });

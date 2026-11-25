@@ -56,6 +56,20 @@ export class RequestUriTooLongError extends Error {
   }
 }
 
+export class RateLimitExceededError extends Error {
+  override readonly name = "RateLimitExceededError";
+  readonly statusCode = 429;
+
+  constructor(
+    message: string,
+    readonly code:
+      | "CAPTURE_RATE_LIMIT_EXCEEDED"
+      | "RATE_LIMIT_EXCEEDED",
+  ) {
+    super(message);
+  }
+}
+
 export class UnsupportedMediaTypeError extends Error {
   readonly code = "UNSUPPORTED_MEDIA_TYPE";
   override readonly name = "UnsupportedMediaTypeError";
