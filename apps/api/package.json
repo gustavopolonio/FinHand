@@ -13,6 +13,7 @@
     "dev:tunnel": "tsx scripts/dev-tunnel.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "lint": "eslint .",
+    "security:smoke:production": "tsx scripts/production-security-smoke.ts",
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "test": "vitest run",

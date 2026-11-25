@@ -30,6 +30,7 @@
     "dev:web": "npm run dev --workspace @finhand/web",
     "infra:synth": "npm run synth --workspace @finhand/infra",
     "lint": "npm run lint --workspaces --if-present",
+    "security:smoke:production": "npm run security:smoke:production --workspace @finhand/api --",
     "start:api": "npm run start --workspace @finhand/api",
     "start:worker": "npm run start:worker --workspace @finhand/api",
     "start:web": "npm run start --workspace @finhand/web",
