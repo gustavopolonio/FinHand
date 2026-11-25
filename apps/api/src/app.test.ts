@@ -8,6 +8,7 @@ import type { DatabaseConnection } from "./db/index.js";
 import { createLoggerOptions } from "./logging/logger.js";
 import type { UserEventListener } from "./realtime/user-events.js";
 import { requestLimits } from "./security/request-limits.js";
+import { requestRateLimitPolicies } from "./security/request-rate-limits.js";
 import { createTestDocumentStorage } from "./test/document-storage.js";
 
 function createDependencies() {
@@ -341,6 +342,40 @@ describe("buildApplication", () => {
     await application.close();
   });
 
+  it("exposes credentialed CORS responses only to the configured origin", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+    });
+
+    const trustedResponse = await application.inject({
+      headers: { origin: "http://localhost:3000" },
+      method: "GET",
+      url: "/health",
+    });
+    const untrustedResponse = await application.inject({
+      headers: { origin: "https://localhost.attacker.test" },
+      method: "GET",
+      url: "/health",
+    });
+
+    expect(trustedResponse.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:3000",
+    );
+    expect(trustedResponse.headers["access-control-allow-credentials"]).toBe(
+      "true",
+    );
+    expect(untrustedResponse.headers["access-control-allow-origin"]).not.toBe(
+      "https://localhost.attacker.test",
+    );
+    await application.close();
+  });
+
   it.each([
     "/api/auth/test",
     "/api/document-capture-session/document",
@@ -506,6 +541,146 @@ describe("buildApplication", () => {
       entry.includes('"event":"http.request.failed"'),
     );
     expect(serializedFailure?.match(/"requestId"/gu)).toHaveLength(1);
+
+    await application.close();
+  });
+
+  it("logs security rejections without credentials, raw URLs, or request bodies", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const entries: Record<string, unknown>[] = [];
+    const serializedEntries: string[] = [];
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+      logger: {
+        ...createLoggerOptions({
+          environment: "test",
+          level: "info",
+          service: "api",
+        }),
+        stream: createLogDestination(entries, serializedEntries),
+      },
+    });
+
+    await application.inject({
+      headers: {
+        cookie: "better-auth.session_token=private-cookie",
+        origin: "https://private-origin.attacker.test",
+      },
+      method: "POST",
+      payload: { name: "Cash", type: "cash" },
+      url: "/api/accounts",
+    });
+    const oversizedUrlPrefix = "/api/accounts?access_token=private-query-";
+    await application.inject({
+      method: "GET",
+      url: `${oversizedUrlPrefix}${"x".repeat(
+        requestLimits.maximumUrlCharacters - oversizedUrlPrefix.length + 1,
+      )}`,
+    });
+    await application.inject({
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      payload: JSON.stringify({
+        value: `private-body-${"x".repeat(requestLimits.bodyBytes)}`,
+      }),
+      url: "/api/accounts",
+    });
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await application.inject({
+        headers: {
+          authorization: `Bearer private-capture-${attempt}`,
+        },
+        method: "POST",
+        url: "/api/document-capture-session/document",
+      });
+    }
+
+    const rejections = entries.filter(
+      (entry) => entry.event === "security.request.rejected",
+    );
+    expect(rejections.map((entry) => entry.code)).toEqual([
+      "ORIGIN_NOT_ALLOWED",
+      "REQUEST_URI_TOO_LONG",
+      "REQUEST_BODY_TOO_LARGE",
+      "CAPTURE_RATE_LIMIT_EXCEEDED",
+    ]);
+    expect(rejections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: "security.request.rejected",
+          level: "warn",
+          requestId: expect.any(String),
+          statusCode: expect.any(Number),
+        }),
+      ]),
+    );
+    expect(serializedEntries.join("\n")).not.toMatch(
+      /private-cookie|private-origin|private-query|private-body|private-capture/u,
+    );
+
+    await application.close();
+  });
+
+  it("logs global IP rate-limit rejections returned by the Fastify plugin", async () => {
+    const { authentication, databaseConnection, documentStorage } =
+      createDependencies();
+    const entries: Record<string, unknown>[] = [];
+    const serializedEntries: string[] = [];
+    const application = buildApplication({
+      authentication,
+      authenticationBaseUrl: "http://localhost:3001",
+      corsOrigin: "http://localhost:3000",
+      databaseConnection,
+      documentStorage,
+      logger: {
+        ...createLoggerOptions({
+          environment: "test",
+          level: "info",
+          service: "api",
+        }),
+        stream: createLogDestination(entries, serializedEntries),
+      },
+    });
+
+    let response;
+    for (
+      let attempt = 0;
+      attempt <= requestRateLimitPolicies.generalIp.maximumRequests;
+      attempt += 1
+    ) {
+      response = await application.inject({
+        method: "GET",
+        remoteAddress: "203.0.113.91",
+        url: "/health",
+      });
+    }
+
+    expect(response?.statusCode).toBe(429);
+    expect(response?.json()).toEqual({
+      statusCode: 429,
+      code: "RATE_LIMIT_EXCEEDED",
+      error: "Too Many Requests",
+      message: "Too many requests. Try again later.",
+    });
+    expect(
+      entries.filter(
+        (entry) => entry.event === "security.request.rejected",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        code: "RATE_LIMIT_EXCEEDED",
+        method: "GET",
+        route: "/health",
+        statusCode: 429,
+      }),
+    ]);
+    expect(serializedEntries.join("\n")).not.toContain("203.0.113.91");
 
     await application.close();
   });
