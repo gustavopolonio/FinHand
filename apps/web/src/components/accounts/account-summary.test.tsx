@@ -56,6 +56,6 @@ describe("AccountSummary", () => {
     expect(markup).toContain("Opening balances");
     expect(markup).toContain("Net movement");
     expect(markup).not.toContain(">Active accounts<");
-    expect(markup).toContain("grid-cols-3");
+    expect(markup).toContain("md:grid-cols-3");
   });
 });

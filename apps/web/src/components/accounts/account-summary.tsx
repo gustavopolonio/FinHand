@@ -22,9 +22,9 @@ export function AccountSummary({
   const movement = BigInt(metrics.netMovementMinor);
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid gap-4 md:grid-cols-3">
       <Card
-        className="flex min-h-44 flex-col justify-between p-6"
+        className="flex min-h-40 flex-col justify-between p-5 sm:min-h-44 sm:p-6"
         variant="primary"
       >
         <div className="flex items-start justify-between gap-4">
@@ -36,7 +36,7 @@ export function AccountSummary({
           </span>
         </div>
         <CurrencyAmount
-          className="mt-7 text-[1.75rem] font-bold tracking-[-0.03em]"
+          className="mt-7 min-w-0 break-all text-[1.75rem] font-bold tracking-[-0.03em]"
           currencyCode={currencyCode}
           value={metrics.activeBalanceMinor}
         />
@@ -45,7 +45,7 @@ export function AccountSummary({
         </p>
       </Card>
 
-      <Card className="flex min-h-44 flex-col justify-between p-6">
+      <Card className="flex min-h-40 flex-col justify-between p-5 sm:min-h-44 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Opening balances
@@ -55,7 +55,7 @@ export function AccountSummary({
           </span>
         </div>
         <CurrencyAmount
-          className="mt-7 text-[1.75rem] font-bold tracking-[-0.03em] text-finhand-ink"
+          className="mt-7 min-w-0 break-all text-[1.75rem] font-bold tracking-[-0.03em] text-finhand-ink"
           currencyCode={currencyCode}
           value={metrics.openingBalanceMinor}
         />
@@ -64,7 +64,7 @@ export function AccountSummary({
         </p>
       </Card>
 
-      <Card className="flex min-h-44 flex-col justify-between p-6">
+      <Card className="flex min-h-40 flex-col justify-between p-5 sm:min-h-44 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Net movement
@@ -74,7 +74,7 @@ export function AccountSummary({
           </span>
         </div>
         <CurrencyAmount
-          className={`mt-7 text-[1.75rem] font-bold tracking-[-0.03em] ${
+          className={`mt-7 min-w-0 break-all text-[1.75rem] font-bold tracking-[-0.03em] ${
             movement > 0n
               ? "text-finhand-income"
               : movement < 0n

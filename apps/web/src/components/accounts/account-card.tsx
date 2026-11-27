@@ -59,13 +59,13 @@ export function AccountCard({
 
   return (
     <Card className="overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-start gap-4">
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start gap-3 sm:gap-4">
           <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-finhand-accent-soft text-finhand-interactive">
             <Icon aria-hidden="true" className="size-6" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-lg font-bold tracking-[-0.015em] text-finhand-ink">
                 {account.name}
               </h3>
@@ -75,16 +75,18 @@ export function AccountCard({
               {account.currencyCode} · Active account
             </p>
           </div>
-          <Badge variant="income">Active</Badge>
+          <Badge className="hidden sm:inline-flex" variant="income">
+            Active
+          </Badge>
         </div>
 
         <div className="mt-5 rounded-xl bg-finhand-canvas-muted p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             Current balance
           </p>
-          <div className="mt-2 flex items-end justify-between gap-4">
+          <div className="mt-2 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <CurrencyAmount
-              className={`text-2xl font-bold tracking-[-0.025em] ${
+              className={`min-w-0 break-all text-2xl font-bold tracking-[-0.025em] ${
                 balance > 0n
                   ? "text-finhand-income"
                   : balance < 0n
@@ -94,7 +96,7 @@ export function AccountCard({
               currencyCode={account.currencyCode}
               value={account.balanceMinor}
             />
-            <div className="text-right text-xs text-finhand-muted">
+            <div className="text-left text-xs text-finhand-muted sm:text-right">
               <p>
                 Opening: {" "}
                 <CurrencyAmount
@@ -179,7 +181,7 @@ export function ArchivedAccounts({
 
             return (
               <li
-                className="flex items-center gap-4 border-t border-finhand-divider px-6 py-4 first:border-t-0"
+                className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-t border-finhand-divider px-4 py-4 first:border-t-0 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] sm:gap-4 sm:px-6"
                 key={account.id}
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-finhand-canvas-muted text-finhand-muted">
@@ -192,7 +194,7 @@ export function ArchivedAccounts({
                     </p>
                     <Badge className="opacity-70">Archived</Badge>
                   </div>
-                  <p className="mt-0.5 text-xs text-finhand-muted">
+                  <p className="mt-0.5 break-words text-xs text-finhand-muted">
                     {accountTypeLabels[account.type]} · {account.currencyCode} ·
                     Opening {" "}
                     <CurrencyAmount
@@ -201,17 +203,18 @@ export function ArchivedAccounts({
                     />
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="col-start-2 text-left sm:col-start-auto sm:text-right">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
                     Final balance
                   </p>
                   <CurrencyAmount
-                    className="mt-1 font-bold text-finhand-ink"
+                    className="mt-1 break-all font-bold text-finhand-ink"
                     currencyCode={account.currencyCode}
                     value={account.balanceMinor}
                   />
                 </div>
                 <Button
+                  className="col-span-2 w-full sm:col-span-1 sm:w-auto"
                   disabled={busyAccountId !== null}
                   onClick={() => onRestore(account)}
                   size="sm"

@@ -41,7 +41,7 @@ function AccountsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading accounts" className="space-y-6">
       <div className="h-24 animate-pulse rounded-2xl bg-finhand-accent-soft" />
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }, (_, index) => (
           <div
             className="h-44 animate-pulse rounded-2xl bg-white"
@@ -49,7 +49,7 @@ function AccountsSkeleton() {
           />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="h-72 animate-pulse rounded-2xl bg-white" />
         <div className="h-72 animate-pulse rounded-2xl bg-white" />
       </div>
@@ -215,7 +215,7 @@ export function AccountsPanel() {
 
   return (
     <div className="space-y-7">
-      <div className="flex items-center gap-4 rounded-2xl bg-finhand-accent-soft px-5 py-4 text-finhand-primary-strong">
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-finhand-accent-soft px-4 py-4 text-finhand-primary-strong sm:px-5">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive shadow-finhand-card">
           <Calculator aria-hidden="true" className="size-5" />
         </span>
@@ -234,11 +234,11 @@ export function AccountsPanel() {
           </p>
         </div>
         {availableCurrencies.length > 1 ? (
-          <label className="shrink-0 text-xs font-semibold text-finhand-muted">
+          <label className="w-full text-xs font-semibold text-finhand-muted sm:w-auto sm:shrink-0">
             Currency
             <Select
               ariaLabel="Accounts currency"
-              className="mt-1 w-28"
+              className="mt-1 w-full sm:w-28"
               menuLabel="Currencies"
               onValueChange={setSelectedCurrency}
               options={currencyOptions(availableCurrencies)}
@@ -265,7 +265,7 @@ export function AccountsPanel() {
       ) : null}
 
       <section>
-        <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="mb-4 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-bold text-finhand-ink">
               Active accounts ({activeAccounts.length})
@@ -275,7 +275,7 @@ export function AccountsPanel() {
             </p>
           </div>
           <Button
-            className="shrink-0"
+            className="w-full shrink-0 sm:w-auto"
             disabled={isLoading}
             onClick={() => {
               setError(null);
@@ -300,7 +300,7 @@ export function AccountsPanel() {
             </div>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
             {activeAccounts.map((account) => (
               <AccountCard
                 account={account}

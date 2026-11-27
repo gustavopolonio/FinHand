@@ -63,7 +63,7 @@ export function AccountDrawer({
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => void submit(event)}
       >
-        <div className="flex-1 space-y-5 overflow-y-auto p-6">
+        <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
           <label className="block text-xs font-medium text-finhand-muted">
             Account name
             <Input
@@ -130,7 +130,7 @@ export function AccountDrawer({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+        <div className="grid grid-cols-2 gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:flex sm:justify-end sm:p-5">
           <Button
             className="rounded-xl!"
             disabled={isSubmitting}
