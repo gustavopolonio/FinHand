@@ -1,13 +1,8 @@
 "use client";
 
-import { CalendarDays, Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  type FormEvent,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useDashboardUser } from "@/components/dashboard-shell";
 import { currencyOptions } from "@/components/financial-select-options";
@@ -28,11 +23,11 @@ import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { Input } from "../ui/input";
+import { MonthPicker } from "../ui/month-picker";
 import { Select } from "../ui/select";
 import {
   categoriesWithTotals,
-  sortCategoriesByVolume,
+  sortCategoriesForDisplay,
   summaryFiltersForMonth,
 } from "./category-data";
 import { type CategoryFormValues } from "./category-form";
@@ -40,7 +35,7 @@ import { CategoryModal } from "./category-modal";
 import { CategorySummary } from "./category-summary";
 import { CategoryTable } from "./category-table";
 
-type CategoryTab = CategoryType | "archived";
+type CategoryTab = CategoryType;
 type CategoryEditor =
   | { kind: "create" }
   | { category: Category; kind: "edit" };
@@ -48,7 +43,6 @@ type CategoryEditor =
 const tabs: Array<{ label: string; value: CategoryTab }> = [
   { label: "Expense Categories", value: "expense" },
   { label: "Income Categories", value: "income" },
-  { label: "Archived", value: "archived" },
 ];
 
 function CategoriesSkeleton() {
@@ -80,8 +74,6 @@ export function CategoriesPanel() {
     user.defaultCurrency,
   );
   const [tab, setTab] = useState<CategoryTab>("expense");
-  const [search, setSearch] = useState("");
-  const [month, setMonth] = useState("");
   const [appliedMonth, setAppliedMonth] = useState("");
   const [editor, setEditor] = useState<CategoryEditor | null>(null);
   const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
@@ -202,20 +194,11 @@ export function CategoriesPanel() {
     }
   }
 
-  function applyMonth(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function applyMonth(month: string) {
     setError(null);
     setAppliedMonth(month);
     setIsLoadingSummary(true);
-    void loadData(summaryFiltersForMonth(month));
-  }
-
-  function showAllTime() {
-    setMonth("");
-    setAppliedMonth("");
-    setError(null);
-    setIsLoadingSummary(true);
-    void loadData();
+    void loadData(month ? summaryFiltersForMonth(month) : {});
   }
 
   if (isLoading && !summary) return <CategoriesSkeleton />;
@@ -256,28 +239,13 @@ export function CategoriesPanel() {
     summary,
     currencyCode,
   );
-  const normalizedSearch = search.trim().toLocaleLowerCase();
-  const visibleCategories = sortCategoriesByVolume(
-    categoryData.filter((category) => {
-      const matchesTab =
-        tab === "archived"
-          ? Boolean(category.archivedAt)
-          : !category.archivedAt && category.type === tab;
-      const matchesSearch =
-        !normalizedSearch ||
-        category.name.toLocaleLowerCase().includes(normalizedSearch);
-
-      return matchesTab && matchesSearch;
-    }),
+  const visibleCategories = sortCategoriesForDisplay(
+    categoryData.filter((category) => category.type === tab),
   );
   const tabCounts: Record<CategoryTab, number> = {
-    expense: categories.filter(
-      (category) => category.type === "expense" && !category.archivedAt,
-    ).length,
-    income: categories.filter(
-      (category) => category.type === "income" && !category.archivedAt,
-    ).length,
-    archived: categories.filter((category) => category.archivedAt).length,
+    expense: categories.filter((category) => category.type === "expense")
+      .length,
+    income: categories.filter((category) => category.type === "income").length,
   };
   const editedCategory =
     editor?.kind === "edit" ? editor.category : null;
@@ -285,54 +253,19 @@ export function CategoriesPanel() {
 
   return (
     <div className="space-y-7">
-      <header className="flex items-end justify-between gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
-            Settings &amp; architecture
+          <p className="mb-1 text-xs font-semibold text-finhand-muted">
+            Period
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
-            Categories
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-finhand-muted">
-            Organize income sources and spending habits into clear, manageable
-            buckets.
-          </p>
+          <MonthPicker
+            ariaLabel="Choose category summary month"
+            disabled={isLoadingSummary}
+            onApply={applyMonth}
+            value={appliedMonth}
+          />
         </div>
         <div className="flex items-end gap-2">
-          <form className="flex items-end gap-2" onSubmit={applyMonth}>
-            <label className="text-xs font-semibold text-finhand-muted">
-              Period
-              <span className="relative mt-1 block">
-                <CalendarDays
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-finhand-muted"
-                />
-                <Input
-                  aria-label="Summary month"
-                  className="h-10 rounded-lg pl-9"
-                  onChange={(event) => setMonth(event.target.value)}
-                  type="month"
-                  value={month}
-                />
-              </span>
-            </label>
-            <Button
-              disabled={isLoadingSummary || !month}
-              type="submit"
-              variant="secondary"
-            >
-              Apply
-            </Button>
-          </form>
-          {appliedMonth ? (
-            <Button
-              disabled={isLoadingSummary}
-              onClick={showAllTime}
-              variant="ghost"
-            >
-              All time
-            </Button>
-          ) : null}
           <Button
             disabled={isLoadingSummary}
             onClick={() => {
@@ -344,7 +277,7 @@ export function CategoriesPanel() {
             Add category
           </Button>
         </div>
-      </header>
+      </div>
 
       {availableCurrencies.length > 1 ? (
         <div className="flex justify-end">
@@ -402,21 +335,6 @@ export function CategoriesPanel() {
             </button>
           ))}
         </div>
-
-        <label className="relative block w-72">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-finhand-muted"
-          />
-          <Input
-            aria-label="Filter categories"
-            className="h-10 pl-9"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Filter categories..."
-            type="search"
-            value={search}
-          />
-        </label>
       </div>
 
       <CategoryTable

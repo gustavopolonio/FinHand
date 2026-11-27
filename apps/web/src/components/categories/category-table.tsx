@@ -1,18 +1,18 @@
 import {
   Archive,
-  ArrowDown,
-  ArrowUpRight,
   Pencil,
   RotateCcw,
   Tags,
 } from "lucide-react";
 
 import type { Category } from "@/lib/api";
+import { cn } from "@/lib/class-names";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { CurrencyAmount } from "../ui/currency-amount";
+import { TransactionTypeIcon } from "../transactions/transaction-type-icon";
 import type { CategoryWithTotals } from "./category-data";
 import { categoryTypeLabels } from "./category-form";
 
@@ -48,8 +48,14 @@ export function CategoryTable({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <table className="w-full border-collapse text-left">
+    <Card className="min-w-0 overflow-hidden">
+      <div
+        aria-label="Categories table"
+        className="max-w-full overflow-x-auto overscroll-x-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-finhand-focus"
+        role="region"
+        tabIndex={0}
+      >
+      <table className="w-full min-w-[860px] border-collapse text-left">
         <thead className="bg-finhand-canvas-muted">
           <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
             <th className="px-6 py-4">Category name</th>
@@ -62,27 +68,21 @@ export function CategoryTable({
         </thead>
         <tbody>
           {categories.map((category) => {
-            const TypeIcon =
-              category.type === "income" ? ArrowDown : ArrowUpRight;
             const isCurrentBusy = busyCategoryId === category.id;
             const isDisabled = busyCategoryId !== null;
 
             return (
               <tr
-                className="border-t border-finhand-divider transition hover:bg-finhand-canvas-muted"
+                className={cn(
+                  "border-t border-finhand-divider transition hover:bg-finhand-canvas-muted",
+                  category.archivedAt &&
+                    "bg-finhand-canvas-muted/70 text-finhand-muted hover:bg-finhand-canvas-muted",
+                )}
                 key={category.id}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-xl ${
-                        category.type === "income"
-                          ? "bg-finhand-income-soft text-finhand-income"
-                          : "bg-finhand-accent-soft text-finhand-interactive"
-                      }`}
-                    >
-                      <TypeIcon aria-hidden="true" className="size-5" />
-                    </span>
+                    <TransactionTypeIcon type={category.type} />
                     <div>
                       <p className="font-bold text-finhand-ink">
                         {category.name}
@@ -96,13 +96,7 @@ export function CategoryTable({
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <Badge
-                    variant={
-                      category.type === "income" ? "income" : "neutral"
-                    }
-                  >
-                    {categoryTypeLabels[category.type]}
-                  </Badge>
+                  <Badge>{categoryTypeLabels[category.type]}</Badge>
                 </td>
                 <td className="min-w-44 px-4 py-4 text-right">
                   <CurrencyAmount
@@ -169,6 +163,7 @@ export function CategoryTable({
           })}
         </tbody>
       </table>
+      </div>
     </Card>
   );
 }

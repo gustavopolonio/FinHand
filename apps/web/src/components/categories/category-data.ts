@@ -90,6 +90,23 @@ export function sortCategoriesByVolume(categories: CategoryWithTotals[]) {
   });
 }
 
+export function sortCategoriesForDisplay(categories: CategoryWithTotals[]) {
+  return [...categories].sort((left, right) => {
+    const leftIsArchived = Boolean(left.archivedAt);
+    const rightIsArchived = Boolean(right.archivedAt);
+
+    if (leftIsArchived !== rightIsArchived) {
+      return leftIsArchived ? 1 : -1;
+    }
+
+    const leftTotal = BigInt(left.totalMinor);
+    const rightTotal = BigInt(right.totalMinor);
+
+    if (leftTotal === rightTotal) return left.name.localeCompare(right.name);
+    return leftTotal > rightTotal ? -1 : 1;
+  });
+}
+
 export function calculateCategoryOverview(
   categories: Category[],
   summary: FinancialSummary,

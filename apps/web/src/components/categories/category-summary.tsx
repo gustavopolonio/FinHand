@@ -36,7 +36,7 @@ export function CategorySummary({
   ).length;
 
   return (
-    <div className="grid grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
       <Card className="p-6">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">

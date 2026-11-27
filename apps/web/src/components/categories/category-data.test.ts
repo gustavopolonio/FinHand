@@ -5,6 +5,7 @@ import type { Category, FinancialSummary } from "@/lib/api";
 import {
   calculateCategoryOverview,
   categoriesWithTotals,
+  sortCategoriesForDisplay,
   sortCategoriesByVolume,
   summaryFiltersForMonth,
 } from "./category-data";
@@ -96,5 +97,20 @@ describe("category data helpers", () => {
       to: "2024-02-29",
     });
     expect(summaryFiltersForMonth("invalid")).toEqual({});
+  });
+
+  it("keeps archived categories after active categories", () => {
+    const combined = categoriesWithTotals(categories, summary, "BRL");
+    const archivedLeader = {
+      ...combined[0]!,
+      archivedAt: "2026-11-05T12:00:00.000Z",
+      totalMinor: "99999999999999999",
+    };
+
+    expect(
+      sortCategoriesForDisplay([archivedLeader, combined[1]!]).map(
+        ({ name }) => name,
+      ),
+    ).toEqual(["Transport", "Grocery"]);
   });
 });
