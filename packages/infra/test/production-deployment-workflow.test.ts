@@ -23,6 +23,9 @@ describe("production deployment workflow", () => {
     expect(workflow).toContain("name: production");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("AWS_PRODUCTION_DEPLOY_ROLE_ARN");
+    expect(workflow).toContain("actions/github-script@v8");
+    expect(workflow).toContain("actions/checkout@v5");
+    expect(workflow).toContain("aws-actions/configure-aws-credentials@v6");
   });
 
   it("publishes retry-safe immutable ARM64 images from one full Git SHA", () => {
