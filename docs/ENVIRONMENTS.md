@@ -763,9 +763,11 @@ multi-service deployment should restore separate API and worker roles.
 
 ### GitHub Actions deployment role
 
-GitHub Actions should assume a production deployment role through GitHub OIDC;
-do not store permanent AWS access keys or SSH private keys in GitHub secrets.
-Scope the role to:
+GitHub Actions assumes the `finhand-prod-github-deploy-role` through GitHub
+OIDC; no permanent AWS access keys or SSH private keys are stored in GitHub.
+The CDK stack creates the account-level GitHub OIDC provider and limits the
+role trust policy to the `production` GitHub environment in the
+`gustavopolonio/FinHand` repository. The role can:
 
 - publish images to the two FinHand ECR repositories;
 - invoke only the approved Systems Manager deployment document or command on
@@ -775,6 +777,21 @@ Scope the role to:
 
 The deployment role must not receive database credentials, application secrets,
 or broad EC2 and IAM administration permissions.
+
+Complete this one-time GitHub setup after deploying the CDK stack:
+
+1. Create a GitHub environment named exactly `production` under **Settings →
+   Environments**.
+2. Restrict that environment to the `main` branch and configure a required
+   reviewer when the repository plan supports deployment protection rules.
+3. Copy the `GithubDeploymentRoleArn` CloudFormation output.
+4. Create the repository Actions variable `AWS_PRODUCTION_DEPLOY_ROLE_ARN`
+   under **Settings → Secrets and variables → Actions → Variables** with that
+   ARN as its value.
+
+The role ARN is an identifier rather than a credential, so it is stored as a
+GitHub variable. Application secrets remain in AWS Parameter Store and are
+never copied into the workflow.
 
 ## Release Safety Without Staging
 
@@ -826,9 +843,22 @@ worker lease-recovery loops remain the fallback for work interrupted after its
 graceful 60-second stop window. Applied database migrations are never reversed
 automatically.
 
-After updating image parameters and successfully running
-`finhand-prod-render-runtime-config`, invoke the deployment without supplying
-credentials or secrets as command arguments:
+The `Production deployment` GitHub Actions workflow is intentionally manual and
+serialized. It accepts only `main`, verifies that the selected commit has a
+successful push CI run, waits for the `production` environment approval, and
+publishes Linux ARM64 images tagged with the complete Git commit SHA. It then
+updates only the two image parameters and invokes the runtime-rendering and
+application-deployment Systems Manager documents. A safe workflow retry reuses
+images that already exist with the same immutable SHA tag.
+
+If rendering or deployment fails after the image parameters change, the
+workflow restores both previous parameter values and renders the previous
+runtime configuration again. The host deployment document independently rolls
+the running application back when new containers fail health checks.
+
+For an emergency manual release, after updating image parameters and
+successfully running `finhand-prod-render-runtime-config`, invoke the deployment
+without supplying credentials or secrets as command arguments:
 
 ```bash
 aws ssm send-command \
@@ -973,7 +1003,6 @@ Before provisioning application resources:
 - logical backup and snapshot retention;
 - CloudWatch alarm recipients;
 - exact SecureString versus Secrets Manager placement;
-- exact instance-role and GitHub OIDC deployment-role policies;
 - whether CloudFront provides enough benefit to add after the initial release.
 
 ## References

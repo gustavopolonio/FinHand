@@ -122,7 +122,9 @@
   - [x] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [x] Define and verify safe same-host PostgreSQL migration and worker deployment procedures
 - [x] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
-- [ ] Configure a manually approved production deployment pipeline that publishes immutable images and updates the EC2 Docker Compose application through AWS Systems Manager
+- [ ] Configure a manually approved production deployment pipeline that publishes immutable images and updates the EC2 Docker Compose application through AWS Systems Manager:
+  - [x] Implement the GitHub OIDC deployment role, manual workflow, immutable SHA image publishing, Parameter Store rollback, and Systems Manager orchestration
+  - [ ] Deploy the OIDC role, configure the protected GitHub `production` environment and role variable, and verify the first approved workflow run
 - [ ] Run pre-deployment restore drills, security checks, and representative performance/load tests; resolve release-blocking findings
 - [ ] Deploy the production application and verify health checks, workers, OAuth, uploads, AI processing, alerts, and rollback procedures
 
