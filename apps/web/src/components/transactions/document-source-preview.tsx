@@ -14,10 +14,12 @@ import {
   getDocumentPreview,
   type UploadKind,
 } from "@/lib/api";
+import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 
 interface DocumentSourcePreviewProps {
+  className?: string;
   fileName?: string;
   onHide?: () => void;
   onLoad?: (
@@ -63,7 +65,7 @@ export function DocumentPreviewContent({
   if (kind === "pdf") {
     return (
       <iframe
-        className="h-full min-h-[480px] w-full border-0"
+        className="h-full min-h-0 w-full border-0"
         referrerPolicy="no-referrer"
         src={preview.url}
         title={`Uploaded document ${fileName}`}
@@ -73,7 +75,7 @@ export function DocumentPreviewContent({
 
   if (kind === "audio") {
     return (
-      <div className="flex h-full min-h-64 w-full items-center justify-center p-8">
+      <div className="flex h-full min-h-0 w-full items-center justify-center p-4 sm:p-8">
         <audio
           aria-label={`Original recording ${fileName}`}
           className="w-full max-w-md"
@@ -86,7 +88,7 @@ export function DocumentPreviewContent({
   }
 
   return (
-    <div className="flex h-full min-h-64 flex-col items-center justify-center p-8 text-center">
+    <div className="flex h-full min-h-0 flex-col items-center justify-center p-4 text-center sm:p-8">
       <FileWarning aria-hidden="true" className="size-10 text-finhand-muted" />
       <p className="mt-3 text-sm font-semibold text-finhand-ink">
         Preview unavailable for this file type
@@ -106,6 +108,7 @@ export function DocumentPreviewContent({
 }
 
 export function DocumentSourcePreview({
+  className,
   fileName,
   onHide,
   onLoad,
@@ -157,7 +160,12 @@ export function DocumentSourcePreview({
   const sourceLabel = sourceKind === "audio" ? "recording" : "document";
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-col border-b border-finhand-divider bg-finhand-canvas-muted lg:border-r lg:border-b-0">
+    <section
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col border-b border-finhand-divider bg-finhand-canvas-muted lg:border-r lg:border-b-0",
+        className,
+      )}
+    >
       <header className="flex items-center justify-between gap-3 border-b border-finhand-divider bg-white px-5 py-3">
         <p className="text-xs font-semibold text-finhand-ink">
           Original {sourceLabel}
@@ -183,7 +191,7 @@ export function DocumentSourcePreview({
         </div>
       </header>
 
-      <div className="flex min-h-80 flex-1 items-center justify-center overflow-hidden p-4 lg:min-h-0">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-4">
         {error ? (
           <div className="max-w-xs text-center">
             <FileWarning

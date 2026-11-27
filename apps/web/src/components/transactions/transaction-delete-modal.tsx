@@ -62,8 +62,8 @@ export function TransactionDeleteModal({
       onConfirm={onConfirm}
       title="Delete transaction"
     >
-      <div className="rounded-xl border border-finhand-border bg-finhand-canvas-muted p-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="rounded-xl border border-finhand-border bg-finhand-canvas-muted p-4 sm:p-6">
+        <div className="flex flex-col gap-4 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-finhand-expense-border bg-white text-finhand-expense shadow-sm">
               <ReceiptText aria-hidden="true" className="size-4" />
@@ -77,7 +77,7 @@ export function TransactionDeleteModal({
               </p>
             </div>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 self-end text-right min-[430px]:self-auto">
             <CurrencyAmount
               className={`text-[22px] font-semibold leading-7 tracking-[-0.02em] ${amountColor}`}
               currencyCode={transaction.currencyCode}
@@ -91,7 +91,7 @@ export function TransactionDeleteModal({
           </div>
         </div>
 
-        <dl className="mt-5 grid grid-cols-3 gap-1">
+        <dl className="mt-5 grid grid-cols-1 gap-1 min-[430px]:grid-cols-3">
           <div className="min-w-0 rounded-lg bg-white/80 px-3 py-2">
             <dt className="text-[11px] font-medium text-finhand-subtle">Date</dt>
             <dd className="mt-0.5 truncate text-xs font-semibold text-finhand-ink">

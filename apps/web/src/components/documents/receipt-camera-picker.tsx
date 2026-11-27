@@ -131,7 +131,7 @@ export function ReceiptCameraPicker({
         </div>
       ) : (
         <button
-          className="flex min-h-64 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-finhand-border-strong bg-finhand-canvas-muted px-8 py-10 text-center transition hover:border-finhand-interactive hover:bg-finhand-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-64 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-finhand-border-strong bg-finhand-canvas-muted px-4 py-8 text-center transition hover:border-finhand-interactive hover:bg-finhand-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-10"
           disabled={disabled}
           onClick={openCamera}
           type="button"

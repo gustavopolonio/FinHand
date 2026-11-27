@@ -95,7 +95,7 @@ export function TransactionFields({
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className={labelClassName}>
           Account
           <Select
@@ -133,7 +133,7 @@ export function TransactionFields({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className={labelClassName}>
           Date
           <Input

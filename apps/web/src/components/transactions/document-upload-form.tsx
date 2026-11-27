@@ -110,7 +110,7 @@ export function DocumentUploadForm({
       id="transaction-document-panel"
       onSubmit={(event) => void submit(event)}
     >
-      <div className="flex-1 space-y-4 overflow-y-auto p-6">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         <div>
           <h3 className="text-sm font-semibold text-finhand-ink">
             Select a receipt or invoice
@@ -141,7 +141,7 @@ export function DocumentUploadForm({
         ) : null}
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+      <div className="grid grid-cols-2 gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:flex sm:justify-end sm:p-5">
         <Button
           className="rounded-xl!"
           disabled={isUploading}

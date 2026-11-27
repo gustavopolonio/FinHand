@@ -23,5 +23,6 @@ describe("WorkspaceModal", () => {
     expect(markup).toContain("Add Item");
     expect(markup).toContain("Record a new item.");
     expect(markup).toContain("Form content");
+    expect(markup).toContain("max-h-[calc(100dvh-1rem)]");
   });
 });

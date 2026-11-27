@@ -126,7 +126,7 @@ export function TransactionCandidateReviewPanel({
         id={panelId}
       >
         {review.candidates.length > 1 ? (
-          <div className="flex items-center justify-end gap-2 border-b border-finhand-divider px-6 py-3">
+          <div className="flex items-center justify-end gap-2 border-b border-finhand-divider px-4 py-3 sm:px-6">
               <Button
                 aria-label="Previous candidate"
                 disabled={activeIndex === 0}
@@ -150,29 +150,37 @@ export function TransactionCandidateReviewPanel({
               </Button>
           </div>
         ) : null}
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <DocumentSourcePreview
-            fileName={review.upload.originalFileName}
-            sourceId={review.upload.id}
-            sourceKind={review.upload.kind}
-          />
-          <TransactionCandidateEditor
-            accounts={accounts}
-            candidate={candidate}
-            categories={categories}
-            error={error}
-            key={candidate.id}
-            onConfirm={onConfirm}
-            onConfirmed={(result) =>
-              removeReviewedCandidate(result.candidate.id)
-            }
-            onReject={onReject}
-            onRejected={(result) =>
-              removeReviewedCandidate(result.candidate.id)
-            }
-            onSave={onUpdate}
-            onSaved={replaceCandidate}
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-hidden">
+          <div className="flex min-h-full flex-col lg:grid lg:h-full lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <DocumentSourcePreview
+              className={
+                review.upload.kind === "audio"
+                  ? "h-40 min-h-40 shrink-0 lg:h-full lg:min-h-0"
+                  : "h-[min(22rem,40vh)] min-h-48 shrink-0 lg:h-full lg:min-h-0"
+              }
+              fileName={review.upload.originalFileName}
+              sourceId={review.upload.id}
+              sourceKind={review.upload.kind}
+            />
+            <TransactionCandidateEditor
+              accounts={accounts}
+              candidate={candidate}
+              categories={categories}
+              error={error}
+              key={candidate.id}
+              onConfirm={onConfirm}
+              onConfirmed={(result) =>
+                removeReviewedCandidate(result.candidate.id)
+              }
+              onReject={onReject}
+              onRejected={(result) =>
+                removeReviewedCandidate(result.candidate.id)
+              }
+              onSave={onUpdate}
+              onSaved={replaceCandidate}
+              shareParentScrollOnSmallScreens
+            />
+          </div>
         </div>
       </div>
     );
@@ -189,7 +197,7 @@ export function TransactionCandidateReviewPanel({
       className="flex min-h-0 flex-1 flex-col"
       id={panelId}
     >
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-8 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-5 text-center sm:p-8">
         <span
           className={`grid size-16 place-items-center rounded-full ${
             failed || processedWithoutCandidates
@@ -237,7 +245,7 @@ export function TransactionCandidateReviewPanel({
         ) : null}
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+      <div className="flex flex-wrap justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:p-5">
         {onReset && (failed || processedWithoutCandidates) ? (
           <Button className="rounded-xl!" onClick={onReset} variant="secondary">
             <RotateCcw aria-hidden="true" className="size-4" />

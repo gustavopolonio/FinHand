@@ -17,6 +17,7 @@ import type {
   TransactionType,
   UpdateTransactionCandidateInput,
 } from "@/lib/api";
+import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 import { CurrencyInput } from "../ui/currency-input";
@@ -51,6 +52,7 @@ interface TransactionCandidateEditorProps {
     input: UpdateTransactionCandidateInput,
   ) => Promise<TransactionCandidate | null>;
   onSaved: (candidate: TransactionCandidate) => void;
+  shareParentScrollOnSmallScreens?: boolean;
 }
 
 const labelClassName = "text-xs font-medium text-finhand-muted";
@@ -71,6 +73,7 @@ export function TransactionCandidateEditor({
   onRejected,
   onSave,
   onSaved,
+  shareParentScrollOnSmallScreens = false,
 }: TransactionCandidateEditorProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationInputRef =
@@ -233,11 +236,21 @@ export function TransactionCandidateEditor({
     <>
       <form
         aria-busy={isBusy}
-        className="flex min-h-0 min-w-0 flex-1 flex-col"
+        className={cn(
+          "flex min-h-0 min-w-0 flex-col",
+          shareParentScrollOnSmallScreens ? "flex-none lg:flex-1" : "flex-1",
+        )}
         onSubmit={(event) => void submit(event)}
         ref={formRef}
       >
-      <div className="flex-1 space-y-5 overflow-y-auto p-6">
+        <div
+          className={cn(
+            "flex-1 space-y-5 p-4 sm:p-6",
+            shareParentScrollOnSmallScreens
+              ? "overflow-visible lg:overflow-y-auto"
+              : "overflow-y-auto",
+          )}
+        >
         {warnings.length > 0 ? (
           <div className="rounded-xl border border-finhand-warning/20 bg-finhand-warning-soft px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-warning">
@@ -251,7 +264,7 @@ export function TransactionCandidateEditor({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClassName} data-candidate-field="type">
             Type
             <Select
@@ -309,7 +322,7 @@ export function TransactionCandidateEditor({
           </label>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
           <label className={labelClassName} data-candidate-field="amount">
             Amount
             <CurrencyInput
@@ -357,7 +370,7 @@ export function TransactionCandidateEditor({
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClassName}>
             Category
             <Select
@@ -448,21 +461,21 @@ export function TransactionCandidateEditor({
             {localError ?? error}
           </p>
         ) : null}
-      </div>
+        </div>
 
-      <div className="flex items-center justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
-        <Button
-          className="mr-auto rounded-xl!"
-          disabled={isBusy}
-          onClick={() => setIsRejectModalOpen(true)}
-          variant="danger"
-        >
-          <Trash2 aria-hidden="true" className="size-4" />
-          Discard candidate
-        </Button>
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:flex sm:items-center sm:p-5">
           <Button
-            className="rounded-xl!"
+            aria-label="Discard candidate"
+            className="whitespace-nowrap rounded-xl! sm:mr-auto"
+            disabled={isBusy}
+            onClick={() => setIsRejectModalOpen(true)}
+            variant="danger"
+          >
+            <Trash2 aria-hidden="true" className="size-4" />
+            <span className="hidden min-[400px]:inline">Discard candidate</span>
+          </Button>
+          <Button
+            className="w-full whitespace-nowrap rounded-xl! sm:w-auto"
             disabled={isBusy}
             type="submit"
             variant="secondary"
@@ -471,13 +484,13 @@ export function TransactionCandidateEditor({
             {isSaving ? "Saving…" : "Save draft"}
           </Button>
           <HoldToConfirmButton
+            className="col-span-2 w-full min-w-0 whitespace-nowrap sm:w-auto"
             disabled={isSaving}
             isConfirming={isConfirming}
             onBeforeStart={prepareConfirmation}
             onConfirm={confirmCandidate}
           />
         </div>
-      </div>
       </form>
 
       {isRejectModalOpen ? (

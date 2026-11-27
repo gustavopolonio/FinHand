@@ -239,7 +239,7 @@ export function QrCaptureForm({
       className="flex min-h-0 flex-1 flex-col"
       id="transaction-qr-panel"
     >
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-6 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-4 text-center sm:p-6">
         {session && isConsumed ? (
           <>
             <span
@@ -348,7 +348,7 @@ export function QrCaptureForm({
         ) : null}
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+      <div className="flex flex-wrap justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:p-5">
         {session && !isUnavailable && !isConsumed ? (
           <Button
             className="rounded-xl!"

@@ -58,6 +58,7 @@ describe("TransactionCandidateEditor", () => {
         onRejected={vi.fn()}
         onSave={vi.fn()}
         onSaved={vi.fn()}
+        shareParentScrollOnSmallScreens
       />,
     );
 
@@ -73,5 +74,11 @@ describe("TransactionCandidateEditor", () => {
     expect(markup).not.toContain("This is still a draft");
     expect(markup).not.toContain(">Close<");
     expect(markup).toContain("whitespace-nowrap");
+    expect(markup).toContain("overflow-visible lg:overflow-y-auto");
+    expect(markup).toContain("flex-none lg:flex-1");
+    expect(markup).toContain("grid-cols-[auto_minmax(0,1fr)]");
+    expect(markup).toContain("col-span-2 w-full");
+    expect(markup).toContain('aria-label="Discard candidate"');
+    expect(markup).toContain("hidden min-[400px]:inline");
   });
 });

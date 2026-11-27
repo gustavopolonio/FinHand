@@ -544,7 +544,7 @@ export function VoiceRecordingForm({
       className="flex min-h-0 flex-1 flex-col"
       id="transaction-voice-panel"
     >
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-xl">
           <div className="text-center">
             <h3 className="text-base font-bold text-finhand-ink">
@@ -557,7 +557,7 @@ export function VoiceRecordingForm({
             </p>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-finhand-divider bg-finhand-canvas-muted p-6 text-center">
+          <div className="mt-6 rounded-2xl border border-finhand-divider bg-finhand-canvas-muted p-4 text-center sm:p-6">
             <div
               aria-label="Live microphone input level"
               aria-valuemax={100}
@@ -632,7 +632,7 @@ export function VoiceRecordingForm({
             ) : (
               <div className="mt-5">
                 {isRecording || isPaused ? (
-                  <div className="flex justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     <Button
                       onClick={isPaused ? resumeRecording : pauseRecording}
                       type="button"
@@ -699,7 +699,7 @@ export function VoiceRecordingForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:p-5">
         <Button
           disabled={isUploading}
           onClick={onClose}

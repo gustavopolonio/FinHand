@@ -36,11 +36,11 @@ export function TransactionCandidateRejectModal({
       onConfirm={onConfirm}
       title="Discard candidate"
     >
-      <div className="rounded-xl border border-finhand-border bg-finhand-canvas-muted p-5">
-        <p className="text-sm font-semibold text-finhand-ink">
+      <div className="min-w-0 rounded-xl border border-finhand-border bg-finhand-canvas-muted p-4 sm:p-5">
+        <p className="break-words text-sm font-semibold text-finhand-ink">
           {candidate.description?.trim() || "Untitled transaction candidate"}
         </p>
-        <p className="mt-1 text-xs leading-5 text-finhand-muted">
+        <p className="mt-1 break-words text-xs leading-5 text-finhand-muted">
           {candidate.counterparty?.trim() ||
             "No counterparty was identified for this candidate."}
         </p>

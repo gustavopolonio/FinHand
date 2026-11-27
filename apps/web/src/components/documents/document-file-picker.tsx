@@ -95,7 +95,7 @@ export function DocumentFilePicker({
     >
       <label
         className={cn(
-          "flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-xl px-8 py-10 text-center transition focus-within:ring-2 focus-within:ring-finhand-focus focus-within:ring-offset-2",
+          "flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-xl px-4 py-8 text-center transition focus-within:ring-2 focus-within:ring-finhand-focus focus-within:ring-offset-2 sm:px-8 sm:py-10",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >

@@ -171,7 +171,7 @@ export function TransactionDrawer({
       }
     >
       {!transaction ? (
-        <div className="border-b border-finhand-divider px-6 py-4">
+        <div className="border-b border-finhand-divider px-4 py-3 sm:px-6 sm:py-4">
           <TransactionMethodSelector
             disabled={isBusy}
             onChange={(mode) => {
@@ -251,7 +251,7 @@ export function TransactionDrawer({
           className={cn(
             "min-h-0 flex-1",
             isDocumentTransaction && isShowingSourceDocument
-              ? "grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+              ? "grid grid-cols-1 grid-rows-[minmax(12rem,32vh)_minmax(0,1fr)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:grid-rows-1"
               : "flex flex-col",
           )}
         >
@@ -272,7 +272,7 @@ export function TransactionDrawer({
             key="transaction-form"
             onSubmit={(event) => void submit(event)}
           >
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <TransactionFields
                 accounts={availableAccounts}
                 categories={availableCategories}
@@ -284,7 +284,7 @@ export function TransactionDrawer({
               {transaction &&
                 isDocumentTransaction &&
                 !isShowingSourceDocument ? (
-                <section className="mt-5 flex items-center gap-4 rounded-xl border border-finhand-accent-border bg-finhand-accent-soft p-4">
+                <section className="mt-5 flex flex-col items-stretch gap-4 rounded-xl border border-finhand-accent-border bg-finhand-accent-soft p-4 sm:flex-row sm:items-center">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive">
                     <FileText aria-hidden="true" className="size-5" />
                   </span>
@@ -298,6 +298,7 @@ export function TransactionDrawer({
                     </p>
                   </div>
                   <Button
+                    className="w-full sm:w-auto"
                     onClick={() => setIsShowingSourceDocument(true)}
                     size="sm"
                     type="button"
@@ -325,7 +326,7 @@ export function TransactionDrawer({
               ) : null}
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+            <div className="grid grid-cols-2 gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-4 sm:flex sm:justify-end sm:p-5">
               <Button
                 className="rounded-xl!"
                 disabled={isSubmitting}

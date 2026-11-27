@@ -47,15 +47,15 @@ export function WorkspaceModal({
     <div
       aria-labelledby={titleId}
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-finhand-ink/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-finhand-ink/40 p-2 backdrop-blur-sm sm:p-4"
       onMouseDown={closeFromBackdrop}
       role="dialog"
     >
       <section
-        className={`flex max-h-[90vh] w-full ${widthClassName} flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)]`}
+        className={`flex max-h-[calc(100dvh-1rem)] w-full ${widthClassName} flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)] sm:max-h-[90vh]`}
       >
-        <header className="flex items-start justify-between border-b border-finhand-divider p-6">
-          <div>
+        <header className="flex items-start justify-between gap-3 border-b border-finhand-divider p-4 sm:p-6">
+          <div className="min-w-0">
             <h2
               className="text-lg font-bold tracking-[-0.015em] text-finhand-ink"
               id={titleId}
@@ -63,7 +63,7 @@ export function WorkspaceModal({
               {title}
             </h2>
             {description ? (
-              <p className="mt-1 text-xs text-finhand-muted">
+              <p className="mt-1 text-xs leading-5 text-finhand-muted">
                 {description}
               </p>
             ) : null}

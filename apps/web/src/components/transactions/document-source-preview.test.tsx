@@ -76,6 +76,7 @@ describe("document source preview", () => {
   it("renders a loading state before the preview URL is available", () => {
     const markup = renderToStaticMarkup(
       <DocumentSourcePreview
+        className="h-80"
         fileName="receipt.pdf"
         sourceId="11111111-1111-4111-8111-111111111111"
       />,
@@ -83,6 +84,7 @@ describe("document source preview", () => {
 
     expect(markup).toContain("Original document");
     expect(markup).toContain("Loading original document");
+    expect(markup).toContain("h-80");
     expect(markup).not.toContain("receipt.pdf ·");
     expect(markup).not.toContain("private preview expires");
   });

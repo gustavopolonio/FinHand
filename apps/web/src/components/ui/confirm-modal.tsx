@@ -79,7 +79,7 @@ export function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-finhand-ink/35 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-finhand-ink/35 p-2 backdrop-blur-[2px] sm:p-4"
       onMouseDown={closeFromBackdrop}
     >
       <section
@@ -87,20 +87,20 @@ export function ConfirmModal({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="w-full max-w-[540px] rounded-2xl bg-white p-8 shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)]"
+        className="max-h-[calc(100dvh-1rem)] w-full max-w-[540px] overflow-y-auto rounded-2xl bg-white p-5 shadow-[0_20px_25px_-5px_rgba(15,23,42,0.10),0_8px_10px_-6px_rgba(15,23,42,0.06)] sm:p-8"
         role="alertdialog"
       >
         <header className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-finhand-expense-soft text-finhand-expense">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-finhand-expense-soft text-finhand-expense sm:size-12">
               {icon}
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-finhand-expense">
                 {eyebrow}
               </p>
               <h2
-                className="mt-0.5 text-[22px] font-semibold leading-7 tracking-[-0.01em] text-finhand-ink"
+                className="mt-0.5 text-xl font-semibold leading-7 tracking-[-0.01em] text-finhand-ink sm:text-[22px]"
                 id={titleId}
               >
                 {title}
@@ -136,7 +136,7 @@ export function ConfirmModal({
           </p>
         ) : null}
 
-        <footer className="mt-6 flex items-center justify-end gap-2">
+        <footer className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
           <Button
             disabled={isConfirming}
             onClick={onCancel}

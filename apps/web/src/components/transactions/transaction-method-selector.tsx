@@ -42,10 +42,11 @@ export function TransactionMethodSelector({
 
         return (
           <button
+            aria-label={mode.label}
             aria-controls={`transaction-${mode.value}-panel`}
             aria-pressed={isSelected}
             className={cn(
-              "flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm",
+              "flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus disabled:cursor-not-allowed disabled:opacity-60 min-[430px]:gap-2 sm:px-4 sm:text-sm",
               mode.value === "camera" && "md:hidden",
               mode.value === "qr" && "hidden md:flex",
               isSelected
@@ -59,7 +60,9 @@ export function TransactionMethodSelector({
             type="button"
           >
             <Icon aria-hidden="true" className="size-4" />
-            {mode.label}
+            <span className="hidden truncate min-[430px]:inline">
+              {mode.label}
+            </span>
           </button>
         );
       })}
