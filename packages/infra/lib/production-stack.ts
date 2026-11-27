@@ -524,10 +524,15 @@ export class ProductionStack extends Stack {
         roleName: "finhand-prod-github-deploy-role",
       },
     );
-    webRepository.grantPush(githubDeploymentRole);
-    webRepository.grantRead(githubDeploymentRole);
-    apiRepository.grantPush(githubDeploymentRole);
-    apiRepository.grantRead(githubDeploymentRole);
+    webRepository.grantPullPush(githubDeploymentRole);
+    apiRepository.grantPullPush(githubDeploymentRole);
+    githubDeploymentRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ProductionImageInspection",
+        actions: ["ecr:DescribeImages", "ecr:DescribeRepositories"],
+        resources: [webRepository.repositoryArn, apiRepository.repositoryArn],
+      }),
+    );
     githubDeploymentRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "DeploymentImageParameters",

@@ -276,10 +276,16 @@ describe("ProductionStack", () => {
       expect.arrayContaining([
         expect.objectContaining({
           Action: expect.arrayContaining([
+            "ecr:BatchGetImage",
             "ecr:CompleteLayerUpload",
             "ecr:PutImage",
           ]),
           Effect: "Allow",
+        }),
+        expect.objectContaining({
+          Action: ["ecr:DescribeImages", "ecr:DescribeRepositories"],
+          Effect: "Allow",
+          Sid: "ProductionImageInspection",
         }),
         expect.objectContaining({
           Action: ["ssm:GetParameter", "ssm:PutParameter"],
