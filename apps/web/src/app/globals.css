@@ -1,3 +1,4 @@
+@import "react-day-picker/style.css";
 @import "tailwindcss";
 
 :root {
@@ -59,6 +60,24 @@ textarea {
   --color-finhand-warning-soft: #fffbeb;
   --shadow-finhand-card: 0 1px 3px rgb(15 23 42 / 4%),
     0 1px 2px rgb(15 23 42 / 2%);
+}
+
+.finhand-date-range {
+  --rdp-accent-color: #1e1b4b;
+  --rdp-accent-background-color: #eef2ff;
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  --rdp-day_button-border: 0;
+  --rdp-day_button-border-radius: 0.5rem;
+  --rdp-day_button-height: 2.25rem;
+  --rdp-day_button-width: 2.25rem;
+  --rdp-months-gap: 1rem;
+  --rdp-nav_button-height: 2.25rem;
+  --rdp-nav_button-width: 2.25rem;
+  --rdp-range_middle-background-color: #eef2ff;
+  --rdp-range_middle-color: #0f172a;
+  --rdp-selected-border: 0;
+  --rdp-today-color: #4f46e5;
 }
 
 .money-loader__coin {
