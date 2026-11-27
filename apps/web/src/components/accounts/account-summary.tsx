@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Landmark, Layers3, WalletCards } from "lucide-react";
+import { ArrowLeftRight, Landmark, WalletCards } from "lucide-react";
 
 import type { FinancialSummary } from "@/lib/api";
 
@@ -22,7 +22,7 @@ export function AccountSummary({
   const movement = BigInt(metrics.netMovementMinor);
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       <Card
         className="flex min-h-44 flex-col justify-between p-6"
         variant="primary"
@@ -42,23 +42,6 @@ export function AccountSummary({
         />
         <p className="mt-3 text-sm text-white/75">
           Across all active {currencyCode} accounts
-        </p>
-      </Card>
-
-      <Card className="flex min-h-44 flex-col justify-between p-6">
-        <div className="flex items-start justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
-            Active accounts
-          </p>
-          <span className="grid size-10 place-items-center rounded-full bg-finhand-accent-soft text-finhand-interactive">
-            <Layers3 aria-hidden="true" className="size-5" />
-          </span>
-        </div>
-        <p className="mt-7 text-[1.75rem] font-bold tracking-[-0.03em] text-finhand-ink">
-          {metrics.activeCount}
-        </p>
-        <p className="mt-3 text-sm text-finhand-muted">
-          Included in the active balance
         </p>
       </Card>
 

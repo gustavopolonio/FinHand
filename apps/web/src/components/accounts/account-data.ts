@@ -6,7 +6,6 @@ export interface AccountWithBalance extends Account {
 
 export interface AccountMetrics {
   activeBalanceMinor: string;
-  activeCount: number;
   netMovementMinor: string;
   openingBalanceMinor: string;
 }
@@ -62,7 +61,6 @@ export function calculateAccountMetrics(
 
   return {
     activeBalanceMinor: activeBalance.toString(),
-    activeCount: activeAccounts.length,
     netMovementMinor: (activeBalance - openingBalance).toString(),
     openingBalanceMinor: openingBalance.toString(),
   };

@@ -7,6 +7,8 @@ import type { Account, AccountType } from "@/lib/api";
 import { accountTypeOptions } from "@/components/financial-select-options";
 
 import { Button } from "../ui/button";
+import { CurrencyInput } from "../ui/currency-input";
+import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import {
@@ -23,9 +25,6 @@ interface AccountDrawerProps {
   onClose: () => void;
   onSubmit: (values: AccountFormValues) => Promise<boolean>;
 }
-
-const controlClassName =
-  "mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20";
 
 export function AccountDrawer({
   account,
@@ -52,7 +51,7 @@ export function AccountDrawer({
     <WorkspaceModal
       description={
         account
-          ? "Update the account name, type, or starting balance."
+          ? undefined
           : "Add an account to start tracking its financial activity."
       }
       isBusy={isSubmitting}
@@ -67,9 +66,9 @@ export function AccountDrawer({
         <div className="flex-1 space-y-5 overflow-y-auto p-6">
           <label className="block text-xs font-medium text-finhand-muted">
             Account name
-            <input
+            <Input
               autoFocus
-              className={controlClassName}
+              className="mt-1.5"
               maxLength={100}
               onChange={(event) =>
                 setValues((current) => ({
@@ -103,14 +102,12 @@ export function AccountDrawer({
 
           <label className="block text-xs font-medium text-finhand-muted">
             Opening balance ({currencyCode})
-            <input
-              className={controlClassName}
-              inputMode="decimal"
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  openingBalance: event.target.value,
-                }))
+            <CurrencyInput
+              allowNegative
+              className="mt-1.5"
+              currencyCode={currencyCode}
+              onValueChange={(openingBalance) =>
+                setValues((current) => ({ ...current, openingBalance }))
               }
               required
               value={values.openingBalance}

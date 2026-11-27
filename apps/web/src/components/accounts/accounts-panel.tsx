@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, Plus, RefreshCw, WalletCards } from "lucide-react";
+import { Calculator, Plus, WalletCards } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -41,8 +41,8 @@ function AccountsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading accounts" className="space-y-6">
       <div className="h-24 animate-pulse rounded-2xl bg-finhand-accent-soft" />
-      <div className="grid grid-cols-4 gap-4">
-        {Array.from({ length: 4 }, (_, index) => (
+      <div className="grid grid-cols-3 gap-4">
+        {Array.from({ length: 3 }, (_, index) => (
           <div
             className="h-44 animate-pulse rounded-2xl bg-white"
             key={index}
@@ -215,74 +215,38 @@ export function AccountsPanel() {
 
   return (
     <div className="space-y-7">
-      <header className="flex items-end justify-between gap-8">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
-            Portfolio structure
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
-            Accounts
-          </h1>
-          <p className="mt-1.5 text-sm text-finhand-muted">
-            Manage starting balances and monitor calculated balances in real
-            time.
-          </p>
-        </div>
-        <div className="flex items-end gap-2">
-          {availableCurrencies.length > 1 ? (
-            <label className="mr-1 text-xs font-semibold text-finhand-muted">
-              Currency
-              <Select
-                ariaLabel="Accounts currency"
-                className="mt-1 w-28"
-                menuLabel="Currencies"
-                onValueChange={setSelectedCurrency}
-                options={currencyOptions(availableCurrencies)}
-                value={currencyCode}
-                variant="compact"
-              />
-            </label>
-          ) : null}
-          <Button
-            aria-label="Refresh account data"
-            disabled={isLoading || busyAccountId !== null}
-            onClick={() => {
-              setError(null);
-              setIsLoading(true);
-              void loadAccountData();
-            }}
-            variant="secondary"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-          <Button
-            disabled={isLoading}
-            onClick={() => {
-              setError(null);
-              setEditor({ kind: "create" });
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Add account
-          </Button>
-        </div>
-      </header>
-
       <div className="flex items-center gap-4 rounded-2xl bg-finhand-accent-soft px-5 py-4 text-finhand-primary-strong">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive shadow-finhand-card">
           <Calculator aria-hidden="true" className="size-5" />
         </span>
-        <div>
-          <p className="font-bold">Balance calculation</p>
-          <p className="mt-0.5 text-sm text-finhand-muted">
-            Current balance equals the opening balance plus income and minus
-            expenses registered for each account.
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-interactive">
+            Balance calculation
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-finhand-ink">
+            <span>Current balance</span>
+            <span aria-hidden="true" className="text-finhand-subtle">
+              =
+            </span>
+            <span>Opening balance</span>
+            <span className="text-finhand-income">+ Income</span>
+            <span className="text-finhand-expense">− Expenses</span>
           </p>
         </div>
+        {availableCurrencies.length > 1 ? (
+          <label className="shrink-0 text-xs font-semibold text-finhand-muted">
+            Currency
+            <Select
+              ariaLabel="Accounts currency"
+              className="mt-1 w-28"
+              menuLabel="Currencies"
+              onValueChange={setSelectedCurrency}
+              options={currencyOptions(availableCurrencies)}
+              value={currencyCode}
+              variant="compact"
+            />
+          </label>
+        ) : null}
       </div>
 
       <AccountSummary
@@ -310,6 +274,17 @@ export function AccountsPanel() {
               Sorted by current balance, highest first.
             </p>
           </div>
+          <Button
+            className="shrink-0"
+            disabled={isLoading}
+            onClick={() => {
+              setError(null);
+              setEditor({ kind: "create" });
+            }}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Add account
+          </Button>
         </div>
 
         {activeAccounts.length === 0 ? (

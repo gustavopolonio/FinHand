@@ -50,7 +50,6 @@ describe("account data helpers", () => {
     expect(combined[0]?.balanceMinor).toBe("9007199254741093");
     expect(calculateAccountMetrics(combined, summary, "BRL")).toEqual({
       activeBalanceMinor: "9007199254741093",
-      activeCount: 1,
       netMovementMinor: "100",
       openingBalanceMinor: "9007199254740993",
     });
