@@ -93,7 +93,7 @@ export function DocumentReviewRows({
         return (
           <li
             className={cn(
-              "flex items-center gap-4 px-5 py-4",
+              "flex flex-wrap items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5",
               presentation.tone === "ready" && "bg-finhand-warning-soft/40",
             )}
             key={review.uploadId}
@@ -115,7 +115,7 @@ export function DocumentReviewRows({
               <p className="truncate text-sm font-semibold text-finhand-ink">
                 {review.originalFileName}
               </p>
-              <p className="mt-0.5 text-xs text-finhand-muted">
+              <p className="mt-0.5 text-xs leading-5 text-finhand-muted">
                 <time dateTime={review.createdAt} suppressHydrationWarning>
                   Created {formatCreatedAt(review.createdAt)}
                 </time>
@@ -133,13 +133,14 @@ export function DocumentReviewRows({
 
             {review.status === "processed" ? (
               <Button
+                className="ml-12 w-[calc(100%_-_3rem)] sm:ml-0 sm:w-auto"
                 onClick={() => onOpenReview(review)}
                 size="sm"
               >
                 Review
               </Button>
             ) : (
-              <span className="text-xs text-finhand-muted">
+              <span className="ml-12 text-xs text-finhand-muted sm:ml-0">
                 In progress
               </span>
             )}
@@ -199,7 +200,7 @@ export function DocumentReviewsList({
         <button
           aria-controls="pending-document-reviews-list"
           aria-expanded={isExpanded}
-          className="flex min-h-full w-full min-w-0 items-center gap-3 px-5 py-4 text-left"
+          className="flex min-h-full w-full min-w-0 items-center gap-3 px-4 py-4 text-left sm:px-5"
           onClick={toggleExpanded}
           type="button"
         >

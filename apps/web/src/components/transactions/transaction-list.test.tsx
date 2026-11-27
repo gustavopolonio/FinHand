@@ -61,6 +61,8 @@ describe("TransactionList", () => {
     expect(markup).toContain("Checking");
     expect(markup).toContain("-R$ 25.90");
     expect(markup).not.toContain(">Type<");
+    expect(markup).toContain("md:hidden");
+    expect(markup).toContain("md:table");
   });
 
   it("renders the filtered empty state", () => {

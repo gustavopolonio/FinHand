@@ -16,7 +16,7 @@ export function TransactionConfirmationToast({
   return (
     <div
       aria-live="polite"
-      className="fixed right-6 bottom-6 z-70 w-96 max-w-[calc(100vw-3rem)] rounded-2xl border border-finhand-income-border bg-white p-4 shadow-finhand-modal"
+      className="fixed inset-x-4 bottom-24 z-70 rounded-2xl border border-finhand-income-border bg-white p-4 shadow-finhand-modal sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-96 sm:max-w-[calc(100vw-3rem)]"
       role="status"
     >
       <div className="flex items-start gap-3">

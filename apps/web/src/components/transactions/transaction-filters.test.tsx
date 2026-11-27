@@ -24,5 +24,7 @@ describe("TransactionFilters", () => {
     expect(markup).not.toContain('type="date"');
     expect(markup).not.toContain("Start date");
     expect(markup).not.toContain("End date");
+    expect(markup).toContain("sm:grid-cols-2");
+    expect(markup).toContain("xl:flex");
   });
 });

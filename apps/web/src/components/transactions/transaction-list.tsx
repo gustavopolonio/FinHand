@@ -89,7 +89,82 @@ export function TransactionList({
         </div>
       ) : (
         <div className="overflow-hidden">
-          <table className="w-full table-fixed border-collapse text-left">
+          <ul className="divide-y divide-finhand-divider md:hidden">
+            {transactions.map((transaction) => {
+              const isCurrentTransactionBusy =
+                busyTransactionId === transaction.id;
+              const accountName =
+                accountNames.get(transaction.accountId) ?? "Account";
+              const categoryName = transaction.categoryId
+                ? categoryNames.get(transaction.categoryId) ?? "Category"
+                : "Uncategorized";
+
+              return (
+                <li className="p-4" key={transaction.id}>
+                  <TransactionDescription
+                    counterpartyFallback="No counterparty"
+                    showDocumentOrigin
+                    transaction={transaction}
+                  />
+
+                  <div className="mt-3 flex min-w-0 items-end justify-between gap-3">
+                    <div className="min-w-0 text-xs text-finhand-muted">
+                      <p>{formatTransactionDate(transaction.occurredOn)}</p>
+                      <p className="mt-1 truncate" title={accountName}>
+                        {accountName}
+                      </p>
+                      <Badge className="mt-2 max-w-full truncate">
+                        {categoryName}
+                      </Badge>
+                    </div>
+                    <CurrencyAmount
+                      className={`block max-w-[50%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-sm font-bold ${
+                        transaction.type === "income"
+                          ? "text-finhand-income"
+                          : "text-finhand-expense"
+                      }`}
+                      currencyCode={transaction.currencyCode}
+                      value={signedAmount(transaction)}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex justify-end gap-1 border-t border-finhand-divider pt-2">
+                    <Button
+                      aria-label={`Edit ${transaction.description}`}
+                      disabled={isBusy}
+                      onClick={() => onEdit(transaction)}
+                      size="sm"
+                      title="Edit transaction"
+                      variant="ghost"
+                    >
+                      <Pencil aria-hidden="true" className="size-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      aria-label={`Delete ${transaction.description}`}
+                      disabled={isBusy}
+                      onClick={() => onDelete(transaction)}
+                      size="sm"
+                      title="Delete transaction"
+                      variant="ghost"
+                    >
+                      {isCurrentTransactionBusy ? (
+                        <span className="size-4 animate-spin rounded-full border-2 border-finhand-expense/30 border-t-finhand-expense" />
+                      ) : (
+                        <Trash2
+                          aria-hidden="true"
+                          className="size-4 text-finhand-expense"
+                        />
+                      )}
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <table className="hidden w-full table-fixed border-collapse text-left md:table">
             <colgroup>
               <col className="w-[14%]" />
               <col className="w-[30%]" />

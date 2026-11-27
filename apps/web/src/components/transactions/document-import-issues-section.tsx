@@ -58,7 +58,10 @@ export function DocumentImportIssueRows({
   return (
     <ul className="divide-y divide-finhand-divider">
       {issues.map((issue) => (
-        <li className="flex items-center gap-4 px-5 py-4" key={issue.uploadId}>
+        <li
+          className="flex flex-wrap items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5"
+          key={issue.uploadId}
+        >
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-finhand-expense-soft text-finhand-expense">
             <CircleAlert aria-hidden="true" className="size-5" />
           </span>
@@ -67,7 +70,7 @@ export function DocumentImportIssueRows({
             <p className="truncate text-sm font-semibold text-finhand-ink">
               {issue.originalFileName}
             </p>
-            <p className="mt-0.5 text-xs text-finhand-muted">
+            <p className="mt-0.5 text-xs leading-5 text-finhand-muted">
               <time dateTime={issue.failedAt} suppressHydrationWarning>
                 Failed {formatFailedAt(issue.failedAt)}
               </time>
@@ -76,7 +79,7 @@ export function DocumentImportIssueRows({
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-12 grid w-[calc(100%_-_3rem)] grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:ml-0 sm:flex sm:w-auto sm:shrink-0 sm:items-center">
             <Button
               disabled={isBusy}
               onClick={() => onDismiss(issue.uploadId)}
@@ -160,7 +163,7 @@ export function DocumentImportIssuesList({
       <button
         aria-controls="document-import-issues-list"
         aria-expanded={isExpanded}
-        className="flex w-full min-w-0 items-center gap-3 bg-finhand-expense-soft/60 px-5 py-4 text-left"
+        className="flex w-full min-w-0 items-center gap-3 bg-finhand-expense-soft/60 px-4 py-4 text-left sm:px-5"
         onClick={toggleExpanded}
         type="button"
       >

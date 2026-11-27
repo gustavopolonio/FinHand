@@ -33,7 +33,7 @@ export function DocumentFailureToasts({
     <div
       aria-label="Document processing notifications"
       aria-live="assertive"
-      className="fixed right-6 top-6 z-70 flex w-96 max-w-[calc(100vw-3rem)] flex-col gap-3"
+      className="fixed inset-x-4 top-4 z-70 flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-y-auto sm:inset-x-auto sm:right-6 sm:top-6 sm:w-96 sm:max-w-[calc(100vw-3rem)]"
     >
       {notices.map((notice) => (
         <div
@@ -66,7 +66,7 @@ export function DocumentFailureToasts({
             </button>
           </div>
 
-          <div className="mt-3 flex justify-end gap-2">
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
             <Button
               onClick={() => onDismiss(notice.uploadId)}
               size="sm"

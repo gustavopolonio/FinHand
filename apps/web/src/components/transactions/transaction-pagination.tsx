@@ -24,13 +24,13 @@ export function TransactionPagination({
   const page = Math.floor(offset / limit) + 1;
 
   return (
-    <div className="flex items-center justify-between gap-4 px-1">
+    <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <p className="text-sm text-finhand-muted">
         {itemCount > 0
           ? `Showing ${offset + 1}–${offset + itemCount}`
           : "No results on this page"}
       </p>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 sm:justify-end">
         <span className="text-sm font-semibold text-finhand-muted">
           Page {page}
         </span>
@@ -43,7 +43,7 @@ export function TransactionPagination({
             variant="secondary"
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
-            Previous
+            <span className="hidden min-[390px]:inline">Previous</span>
           </Button>
           <Button
             aria-label="Next page"
@@ -52,7 +52,7 @@ export function TransactionPagination({
             size="sm"
             variant="secondary"
           >
-            Next
+            <span className="hidden min-[390px]:inline">Next</span>
             <ChevronRight aria-hidden="true" className="size-4" />
           </Button>
         </div>
