@@ -25,6 +25,10 @@ describe("TransactionFilters", () => {
     expect(markup).not.toContain("Start date");
     expect(markup).not.toContain("End date");
     expect(markup).toContain("sm:grid-cols-2");
-    expect(markup).toContain("xl:flex");
+    expect(markup).toContain("@container");
+    expect(markup).toContain("@min-[48rem]:grid-cols-4");
+    expect(markup).toContain("@min-[48rem]:col-start-3");
+    expect(markup).toContain("@min-[48rem]:col-start-4");
+    expect(markup).toContain("@min-[68rem]:flex");
   });
 });

@@ -134,11 +134,11 @@ export function TransactionFilters({
   }
 
   return (
-    <Card className="p-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-nowrap xl:items-center">
+    <Card className="@container p-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 @min-[48rem]:grid-cols-4 @min-[68rem]:flex @min-[68rem]:flex-nowrap @min-[68rem]:items-center">
         <Select
           ariaLabel="Filter by transaction type"
-          className="min-w-0 w-full xl:min-w-44 xl:flex-1"
+          className="min-w-0 w-full @min-[68rem]:min-w-44 @min-[68rem]:flex-1"
           disabled={isLoading}
           menuLabel="Transaction types"
           onValueChange={changeType}
@@ -155,7 +155,7 @@ export function TransactionFilters({
 
         <Select
           ariaLabel="Filter by account"
-          className="min-w-0 w-full xl:min-w-44 xl:flex-1"
+          className="min-w-0 w-full @min-[68rem]:min-w-44 @min-[68rem]:flex-1"
           disabled={isLoading}
           menuLabel={`Accounts (${accounts.length})`}
           onValueChange={changeAccount}
@@ -171,7 +171,7 @@ export function TransactionFilters({
 
         <Select
           ariaLabel="Filter by category"
-          className="min-w-0 w-full xl:min-w-44 xl:flex-1"
+          className="min-w-0 w-full @min-[68rem]:min-w-44 @min-[68rem]:flex-1"
           disabled={isLoading}
           menuLabel={`Categories (${matchingCategories.length})`}
           onValueChange={changeCategory}
@@ -190,12 +190,12 @@ export function TransactionFilters({
           ariaLabel="Choose transaction date range"
           disabled={isLoading}
           onApply={applyDateRange}
-          triggerClassName="h-10 w-full justify-between xl:w-40"
+          triggerClassName="h-10 w-full justify-between @min-[68rem]:w-40"
           value={dateRange}
         />
 
         <Button
-          className="w-full shrink-0 xl:w-auto"
+          className="w-full shrink-0 @min-[48rem]:col-start-3 @min-[68rem]:w-auto"
           disabled={isLoading || !hasFilters}
           onClick={reset}
           size="sm"
@@ -206,7 +206,7 @@ export function TransactionFilters({
         </Button>
 
         <Button
-          className="w-full shrink-0 xl:ml-auto xl:w-auto"
+          className="w-full shrink-0 @min-[48rem]:col-start-4 @min-[68rem]:ml-auto @min-[68rem]:w-auto"
           disabled={isCreateDisabled}
           onClick={onCreate}
         >

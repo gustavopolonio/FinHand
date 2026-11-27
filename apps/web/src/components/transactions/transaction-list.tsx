@@ -70,7 +70,7 @@ export function TransactionList({
   const isBusy = busyTransactionId !== null;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="@container min-w-0 overflow-hidden">
       {isLoading ? (
         <TransactionTableSkeleton />
       ) : transactions.length === 0 ? (
@@ -88,8 +88,8 @@ export function TransactionList({
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden">
-          <ul className="divide-y divide-finhand-divider md:hidden">
+        <div className="min-w-0 overflow-hidden">
+          <ul className="divide-y divide-finhand-divider @min-[64rem]:hidden">
             {transactions.map((transaction) => {
               const isCurrentTransactionBusy =
                 busyTransactionId === transaction.id;
@@ -164,14 +164,20 @@ export function TransactionList({
             })}
           </ul>
 
-          <table className="hidden w-full table-fixed border-collapse text-left md:table">
+          <div
+            aria-label="Transactions table"
+            className="hidden max-w-full overflow-x-auto overscroll-x-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-finhand-focus @min-[64rem]:block"
+            role="region"
+            tabIndex={0}
+          >
+          <table className="w-full min-w-[64rem] table-fixed border-collapse text-left">
             <colgroup>
               <col className="w-[14%]" />
-              <col className="w-[30%]" />
-              <col className="w-[16%]" />
-              <col className="w-[16%]" />
+              <col className="w-[28%]" />
               <col className="w-[15%]" />
-              <col className="w-[9%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[13%]" />
             </colgroup>
             <thead className="bg-finhand-canvas-muted">
               <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
@@ -180,7 +186,7 @@ export function TransactionList({
                 <th className="px-4 py-4">Category</th>
                 <th className="px-4 py-4">Account</th>
                 <th className="px-4 py-4 text-right">Amount</th>
-                <th className="px-5 py-4 text-right">Actions</th>
+                <th className="px-4 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -203,16 +209,23 @@ export function TransactionList({
                         transaction={transaction}
                       />
                     </td>
-                    <td className="px-4 py-4">
-                      <Badge>
+                    <td className="min-w-0 overflow-hidden px-4 py-4">
+                      <Badge className="max-w-full truncate">
                         {transaction.categoryId
                           ? categoryNames.get(transaction.categoryId) ??
                             "Category"
                           : "Uncategorized"}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-sm text-finhand-muted">
-                      {accountNames.get(transaction.accountId) ?? "Account"}
+                    <td className="min-w-0 overflow-hidden px-4 py-4 text-sm text-finhand-muted">
+                      <span
+                        className="block truncate"
+                        title={
+                          accountNames.get(transaction.accountId) ?? "Account"
+                        }
+                      >
+                        {accountNames.get(transaction.accountId) ?? "Account"}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-right">
                       <CurrencyAmount
@@ -225,7 +238,7 @@ export function TransactionList({
                         value={signedAmount(transaction)}
                       />
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-4">
                       <div className="flex justify-end gap-1">
                         <Button
                           aria-label={`Edit ${transaction.description}`}
@@ -261,6 +274,7 @@ export function TransactionList({
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Card>

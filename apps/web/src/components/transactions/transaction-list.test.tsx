@@ -61,8 +61,10 @@ describe("TransactionList", () => {
     expect(markup).toContain("Checking");
     expect(markup).toContain("-R$ 25.90");
     expect(markup).not.toContain(">Type<");
-    expect(markup).toContain("md:hidden");
-    expect(markup).toContain("md:table");
+    expect(markup).toContain("@container");
+    expect(markup).toContain("@min-[64rem]:hidden");
+    expect(markup).toContain("@min-[64rem]:block");
+    expect(markup).toContain('aria-label="Transactions table"');
   });
 
   it("renders the filtered empty state", () => {
@@ -97,7 +99,7 @@ describe("TransactionList", () => {
     );
 
     expect(markup).toContain("table-fixed");
-    expect(markup).toContain('class="w-[30%]"');
+    expect(markup).toContain('class="w-[28%]"');
     expect(markup).toContain(`title="${longDescription}"`);
     expect(markup).toContain("truncate text-sm");
   });
