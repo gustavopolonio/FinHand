@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  LogOut,
   ReceiptText,
   Tags,
   WalletCards,
@@ -27,6 +26,7 @@ import { DashboardHeader } from "./dashboard-header";
 import { FinHandBrand } from "./finhand-brand";
 import { MoneyLoader } from "./money-loader";
 import { Button } from "./ui/button";
+import { UserSettingsMenu } from "./user-settings-menu";
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -251,15 +251,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   {user.email}
                 </p>
               </div>
-              <button
-                aria-label="Sign out"
-                className="grid size-9 place-items-center rounded-lg text-finhand-muted transition hover:bg-white hover:text-finhand-expense focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus"
-                onClick={() => void signOut()}
-                title="Sign out"
-                type="button"
-              >
-                <LogOut aria-hidden="true" className="size-4" />
-              </button>
+              <UserSettingsMenu
+                onSignOut={() => void signOut()}
+                placement="above"
+                triggerClassName="size-9"
+              />
             </div>
           </div>
         </aside>
@@ -278,7 +274,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
         <nav
           aria-label="Mobile primary navigation"
-          className="fixed inset-x-3 bottom-3 z-50 flex gap-1 rounded-2xl border border-finhand-border bg-white/95 p-1.5 shadow-[0_12px_36px_rgb(15_23_42/18%)] backdrop-blur-md lg:hidden"
+          className="fixed inset-x-3 bottom-3 z-40 flex gap-1 rounded-2xl border border-finhand-border bg-white/95 p-1.5 shadow-[0_12px_36px_rgb(15_23_42/18%)] backdrop-blur-md lg:hidden"
         >
           {navigationItems.map((item) => (
             <NavigationLink

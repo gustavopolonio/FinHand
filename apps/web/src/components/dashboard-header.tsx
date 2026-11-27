@@ -11,7 +11,6 @@ import {
   CloudRainWind,
   CloudSnow,
   CloudSun,
-  LogOut,
   MoonStar,
   SunMedium,
   ThermometerSun,
@@ -34,6 +33,7 @@ import {
   getGreeting,
   getHeaderDateParts,
 } from "./dashboard-header-data";
+import { UserSettingsMenu } from "./user-settings-menu";
 
 interface DashboardHeaderProps {
   isOverview: boolean;
@@ -105,7 +105,10 @@ function WeatherTimeline({ forecast }: { forecast: LocalWeatherForecast }) {
       className="flex items-center gap-1"
     >
       {forecast.points.map((point, index) => (
-        <div className="contents" key={point.label}>
+        <div
+          className={index === 0 ? "contents" : "hidden min-[430px]:contents"}
+          key={point.label}
+        >
           {index > 0 ? (
             <ChevronRight
               aria-hidden="true"
@@ -239,7 +242,7 @@ export function DashboardHeader({
   }, [requestWeather]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-finhand-border bg-finhand-canvas/95 px-4 py-3 backdrop-blur-sm sm:px-6 lg:px-10">
+    <header className="z-30 border-b border-finhand-border bg-finhand-canvas/95 px-4 py-3 backdrop-blur-sm sm:px-6 md:sticky md:top-0 lg:px-10">
       <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         {isOverview ? (
           <h1 className="text-lg font-bold tracking-[-0.02em] text-finhand-ink sm:text-xl">
@@ -251,8 +254,8 @@ export function DashboardHeader({
           </p>
         )}
 
-        <div className="flex items-center gap-3">
-          <div className="min-w-28 text-right">
+        <div className="order-3 flex w-full min-w-0 items-center justify-between gap-2 border-t border-finhand-border pt-2 sm:order-none sm:w-auto sm:gap-3 sm:border-0 sm:pt-0">
+          <div className="min-w-0 flex-1 text-left sm:min-w-28 sm:flex-none sm:text-right">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-finhand-subtle">
               {date.weekday}
             </p>
@@ -276,15 +279,12 @@ export function DashboardHeader({
             </>
           ) : null}
 
-          <button
-            aria-label="Sign out"
-            className="grid size-10 shrink-0 place-items-center rounded-lg text-finhand-muted transition hover:bg-white hover:text-finhand-expense focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus lg:hidden"
-            onClick={onSignOut}
-            title="Sign out"
-            type="button"
-          >
-            <LogOut aria-hidden="true" className="size-4" />
-          </button>
+          <div className="lg:hidden">
+            <UserSettingsMenu
+              onSignOut={onSignOut}
+              triggerClassName="size-10"
+            />
+          </div>
         </div>
       </div>
     </header>
