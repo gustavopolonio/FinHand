@@ -1,9 +1,6 @@
 "use client";
 
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  FileText,
   Pencil,
   ReceiptText,
   Trash2,
@@ -15,6 +12,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { CurrencyAmount } from "../ui/currency-amount";
+import { TransactionDescription } from "./transaction-description";
 
 interface TransactionListProps {
   accounts: Account[];
@@ -91,24 +89,27 @@ export function TransactionList({
         </div>
       ) : (
         <div className="overflow-hidden">
-          <table className="w-full border-collapse text-left">
+          <table className="w-full table-fixed border-collapse text-left">
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[30%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
+              <col className="w-[15%]" />
+              <col className="w-[9%]" />
+            </colgroup>
             <thead className="bg-finhand-canvas-muted">
               <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
                 <th className="px-6 py-4">Date</th>
                 <th className="px-4 py-4">Description &amp; counterparty</th>
                 <th className="px-4 py-4">Category</th>
                 <th className="px-4 py-4">Account</th>
-                <th className="px-4 py-4">Type</th>
                 <th className="px-4 py-4 text-right">Amount</th>
                 <th className="px-5 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((transaction) => {
-                const TypeIcon =
-                  transaction.type === "income"
-                    ? ArrowDownLeft
-                    : ArrowUpRight;
                 const isCurrentTransactionBusy =
                   busyTransactionId === transaction.id;
 
@@ -120,35 +121,12 @@ export function TransactionList({
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-finhand-muted">
                       {formatTransactionDate(transaction.occurredOn)}
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex min-w-48 items-center gap-3">
-                        <span
-                          className={`grid size-9 shrink-0 place-items-center rounded-full ${
-                            transaction.type === "income"
-                              ? "bg-finhand-income-soft text-finhand-income"
-                              : "bg-finhand-expense-soft text-finhand-expense"
-                          }`}
-                        >
-                          <TypeIcon aria-hidden="true" className="size-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-finhand-ink">
-                            {transaction.description}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-finhand-muted">
-                            {transaction.counterparty ?? "No counterparty"}
-                          </p>
-                          {transaction.origin === "document" ? (
-                            <span
-                              className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-finhand-interactive"
-                              title="Created from an uploaded document"
-                            >
-                              <FileText aria-hidden="true" className="size-3" />
-                              Imported
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
+                    <td className="min-w-0 overflow-hidden px-4 py-4">
+                      <TransactionDescription
+                        counterpartyFallback="No counterparty"
+                        showDocumentOrigin
+                        transaction={transaction}
+                      />
                     </td>
                     <td className="px-4 py-4">
                       <Badge>
@@ -159,19 +137,7 @@ export function TransactionList({
                       </Badge>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-finhand-muted">
-                      <span className="mr-2 inline-block size-1.5 rounded-full bg-finhand-primary align-middle" />
                       {accountNames.get(transaction.accountId) ?? "Account"}
-                    </td>
-                    <td className="px-4 py-4">
-                      <Badge
-                        variant={
-                          transaction.type === "income"
-                            ? "income"
-                            : "expense"
-                        }
-                      >
-                        {transaction.type === "income" ? "Income" : "Expense"}
-                      </Badge>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-right">
                       <CurrencyAmount

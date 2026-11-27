@@ -60,6 +60,7 @@ describe("TransactionList", () => {
     expect(markup).toContain("Grocery");
     expect(markup).toContain("Checking");
     expect(markup).toContain("-R$ 25.90");
+    expect(markup).not.toContain(">Type<");
   });
 
   it("renders the filtered empty state", () => {
@@ -76,6 +77,27 @@ describe("TransactionList", () => {
     );
 
     expect(markup).toContain("No transactions found");
+  });
+
+  it("keeps long descriptions inside a fixed, truncating column", () => {
+    const longDescription =
+      "A deliberately long transaction description that must never resize the remaining transaction table columns";
+    const markup = renderToStaticMarkup(
+      <TransactionList
+        accounts={[account]}
+        busyTransactionId={null}
+        categories={[category]}
+        isLoading={false}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+        transactions={[{ ...transaction, description: longDescription }]}
+      />,
+    );
+
+    expect(markup).toContain("table-fixed");
+    expect(markup).toContain('class="w-[30%]"');
+    expect(markup).toContain(`title="${longDescription}"`);
+    expect(markup).toContain("truncate text-sm");
   });
 
   it("identifies transactions created from uploaded documents", () => {

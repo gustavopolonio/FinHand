@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -45,7 +44,6 @@ import {
 } from "@/lib/api";
 import { startUserEventStream } from "@/lib/user-events";
 
-import { Button } from "../ui/button";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import {
   DocumentFailureToasts,
@@ -148,21 +146,6 @@ export function TransactionsPanel() {
 
     return stream.close;
   }, []);
-
-  const loadReferences = useCallback(async () => {
-    try {
-      const [userAccounts, userCategories] = await Promise.all([
-        getAccounts(),
-        getCategories(),
-      ]);
-      setAccounts(userAccounts);
-      setCategories(userCategories);
-    } catch (cause) {
-      reportError(cause);
-    } finally {
-      setIsLoadingReferences(false);
-    }
-  }, [reportError]);
 
   const loadTransactions = useCallback(
     async (filters: TransactionFilterValues) => {
@@ -569,55 +552,6 @@ export function TransactionsPanel() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-end justify-between gap-8">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
-            Ledger records
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
-            Transactions
-          </h1>
-          <p className="mt-1.5 text-sm text-finhand-muted">
-            Track and organize income and expenses across your accounts.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            aria-label="Refresh transaction data"
-            disabled={isLoadingReferences || isLoadingTransactions}
-            onClick={() => {
-              setError(null);
-              setIsLoadingReferences(true);
-              setIsLoadingTransactions(true);
-              setDocumentReviewRefreshKey((key) => key + 1);
-              setDocumentIssueRefreshKey((key) => key + 1);
-              void Promise.all([loadReferences(), loadTransactions(query)]);
-            }}
-            variant="secondary"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 ${
-                isLoadingReferences || isLoadingTransactions
-                  ? "animate-spin"
-                  : ""
-              }`}
-            />
-            Refresh
-          </Button>
-          <Button
-            disabled={isLoadingReferences}
-            onClick={() => {
-              setError(null);
-              setEditor({ kind: "create" });
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Add transaction
-          </Button>
-        </div>
-      </header>
-
       <DocumentImportIssuesSection
         dismissingUploadId={dismissingDocumentUploadId}
         onDismiss={dismissFailedDocument}
@@ -646,8 +580,13 @@ export function TransactionsPanel() {
       <TransactionFilters
         accounts={accounts}
         categories={categories}
+        isCreateDisabled={isLoadingReferences}
         isLoading={isLoadingTransactions}
-        onApply={applyFilters}
+        onChange={applyFilters}
+        onCreate={() => {
+          setError(null);
+          setEditor({ kind: "create" });
+        }}
       />
 
       {error ? (
