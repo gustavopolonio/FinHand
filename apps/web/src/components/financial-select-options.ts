@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowDown,
+  ArrowDownLeft,
   ArrowUpRight,
   Banknote,
   CreditCard,
@@ -75,7 +75,8 @@ export function categoryOptions(
       ? "Archived"
       : categoryTypeLabels[category.type],
     disabled: disableArchived && Boolean(category.archivedAt),
-    icon: category.type === "income" ? ArrowDown : ArrowUpRight,
+    icon: category.type === "income" ? ArrowDownLeft : ArrowUpRight,
+    iconTone: category.type,
     label: category.name,
     value: category.id,
   }));

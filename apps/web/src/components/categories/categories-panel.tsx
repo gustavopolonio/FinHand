@@ -28,6 +28,7 @@ import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 import {
   categoriesWithTotals,
@@ -301,11 +302,14 @@ export function CategoriesPanel() {
           <form className="flex items-end gap-2" onSubmit={applyMonth}>
             <label className="text-xs font-semibold text-finhand-muted">
               Period
-              <span className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-finhand-border bg-white px-3">
-                <CalendarDays aria-hidden="true" className="size-4" />
-                <input
+              <span className="relative mt-1 block">
+                <CalendarDays
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-finhand-muted"
+                />
+                <Input
                   aria-label="Summary month"
-                  className="bg-transparent text-sm text-finhand-ink outline-none"
+                  className="h-10 rounded-lg pl-9"
                   onChange={(event) => setMonth(event.target.value)}
                   type="month"
                   value={month}
@@ -399,11 +403,14 @@ export function CategoriesPanel() {
           ))}
         </div>
 
-        <label className="flex h-10 w-72 items-center gap-2 rounded-xl border border-finhand-border bg-white px-3 focus-within:border-finhand-focus focus-within:ring-2 focus-within:ring-finhand-focus/20">
-          <Search aria-hidden="true" className="size-4 text-finhand-muted" />
-          <input
+        <label className="relative block w-72">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-finhand-muted"
+          />
+          <Input
             aria-label="Filter categories"
-            className="min-w-0 flex-1 bg-transparent text-sm text-finhand-ink outline-none placeholder:text-finhand-subtle"
+            className="h-10 pl-9"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Filter categories..."
             type="search"

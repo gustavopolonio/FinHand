@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Account, Category, Transaction } from "@/lib/api";
+import {
+  currencyValueFromInput,
+  formatCurrencyInput,
+} from "@/lib/currency-input";
 
 import {
   formValuesFromTransaction,
@@ -41,6 +45,22 @@ const values: TransactionFormValues = {
 };
 
 describe("transaction form helpers", () => {
+  it("builds a BRL-style amount from right to left without floating point arithmetic", () => {
+    const typedValues = ["1", "12", "123", "1234", "12345", "123456"];
+
+    expect(
+      typedValues.map((typedValue) =>
+        formatCurrencyInput(currencyValueFromInput(typedValue)),
+      ),
+    ).toEqual(["0,01", "0,12", "1,23", "12,34", "123,45", "1.234,56"]);
+  });
+
+  it("normalizes pasted Brazilian and US-formatted amounts", () => {
+    expect(currencyValueFromInput("1.234,56")).toBe("1234.56");
+    expect(currencyValueFromInput("1,234.56")).toBe("1234.56");
+    expect(currencyValueFromInput("abc")).toBe("0.00");
+  });
+
   it("converts form money to exact positive minor units", () => {
     expect(transactionInputFromForm(values)).toEqual({
       accountId: account.id,

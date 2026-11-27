@@ -145,6 +145,10 @@ required to complete Production Readiness.
 
 - [ ] Define and implement retention cleanup for abandoned database records, transcripts, and S3 objects without deleting active user data
 
+### Localization
+
+- [ ] Add a user language and locale preference, then format currency inputs and values with locale-specific decimal and grouping separators while preserving canonical minor-unit amounts
+
 ### RAG Financial Assistant
 
 - [ ] Define privacy, consent, retention, and source-citation requirements for document knowledge

@@ -19,6 +19,7 @@ export interface SelectOption {
   description?: string;
   disabled?: boolean;
   icon?: LucideIcon;
+  iconTone?: "income" | "expense";
   label: string;
   value: string;
 }
@@ -35,6 +36,7 @@ interface SelectProps {
   onValueChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  triggerClassName?: string;
   value: string;
   variant?: SelectVariant;
 }
@@ -51,7 +53,8 @@ const variantClasses: Record<SelectVariant, string> = {
   default:
     "min-h-11 border border-finhand-border bg-finhand-canvas-muted px-3",
   soft: "min-h-12 border border-finhand-border-strong bg-white px-3.5",
-  compact: "min-h-10 border border-finhand-border bg-white px-3",
+  compact:
+    "min-h-10 border border-finhand-border bg-white px-3",
 };
 
 export function findNextEnabledOptionIndex(
@@ -81,6 +84,7 @@ export function Select({
   onValueChange,
   options,
   placeholder = "Select an option",
+  triggerClassName,
   value,
   variant = "default",
 }: SelectProps) {
@@ -275,6 +279,7 @@ export function Select({
   }
 
   const SelectedIcon = selectedOption?.icon;
+  const selectedIconTone = selectedOption?.iconTone;
   const menuStyle: CSSProperties | undefined = position
     ? {
         bottom: position.bottom,
@@ -300,12 +305,13 @@ export function Select({
         aria-invalid={ariaInvalid}
         aria-label={ariaLabel}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl text-left text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+          "flex w-full items-center justify-between gap-3 rounded-xl text-left text-sm outline-none transition hover:border-finhand-accent-border hover:bg-finhand-canvas-muted focus-visible:ring-2 focus-visible:ring-finhand-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
           variantClasses[variant],
           ariaInvalid &&
             "border-finhand-expense focus-visible:ring-finhand-expense/20",
           isOpen &&
             "border-2 border-finhand-focus bg-finhand-accent-soft shadow-finhand-card",
+          triggerClassName,
         )}
         disabled={disabled}
         onClick={() => (isOpen ? closeMenu() : openMenu())}
@@ -316,8 +322,21 @@ export function Select({
       >
         <span className="flex min-w-0 items-center gap-2.5">
           {SelectedIcon ? (
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-finhand-accent-border bg-white text-finhand-interactive">
-              <SelectedIcon aria-hidden="true" className="size-4" />
+            <span
+              className={cn(
+                "grid shrink-0 place-items-center",
+                selectedIconTone === "income" &&
+                  "size-7 rounded-full bg-finhand-income-soft text-finhand-income",
+                selectedIconTone === "expense" &&
+                  "size-7 rounded-full bg-finhand-expense-soft text-finhand-expense",
+                !selectedIconTone &&
+                  "size-8 rounded-lg border border-finhand-accent-border bg-white text-finhand-interactive",
+              )}
+            >
+              <SelectedIcon
+                aria-hidden="true"
+                className={selectedIconTone ? "size-3" : "size-4"}
+              />
             </span>
           ) : null}
           <span className="min-w-0">
@@ -342,7 +361,7 @@ export function Select({
           ) : null}
         </span>
 
-        <span className="grid size-6 shrink-0 place-items-center rounded-md bg-finhand-accent text-finhand-interactive">
+        <span className="grid size-6 shrink-0 place-items-center text-finhand-subtle">
           <ChevronDown
             aria-hidden="true"
             className={cn(
@@ -368,6 +387,7 @@ export function Select({
               <div className="min-h-0 overflow-y-auto" id={listboxId} role="listbox">
                 {options.map((option, index) => {
                   const Icon = option.icon;
+                  const iconTone = option.iconTone;
                   const isSelected = index === selectedIndex;
                   const isHighlighted = index === highlightedIndex;
 
@@ -397,8 +417,21 @@ export function Select({
                     >
                       <span className="flex min-w-0 items-center gap-3">
                         {Icon ? (
-                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-finhand-accent-soft text-finhand-interactive">
-                            <Icon aria-hidden="true" className="size-4" />
+                          <span
+                            className={cn(
+                              "grid shrink-0 place-items-center",
+                              iconTone === "income" &&
+                                "size-7 rounded-full bg-finhand-income-soft text-finhand-income",
+                              iconTone === "expense" &&
+                                "size-7 rounded-full bg-finhand-expense-soft text-finhand-expense",
+                              !iconTone &&
+                                "size-8 rounded-lg bg-finhand-accent-soft text-finhand-interactive",
+                            )}
+                          >
+                            <Icon
+                              aria-hidden="true"
+                              className={iconTone ? "size-3" : "size-4"}
+                            />
                           </span>
                         ) : null}
                         <span className="min-w-0">

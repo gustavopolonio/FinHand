@@ -8,6 +8,7 @@ import { categoryTypes } from "@/lib/api";
 import { cn } from "@/lib/class-names";
 
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { WorkspaceModal } from "../ui/workspace-modal";
 import {
   categoryTypeLabels,
@@ -101,9 +102,9 @@ export function CategoryModal({
 
           <label className="block text-xs font-medium text-finhand-muted">
             Category name
-            <input
+            <Input
               autoFocus
-              className="mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
+              className="mt-1.5"
               maxLength={100}
               onChange={(event) =>
                 setValues((current) => ({
