@@ -159,14 +159,9 @@ export function DocumentSourcePreview({
   return (
     <section className="flex min-h-0 min-w-0 flex-col border-b border-finhand-divider bg-finhand-canvas-muted lg:border-r lg:border-b-0">
       <header className="flex items-center justify-between gap-3 border-b border-finhand-divider bg-white px-5 py-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-finhand-ink">
-            Original {sourceLabel}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-finhand-muted">
-            {resolvedFileName} · private preview expires after 5 minutes
-          </p>
-        </div>
+        <p className="text-xs font-semibold text-finhand-ink">
+          Original {sourceLabel}
+        </p>
         <div className="flex items-center gap-2">
           {onHide ? (
             <Button onClick={onHide} size="sm" variant="ghost">

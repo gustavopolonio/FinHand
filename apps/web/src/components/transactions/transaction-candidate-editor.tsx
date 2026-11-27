@@ -19,6 +19,8 @@ import type {
 } from "@/lib/api";
 
 import { Button } from "../ui/button";
+import { CurrencyInput } from "../ui/currency-input";
+import { Input } from "../ui/input";
 import { Select, type SelectOption } from "../ui/select";
 import { HoldToConfirmButton } from "./hold-to-confirm-button";
 import { TransactionCandidateRejectModal } from "./transaction-candidate-reject-modal";
@@ -40,7 +42,6 @@ interface TransactionCandidateEditorProps {
     input: ConfirmTransactionCandidateInput,
   ) => Promise<ConfirmTransactionCandidateResult | null>;
   onConfirmed: (result: ConfirmTransactionCandidateResult) => void;
-  onClose: () => void;
   onReject: (
     candidateId: string,
   ) => Promise<RejectTransactionCandidateResult | null>;
@@ -52,8 +53,6 @@ interface TransactionCandidateEditorProps {
   onSaved: (candidate: TransactionCandidate) => void;
 }
 
-const controlClassName =
-  "mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20 disabled:bg-finhand-canvas-muted disabled:text-finhand-muted";
 const labelClassName = "text-xs font-medium text-finhand-muted";
 const typeOptions: SelectOption[] = [
   { label: "Not identified", value: "" },
@@ -68,7 +67,6 @@ export function TransactionCandidateEditor({
   error,
   onConfirm,
   onConfirmed,
-  onClose,
   onReject,
   onRejected,
   onSave,
@@ -314,20 +312,20 @@ export function TransactionCandidateEditor({
         <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
           <label className={labelClassName} data-candidate-field="amount">
             Amount
-            <input
+            <CurrencyInput
               aria-describedby={
                 fieldErrors.amount
                   ? `candidate-${candidate.id}-amount-error`
                   : undefined
               }
               aria-invalid={Boolean(fieldErrors.amount)}
-              className={`${controlClassName} ${fieldErrors.amount ? "border-finhand-expense" : ""}`}
-              inputMode="decimal"
-              onChange={(event) => {
-                setValues({ ...values, amount: event.target.value });
+              className="mt-1.5"
+              currencyCode={selectedAccount?.currencyCode ?? values.currencyCode ?? "BRL"}
+              onValueChange={(amount) => {
+                setValues({ ...values, amount });
                 clearFieldError("amount");
               }}
-              placeholder="0.00"
+              placeholder="0,00"
               value={values.amount}
             />
             {fieldError("amount")}
@@ -335,14 +333,14 @@ export function TransactionCandidateEditor({
 
           <label className={labelClassName} data-candidate-field="currencyCode">
             Currency
-            <input
+            <Input
               aria-describedby={
                 fieldErrors.currencyCode
                   ? `candidate-${candidate.id}-currencyCode-error`
                   : undefined
               }
               aria-invalid={Boolean(fieldErrors.currencyCode)}
-              className={`${controlClassName} uppercase ${fieldErrors.currencyCode ? "border-finhand-expense" : ""}`}
+              className="mt-1.5 uppercase"
               disabled={Boolean(selectedAccount)}
               maxLength={3}
               onChange={(event) => {
@@ -377,14 +375,14 @@ export function TransactionCandidateEditor({
 
           <label className={labelClassName} data-candidate-field="occurredOn">
             Date
-            <input
+            <Input
               aria-describedby={
                 fieldErrors.occurredOn
                   ? `candidate-${candidate.id}-occurredOn-error`
                   : undefined
               }
               aria-invalid={Boolean(fieldErrors.occurredOn)}
-              className={`${controlClassName} ${fieldErrors.occurredOn ? "border-finhand-expense" : ""}`}
+              className="mt-1.5"
               onChange={(event) => {
                 setValues({ ...values, occurredOn: event.target.value });
                 clearFieldError("occurredOn");
@@ -401,14 +399,14 @@ export function TransactionCandidateEditor({
           data-candidate-field="description"
         >
           Description
-          <input
+          <Input
             aria-describedby={
               fieldErrors.description
                 ? `candidate-${candidate.id}-description-error`
                 : undefined
             }
             aria-invalid={Boolean(fieldErrors.description)}
-            className={`${controlClassName} ${fieldErrors.description ? "border-finhand-expense" : ""}`}
+            className="mt-1.5"
             maxLength={200}
             onChange={(event) => {
               setValues({ ...values, description: event.target.value });
@@ -422,8 +420,8 @@ export function TransactionCandidateEditor({
 
         <label className={`block ${labelClassName}`}>
           Payee / Counterparty
-          <input
-            className={controlClassName}
+          <Input
+            className="mt-1.5"
             maxLength={200}
             onChange={(event) =>
               setValues({ ...values, counterparty: event.target.value })
@@ -432,24 +430,6 @@ export function TransactionCandidateEditor({
             value={values.counterparty}
           />
         </label>
-
-        <label className={`block ${labelClassName}`}>
-          Notes (Optional)
-          <textarea
-            className={`${controlClassName} min-h-20 resize-none py-3`}
-            maxLength={2_000}
-            onChange={(event) =>
-              setValues({ ...values, notes: event.target.value })
-            }
-            rows={2}
-            value={values.notes}
-          />
-        </label>
-
-        <p className="rounded-xl bg-finhand-accent-soft px-4 py-3 text-xs leading-5 text-finhand-interactive">
-          This is still a draft. Saving these corrections does not create a
-          transaction or change your balances.
-        </p>
 
         {wasSaved ? (
           <p
@@ -470,7 +450,7 @@ export function TransactionCandidateEditor({
         ) : null}
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
+      <div className="flex items-center justify-end gap-3 border-t border-finhand-divider bg-finhand-canvas-muted p-5">
         <Button
           className="mr-auto rounded-xl!"
           disabled={isBusy}
@@ -480,24 +460,23 @@ export function TransactionCandidateEditor({
           <Trash2 aria-hidden="true" className="size-4" />
           Discard candidate
         </Button>
-        <Button
-          className="rounded-xl!"
-          disabled={isBusy}
-          onClick={onClose}
-          variant="ghost"
-        >
-          Close
-        </Button>
-        <Button className="rounded-xl!" disabled={isBusy} type="submit">
-          <Save aria-hidden="true" className="size-4" />
-          {isSaving ? "Saving…" : "Save draft"}
-        </Button>
-        <HoldToConfirmButton
-          disabled={isSaving}
-          isConfirming={isConfirming}
-          onBeforeStart={prepareConfirmation}
-          onConfirm={confirmCandidate}
-        />
+        <div className="flex items-center gap-3">
+          <Button
+            className="rounded-xl!"
+            disabled={isBusy}
+            type="submit"
+            variant="secondary"
+          >
+            <Save aria-hidden="true" className="size-4" />
+            {isSaving ? "Saving…" : "Save draft"}
+          </Button>
+          <HoldToConfirmButton
+            disabled={isSaving}
+            isConfirming={isConfirming}
+            onBeforeStart={prepareConfirmation}
+            onConfirm={confirmCandidate}
+          />
+        </div>
       </div>
       </form>
 

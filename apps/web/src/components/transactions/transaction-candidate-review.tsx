@@ -125,17 +125,8 @@ export function TransactionCandidateReviewPanel({
         className="flex min-h-0 flex-1 flex-col"
         id={panelId}
       >
-        <div className="flex items-center justify-between border-b border-finhand-divider px-6 py-3">
-          <div>
-            <p className="text-xs font-semibold text-finhand-interactive">
-              Review extracted transaction
-            </p>
-            <p className="mt-0.5 max-w-xs truncate text-xs text-finhand-muted">
-              {review.upload.originalFileName}
-            </p>
-          </div>
-          {review.candidates.length > 1 ? (
-            <div className="flex items-center gap-2">
+        {review.candidates.length > 1 ? (
+          <div className="flex items-center justify-end gap-2 border-b border-finhand-divider px-6 py-3">
               <Button
                 aria-label="Previous candidate"
                 disabled={activeIndex === 0}
@@ -157,10 +148,9 @@ export function TransactionCandidateReviewPanel({
               >
                 <ChevronRight aria-hidden="true" className="size-4" />
               </Button>
-            </div>
-          ) : null}
-        </div>
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          </div>
+        ) : null}
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <DocumentSourcePreview
             fileName={review.upload.originalFileName}
             sourceId={review.upload.id}
@@ -176,7 +166,6 @@ export function TransactionCandidateReviewPanel({
             onConfirmed={(result) =>
               removeReviewedCandidate(result.candidate.id)
             }
-            onClose={onClose}
             onReject={onReject}
             onRejected={(result) =>
               removeReviewedCandidate(result.candidate.id)

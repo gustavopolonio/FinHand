@@ -54,7 +54,7 @@ describe("document reviews section", () => {
     expect(markup).toContain("1 transaction needs your review");
     expect(markup).toContain("2 processing");
     expect(markup).toContain('aria-expanded="false"');
-    expect(markup).toContain("Review next");
+    expect(markup).not.toContain("Review next");
     expect(markup).not.toContain("uploaded-receipt.pdf");
   });
 

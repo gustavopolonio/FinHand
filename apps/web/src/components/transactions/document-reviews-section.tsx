@@ -139,7 +139,9 @@ export function DocumentReviewRows({
                 Review
               </Button>
             ) : (
-              <span className="text-xs text-finhand-muted">In progress</span>
+              <span className="text-xs text-finhand-muted">
+                In progress
+              </span>
             )}
           </li>
         );
@@ -157,9 +159,6 @@ export function DocumentReviewsList({
     (review) => review.status === "processed",
   );
   const processingCount = reviews.filter(isProcessing).length;
-  const nextReview = [...readyReviews].sort((left, right) =>
-    left.createdAt.localeCompare(right.createdAt),
-  )[0];
   const summary = [
     readyReviews.length > 0
       ? readyReviews.length === 1
@@ -200,10 +199,7 @@ export function DocumentReviewsList({
         <button
           aria-controls="pending-document-reviews-list"
           aria-expanded={isExpanded}
-          className={cn(
-            "flex min-h-full w-full min-w-0 items-center gap-3 px-5 py-4 text-left",
-            nextReview && "pr-40",
-          )}
+          className="flex min-h-full w-full min-w-0 items-center gap-3 px-5 py-4 text-left"
           onClick={toggleExpanded}
           type="button"
         >
@@ -238,16 +234,6 @@ export function DocumentReviewsList({
             )}
           />
         </button>
-
-        {nextReview ? (
-          <Button
-            className="absolute right-5 top-1/2 z-10 -translate-y-1/2"
-            onClick={() => openReview(nextReview)}
-            size="sm"
-          >
-            Review next
-          </Button>
-        ) : null}
       </div>
 
       {isExpanded ? (

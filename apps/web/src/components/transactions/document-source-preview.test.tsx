@@ -83,6 +83,8 @@ describe("document source preview", () => {
 
     expect(markup).toContain("Original document");
     expect(markup).toContain("Loading original document");
+    expect(markup).not.toContain("receipt.pdf ·");
+    expect(markup).not.toContain("private preview expires");
   });
 
   it("offers an inline hide action when embedded in transaction details", () => {

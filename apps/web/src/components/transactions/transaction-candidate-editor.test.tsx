@@ -45,7 +45,7 @@ const candidate: TransactionCandidate = {
 };
 
 describe("TransactionCandidateEditor", () => {
-  it("shows extracted values, warnings, selectors, and draft semantics", () => {
+  it("shows extracted values, warnings, selectors, and clear review actions", () => {
     const markup = renderToStaticMarkup(
       <TransactionCandidateEditor
         accounts={[account]}
@@ -54,7 +54,6 @@ describe("TransactionCandidateEditor", () => {
         error={null}
         onConfirm={vi.fn()}
         onConfirmed={vi.fn()}
-        onClose={vi.fn()}
         onReject={vi.fn()}
         onRejected={vi.fn()}
         onSave={vi.fn()}
@@ -64,12 +63,15 @@ describe("TransactionCandidateEditor", () => {
 
     expect(markup).toContain("Extraction notes");
     expect(markup).toContain("The total was slightly blurred.");
-    expect(markup).toContain('value="42.90"');
+    expect(markup).toContain('value="42,90"');
     expect(markup).toContain('value="Groceries"');
     expect(markup).toContain('aria-label="Candidate account"');
-    expect(markup).toContain("does not create a transaction");
     expect(markup).toContain("Save draft");
     expect(markup).toContain("Hold to confirm");
     expect(markup).toContain("Discard candidate");
+    expect(markup).not.toContain("Notes (Optional)");
+    expect(markup).not.toContain("This is still a draft");
+    expect(markup).not.toContain(">Close<");
+    expect(markup).toContain("whitespace-nowrap");
   });
 });
