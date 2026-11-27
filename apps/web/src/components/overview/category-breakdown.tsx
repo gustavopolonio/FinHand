@@ -34,7 +34,7 @@ export function CategoryBreakdown({
           </p>
         </div>
         <CurrencyAmount
-          className="font-bold text-finhand-ink"
+          className="max-w-full break-all font-bold text-finhand-ink"
           currencyCode={currencyCode}
           value={totalMinor}
         />
@@ -88,7 +88,7 @@ export function CategoryBreakdown({
                     {slice.transactionCount === 1 ? "transaction" : "transactions"}
                   </span>
                   <CurrencyAmount
-                    className="col-start-3 row-start-1 text-right font-semibold text-finhand-ink sm:col-start-auto sm:row-start-auto sm:min-w-28"
+                    className="col-start-3 row-start-1 block max-w-[45vw] overflow-hidden text-ellipsis whitespace-nowrap text-right font-semibold text-finhand-ink sm:col-start-auto sm:row-start-auto sm:min-w-28 sm:max-w-36"
                     currencyCode={currencyCode}
                     value={slice.totalMinor}
                   />

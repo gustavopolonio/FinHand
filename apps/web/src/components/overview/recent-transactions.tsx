@@ -88,7 +88,7 @@ export function RecentTransactions({
                           </p>
                         </div>
                         <CurrencyAmount
-                          className={`shrink-0 font-bold ${
+                          className={`block max-w-[50%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-right font-bold ${
                             transaction.type === "income"
                               ? "text-finhand-income"
                               : "text-finhand-expense"

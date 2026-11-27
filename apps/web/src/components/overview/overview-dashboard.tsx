@@ -46,9 +46,9 @@ async function fetchOverviewData(
 function OverviewSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading overview" className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="h-10 w-64 animate-pulse rounded-lg bg-finhand-accent-soft" />
-        <div className="h-9 w-24 animate-pulse rounded-lg bg-white" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="h-10 w-full animate-pulse rounded-lg bg-finhand-accent-soft sm:w-64" />
+        <div className="h-9 w-24 animate-pulse self-end rounded-lg bg-white sm:self-auto" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
