@@ -38,8 +38,8 @@ import {
 } from "./runtime-configuration.js";
 
 const PRODUCTION_REGION = "us-east-1";
-const GITHUB_ACTIONS_REPOSITORY = "gustavopolonio/FinHand";
-const GITHUB_ACTIONS_ENVIRONMENT = "production";
+const GITHUB_ACTIONS_SUBJECT =
+  "repo:gustavopolonio@69776883/FinHand@1441112950:environment:production";
 const PRODUCTION_CONTAINER_LOG_GROUPS = [
   { id: "ProxyLogGroup", name: "/finhand/production/proxy" },
   { id: "WebLogGroup", name: "/finhand/production/web" },
@@ -515,8 +515,7 @@ export class ProductionStack extends Stack {
         assumedBy: new iam.OpenIdConnectPrincipal(githubActionsProvider, {
           StringEquals: {
             "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-            "token.actions.githubusercontent.com:sub":
-              `repo:${GITHUB_ACTIONS_REPOSITORY}:environment:${GITHUB_ACTIONS_ENVIRONMENT}`,
+            "token.actions.githubusercontent.com:sub": GITHUB_ACTIONS_SUBJECT,
           },
         }),
         description:

@@ -767,7 +767,10 @@ GitHub Actions assumes the `finhand-prod-github-deploy-role` through GitHub
 OIDC; no permanent AWS access keys or SSH private keys are stored in GitHub.
 The CDK stack creates the account-level GitHub OIDC provider and limits the
 role trust policy to the `production` GitHub environment in the
-`gustavopolonio/FinHand` repository. The role can:
+`gustavopolonio/FinHand` repository. GitHub's emitted subject includes the
+immutable owner and repository IDs (`gustavopolonio@69776883` and
+`FinHand@1441112950`), preventing a renamed or recreated repository from
+assuming the role. The role can:
 
 - publish images to the two FinHand ECR repositories;
 - invoke only the approved Systems Manager deployment document or command on

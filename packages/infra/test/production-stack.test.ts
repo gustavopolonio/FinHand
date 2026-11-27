@@ -242,7 +242,7 @@ describe("ProductionStack", () => {
                 "token.actions.githubusercontent.com:aud":
                   "sts.amazonaws.com",
                 "token.actions.githubusercontent.com:sub":
-                  "repo:gustavopolonio/FinHand:environment:production",
+                  "repo:gustavopolonio@69776883/FinHand@1441112950:environment:production",
               },
             },
             Effect: "Allow",
