@@ -5,7 +5,7 @@ import { type MouseEvent, type ReactNode, useEffect, useId } from "react";
 
 interface WorkspaceModalProps {
   children: ReactNode;
-  description: string;
+  description?: string;
   isBusy: boolean;
   onClose: () => void;
   title: string;
@@ -62,7 +62,11 @@ export function WorkspaceModal({
             >
               {title}
             </h2>
-            <p className="mt-1 text-xs text-finhand-muted">{description}</p>
+            {description ? (
+              <p className="mt-1 text-xs text-finhand-muted">
+                {description}
+              </p>
+            ) : null}
           </div>
           <button
             aria-label={`Close ${title.toLowerCase()}`}

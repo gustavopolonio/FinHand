@@ -81,6 +81,14 @@ describe("TransactionDrawer", () => {
     expect(markup).toContain("Voice");
     expect(markup).toContain('id="transaction-manual-panel"');
     expect(markup).toContain("Save Transaction");
+    expect(markup).toContain("max-w-[1040px]");
+    expect(markup).not.toContain(
+      "Record a new expense or income to your ledger.",
+    );
+    expect(markup).not.toContain("lucide-landmark");
+    expect(markup).toContain('inputMode="numeric"');
+    expect(markup).toContain('value="0,00"');
+    expect(markup).not.toContain("Notes (Optional)");
   });
 
   it("does not show creation modes while editing a transaction", () => {
@@ -93,6 +101,7 @@ describe("TransactionDrawer", () => {
       'aria-label="Transaction creation method"',
     );
     expect(markup).toContain("Save Changes");
+    expect(markup).not.toContain("Notes (Optional)");
   });
 
   it("offers the original file for a document-origin transaction", () => {

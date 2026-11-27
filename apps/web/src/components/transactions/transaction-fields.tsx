@@ -9,6 +9,8 @@ import {
 } from "@/components/financial-select-options";
 
 import { Select } from "../ui/select";
+import { CurrencyInput } from "../ui/currency-input";
+import { Input } from "../ui/input";
 import {
   type TransactionFormValues,
   transactionTypeLabels,
@@ -17,24 +19,17 @@ import {
 interface TransactionFieldsProps {
   accounts: Account[];
   categories: Category[];
+  compactSelectors?: boolean;
   onChange: (values: TransactionFormValues) => void;
   values: TransactionFormValues;
 }
 
-const controlClassName =
-  "mt-1.5 min-h-12 w-full rounded-xl border border-finhand-border-strong bg-white px-4 text-sm text-finhand-ink outline-none transition placeholder:text-finhand-subtle focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20";
 const labelClassName = "text-xs font-medium text-finhand-muted";
-
-const currencySymbols: Record<string, string> = {
-  BRL: "R$",
-  EUR: "€",
-  GBP: "£",
-  USD: "US$",
-};
 
 export function TransactionFields({
   accounts,
   categories,
+  compactSelectors = false,
   onChange,
   values,
 }: TransactionFieldsProps) {
@@ -59,7 +54,7 @@ export function TransactionFields({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-finhand-canvas-muted p-1">
         {transactionTypes.map((type) => {
           const Icon = type === "expense" ? ArrowUpRight : ArrowDown;
@@ -88,22 +83,16 @@ export function TransactionFields({
 
       <label className={`block ${labelClassName}`}>
         Amount
-        <span className="mt-1.5 flex min-h-14 items-center rounded-xl border border-finhand-border-strong bg-white px-4 transition focus-within:border-finhand-focus focus-within:ring-2 focus-within:ring-finhand-focus/20">
-          <span className="mr-2 text-base font-medium text-finhand-muted">
-            {currencySymbols[currencyCode] ?? currencyCode}
-          </span>
-          <input
-            autoFocus
-            className="min-w-0 flex-1 bg-transparent text-2xl font-bold tracking-[-0.02em] text-finhand-ink outline-none placeholder:text-finhand-subtle"
-            inputMode="decimal"
-            onChange={(event) =>
-              onChange({ ...values, amount: event.target.value })
-            }
-            placeholder="0.00"
-            required
-            value={values.amount}
-          />
-        </span>
+        <CurrencyInput
+          autoFocus
+          className="mt-1.5"
+          currencyCode={currencyCode}
+          inputClassName="text-2xl font-bold tracking-[-0.02em]"
+          onValueChange={(amount) => onChange({ ...values, amount })}
+          placeholder="0,00"
+          required
+          value={values.amount}
+        />
       </label>
 
       <div className="grid grid-cols-2 gap-4">
@@ -116,10 +105,13 @@ export function TransactionFields({
             onValueChange={(accountId) =>
               onChange({ ...values, accountId })
             }
-            options={accountOptions(accounts)}
+            options={accountOptions(accounts).map((option) =>
+              compactSelectors ? { ...option, icon: undefined } : option,
+            )}
             placeholder="Select an account"
+            triggerClassName={compactSelectors ? "h-12" : undefined}
             value={values.accountId}
-            variant="soft"
+            variant={compactSelectors ? "compact" : "soft"}
           />
         </label>
 
@@ -134,8 +126,9 @@ export function TransactionFields({
             }
             options={categoryOptionsWithUncategorized(matchingCategories)}
             placeholder="Uncategorized"
+            triggerClassName={compactSelectors ? "h-12" : undefined}
             value={values.categoryId}
-            variant="soft"
+            variant={compactSelectors ? "compact" : "soft"}
           />
         </label>
       </div>
@@ -143,8 +136,8 @@ export function TransactionFields({
       <div className="grid grid-cols-2 gap-4">
         <label className={labelClassName}>
           Date
-          <input
-            className={controlClassName}
+          <Input
+            className="mt-1.5"
             onChange={(event) =>
               onChange({ ...values, occurredOn: event.target.value })
             }
@@ -156,8 +149,8 @@ export function TransactionFields({
 
         <label className={labelClassName}>
           Payee / Counterparty
-          <input
-            className={controlClassName}
+          <Input
+            className="mt-1.5"
             maxLength={200}
             onChange={(event) =>
               onChange({ ...values, counterparty: event.target.value })
@@ -168,10 +161,10 @@ export function TransactionFields({
         </label>
       </div>
 
-      <label className={`block ${labelClassName}`}>
+      <label className={`block min-w-0 ${labelClassName}`}>
         Description
-        <input
-          className={controlClassName}
+        <Input
+          className="mt-1.5"
           maxLength={200}
           onChange={(event) =>
             onChange({ ...values, description: event.target.value })
@@ -182,19 +175,6 @@ export function TransactionFields({
         />
       </label>
 
-      <label className={`block ${labelClassName}`}>
-        Notes (Optional)
-        <textarea
-          className={`${controlClassName} min-h-20 resize-none py-3`}
-          maxLength={2000}
-          onChange={(event) =>
-            onChange({ ...values, notes: event.target.value })
-          }
-          placeholder="Add any extra context or receipt reference..."
-          rows={2}
-          value={values.notes}
-        />
-      </label>
     </div>
   );
 }

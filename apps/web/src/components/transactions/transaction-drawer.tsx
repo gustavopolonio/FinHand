@@ -147,7 +147,7 @@ export function TransactionDrawer({
   const description = transaction
     ? "Adjust the details saved for this transaction."
     : creationMode === "manual"
-      ? "Record a new expense or income to your ledger."
+      ? undefined
       : creationMode === "document"
         ? "Upload a receipt or invoice securely from this device."
         : creationMode === "camera"
@@ -165,7 +165,7 @@ export function TransactionDrawer({
       widthClassName={
         isDocumentTransaction && isShowingSourceDocument
           ? "max-w-[1040px]"
-          : !transaction && creationMode !== "manual"
+          : !transaction
             ? "max-w-[1040px]"
             : undefined
       }
@@ -276,6 +276,7 @@ export function TransactionDrawer({
               <TransactionFields
                 accounts={availableAccounts}
                 categories={availableCategories}
+                compactSelectors={!transaction}
                 onChange={setValues}
                 values={resolvedValues}
               />
