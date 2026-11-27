@@ -80,6 +80,15 @@ textarea {
   --rdp-today-color: #4f46e5;
 }
 
+@media (max-width: 359px) {
+  .finhand-date-range {
+    --rdp-day-height: 2.25rem;
+    --rdp-day-width: 2.25rem;
+    --rdp-day_button-height: 2rem;
+    --rdp-day_button-width: 2rem;
+  }
+}
+
 .money-loader__coin {
   display: grid;
   width: 2.75rem;

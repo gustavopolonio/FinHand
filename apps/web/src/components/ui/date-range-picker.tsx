@@ -126,6 +126,30 @@ export function DateRangePicker({
     };
   }, [closePicker, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const compactViewport = window.matchMedia("(max-width: 639px)");
+    const previousOverflow = document.body.style.overflow;
+
+    function synchronizeBackgroundScroll() {
+      document.body.style.overflow = compactViewport.matches
+        ? "hidden"
+        : previousOverflow;
+    }
+
+    synchronizeBackgroundScroll();
+    compactViewport.addEventListener("change", synchronizeBackgroundScroll);
+
+    return () => {
+      compactViewport.removeEventListener(
+        "change",
+        synchronizeBackgroundScroll,
+      );
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   function togglePicker() {
     if (isOpen) {
       closePicker();
@@ -197,16 +221,22 @@ export function DateRangePicker({
       </button>
 
       {isOpen ? (
-        <div
-          aria-label={ariaLabel}
-          className={cn(
-            "absolute top-full z-50 mt-2 flex max-h-[calc(100vh-8rem)] w-[min(31rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-xl shadow-slate-950/10",
-            align === "right" ? "right-0" : "left-0",
-          )}
-          id={panelId}
-          onPointerDown={stopPanelPointerDown}
-          role="dialog"
-        >
+        <>
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-50 bg-finhand-ink/40 backdrop-blur-sm sm:hidden"
+            onPointerDown={() => closePicker(true)}
+          />
+          <div
+            aria-label={ariaLabel}
+            className={cn(
+              "fixed inset-x-4 top-20 bottom-4 z-60 flex w-auto flex-col overflow-hidden rounded-2xl border border-finhand-border bg-white shadow-xl shadow-slate-950/10 sm:absolute sm:inset-x-auto sm:top-full sm:bottom-auto sm:z-50 sm:mt-2 sm:max-h-[calc(100vh-8rem)] sm:w-[min(31rem,calc(100vw-2rem))]",
+              align === "right" ? "sm:right-0" : "sm:left-0",
+            )}
+            id={panelId}
+            onPointerDown={stopPanelPointerDown}
+            role="dialog"
+          >
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto sm:flex-row">
             <div className="order-2 border-t border-finhand-border p-2 sm:order-1 sm:w-36 sm:shrink-0 sm:border-r sm:border-t-0 sm:py-3">
               <p className="px-2 pb-1.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-finhand-subtle">
@@ -309,7 +339,8 @@ export function DateRangePicker({
               </Button>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       ) : null}
     </div>
   );
