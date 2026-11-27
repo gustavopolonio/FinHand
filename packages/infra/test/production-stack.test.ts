@@ -221,6 +221,90 @@ describe("ProductionStack", () => {
     }
   });
 
+  it("creates a repository- and environment-scoped GitHub deployment role", () => {
+    const app = new App();
+    const stack = new ProductionStack(app, "TestProductionStack", {
+      env: productionEnvironment,
+    });
+
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties("AWS::IAM::OIDCProvider", {
+      ClientIdList: ["sts.amazonaws.com"],
+      Url: "https://token.actions.githubusercontent.com",
+    });
+    template.hasResourceProperties("AWS::IAM::Role", {
+      AssumeRolePolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: "sts:AssumeRoleWithWebIdentity",
+            Condition: {
+              StringEquals: {
+                "token.actions.githubusercontent.com:aud":
+                  "sts.amazonaws.com",
+                "token.actions.githubusercontent.com:sub":
+                  "repo:gustavopolonio/FinHand:environment:production",
+              },
+            },
+            Effect: "Allow",
+          }),
+        ]),
+        Version: "2012-10-17",
+      },
+      Description:
+        "Least-privilege GitHub Actions role for approved FinHand production releases",
+      MaxSessionDuration: 3600,
+      RoleName: "finhand-prod-github-deploy-role",
+    });
+    const policies = template.findResources("AWS::IAM::Policy");
+    const githubPolicy = Object.values(policies).find((candidate) =>
+      String(candidate.Properties.PolicyName).includes(
+        "GithubDeploymentRoleDefaultPolicy",
+      ),
+    );
+    if (!githubPolicy) throw new Error("GitHub deployment policy is missing.");
+
+    const statements = githubPolicy.Properties.PolicyDocument
+      .Statement as Array<{
+      Action: string | string[];
+      Effect: string;
+      Resource: unknown;
+      Sid?: string;
+    }>;
+    const serializedPolicy = JSON.stringify(githubPolicy);
+
+    expect(statements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Action: expect.arrayContaining([
+            "ecr:CompleteLayerUpload",
+            "ecr:PutImage",
+          ]),
+          Effect: "Allow",
+        }),
+        expect.objectContaining({
+          Action: ["ssm:GetParameter", "ssm:PutParameter"],
+          Effect: "Allow",
+          Sid: "DeploymentImageParameters",
+        }),
+        expect.objectContaining({
+          Action: "ssm:SendCommand",
+          Effect: "Allow",
+          Sid: "ApprovedProductionCommands",
+        }),
+        expect.objectContaining({
+          Action: "ssm:ListCommandInvocations",
+          Effect: "Allow",
+          Resource: "*",
+          Sid: "ProductionCommandStatus",
+        }),
+      ]),
+    );
+    expect(serializedPolicy).toContain("deployment/web-image");
+    expect(serializedPolicy).toContain("deployment/api-image");
+    expect(serializedPolicy).not.toContain("google-client-secret");
+    expect(serializedPolicy).not.toContain("better-auth-secret");
+  });
+
   it("creates retained container log groups with 30-day retention", () => {
     const app = new App();
     const stack = new ProductionStack(app, "TestProductionStack", {
@@ -386,7 +470,7 @@ describe("ProductionStack", () => {
 
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("AWS::IAM::Role", 1);
+    template.resourceCountIs("AWS::IAM::Role", 2);
     template.hasResourceProperties("AWS::IAM::Role", {
       AssumeRolePolicyDocument: {
         Statement: [
@@ -415,13 +499,18 @@ describe("ProductionStack", () => {
       RoleName: "finhand-prod-instance-role",
     });
 
-    template.resourceCountIs("AWS::IAM::Policy", 1);
+    template.resourceCountIs("AWS::IAM::Policy", 2);
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyName: Match.stringLikeRegexp("InstanceRoleDefaultPolicy"),
     });
 
     const policies = template.findResources("AWS::IAM::Policy");
-    const [policy] = Object.values(policies);
+    const policy = Object.values(policies).find((candidate) =>
+      String(candidate.Properties.PolicyName).includes(
+        "InstanceRoleDefaultPolicy",
+      ),
+    );
+    if (!policy) throw new Error("Instance role policy is missing.");
     const statements = policy.Properties.PolicyDocument.Statement as Array<{
       Action: string | string[];
       Condition?: unknown;
@@ -904,6 +993,11 @@ describe("ProductionStack", () => {
     });
     template.hasOutput("InstanceRoleName", {
       Description: "Least-privilege role for the production EC2 host",
+      Value: Match.anyValue(),
+    });
+    template.hasOutput("GithubDeploymentRoleArn", {
+      Description:
+        "GitHub OIDC role for manually approved production deployments",
       Value: Match.anyValue(),
     });
     template.hasOutput("HostInstanceId", {

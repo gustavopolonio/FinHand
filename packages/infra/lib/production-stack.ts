@@ -38,6 +38,8 @@ import {
 } from "./runtime-configuration.js";
 
 const PRODUCTION_REGION = "us-east-1";
+const GITHUB_ACTIONS_REPOSITORY = "gustavopolonio/FinHand";
+const GITHUB_ACTIONS_ENVIRONMENT = "production";
 const PRODUCTION_CONTAINER_LOG_GROUPS = [
   { id: "ProxyLogGroup", name: "/finhand/production/proxy" },
   { id: "WebLogGroup", name: "/finhand/production/web" },
@@ -498,6 +500,86 @@ export class ProductionStack extends Stack {
       },
     );
 
+    const githubActionsProvider = new iam.OidcProviderNative(
+      this,
+      "GithubActionsProvider",
+      {
+        clientIds: ["sts.amazonaws.com"],
+        url: "https://token.actions.githubusercontent.com",
+      },
+    );
+    const githubDeploymentRole = new iam.Role(
+      this,
+      "GithubDeploymentRole",
+      {
+        assumedBy: new iam.OpenIdConnectPrincipal(githubActionsProvider, {
+          StringEquals: {
+            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+            "token.actions.githubusercontent.com:sub":
+              `repo:${GITHUB_ACTIONS_REPOSITORY}:environment:${GITHUB_ACTIONS_ENVIRONMENT}`,
+          },
+        }),
+        description:
+          "Least-privilege GitHub Actions role for approved FinHand production releases",
+        maxSessionDuration: Duration.hours(1),
+        roleName: "finhand-prod-github-deploy-role",
+      },
+    );
+    webRepository.grantPush(githubDeploymentRole);
+    webRepository.grantRead(githubDeploymentRole);
+    apiRepository.grantPush(githubDeploymentRole);
+    apiRepository.grantRead(githubDeploymentRole);
+    githubDeploymentRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "DeploymentImageParameters",
+        actions: ["ssm:GetParameter", "ssm:PutParameter"],
+        resources: [
+          "deployment/web-image",
+          "deployment/api-image",
+        ].map((parameterName) =>
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ssm",
+            resource: "parameter",
+            resourceName: `${runtimeParameterRoot.slice(1)}/${parameterName}`,
+          }),
+        ),
+      }),
+    );
+    githubDeploymentRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ApprovedProductionCommands",
+        actions: ["ssm:SendCommand"],
+        resources: [
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ssm",
+            resource: "document",
+            resourceName: runtimeConfigurationDocument.ref,
+          }),
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ssm",
+            resource: "document",
+            resourceName: applicationDeploymentDocument.ref,
+          }),
+          this.formatArn({
+            arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            service: "ec2",
+            resource: "instance",
+            resourceName: host.instanceId,
+          }),
+        ],
+      }),
+    );
+    githubDeploymentRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ProductionCommandStatus",
+        actions: ["ssm:ListCommandInvocations"],
+        resources: ["*"],
+      }),
+    );
+
     const elasticIp = new ec2.CfnEIP(this, "ElasticIp", {
       domain: "vpc",
     });
@@ -551,6 +633,12 @@ export class ProductionStack extends Stack {
     new CfnOutput(this, "InstanceRoleName", {
       description: "Least-privilege role for the production EC2 host",
       value: instanceRole.roleName,
+    });
+
+    new CfnOutput(this, "GithubDeploymentRoleArn", {
+      description:
+        "GitHub OIDC role for manually approved production deployments",
+      value: githubDeploymentRole.roleArn,
     });
 
     new CfnOutput(this, "HostInstanceId", {
