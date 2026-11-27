@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, ReceiptText } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import Link from "next/link";
 
 import type { FinancialSummary, Transaction } from "@/lib/api";
@@ -7,6 +7,7 @@ import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { CurrencyAmount } from "../ui/currency-amount";
 import { TransactionDescription } from "../transactions/transaction-description";
+import { TransactionTypeIcon } from "../transactions/transaction-type-icon";
 import { signedTransactionAmount } from "./overview-data";
 
 interface RecentTransactionsProps {
@@ -62,21 +63,10 @@ export function RecentTransactions({
         <div className="border-t border-finhand-divider">
           <ul className="divide-y divide-finhand-divider md:hidden">
             {transactions.map((transaction) => {
-              const Icon =
-                transaction.type === "income" ? ArrowDownLeft : ArrowUpRight;
-
               return (
                 <li className="p-4" key={transaction.id}>
                   <div className="flex items-start gap-3">
-                    <span
-                      className={`grid size-9 shrink-0 place-items-center rounded-full ${
-                        transaction.type === "income"
-                          ? "bg-finhand-income-soft text-finhand-income"
-                          : "bg-finhand-expense-soft text-finhand-expense"
-                      }`}
-                    >
-                      <Icon aria-hidden="true" className="size-4" />
-                    </span>
+                    <TransactionTypeIcon type={transaction.type} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">

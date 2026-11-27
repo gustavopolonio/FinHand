@@ -1,6 +1,8 @@
-import { ArrowDownLeft, ArrowUpRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import type { Transaction } from "@/lib/api";
+
+import { TransactionTypeIcon } from "./transaction-type-icon";
 
 interface TransactionDescriptionProps {
   counterpartyFallback?: string;
@@ -13,21 +15,11 @@ export function TransactionDescription({
   showDocumentOrigin = false,
   transaction,
 }: TransactionDescriptionProps) {
-  const TypeIcon =
-    transaction.type === "income" ? ArrowDownLeft : ArrowUpRight;
   const counterparty = transaction.counterparty ?? counterpartyFallback;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full ${
-          transaction.type === "income"
-            ? "bg-finhand-income-soft text-finhand-income"
-            : "bg-finhand-expense-soft text-finhand-expense"
-        }`}
-      >
-        <TypeIcon aria-hidden="true" className="size-4" />
-      </span>
+      <TransactionTypeIcon type={transaction.type} />
       <div className="min-w-0 flex-1">
         <p
           className="truncate text-sm font-bold text-finhand-ink"
