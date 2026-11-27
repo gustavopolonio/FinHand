@@ -33,7 +33,13 @@ describe("production deployment workflow", () => {
     expect(workflow).toContain("imageTag=$GITHUB_SHA");
     expect(workflow).toContain("finhand-prod-api-ecr");
     expect(workflow).toContain("finhand-prod-web-ecr");
-    expect(workflow).toContain("NEXT_PUBLIC_API_URL=/api");
+    expect(workflow).toContain(
+      "PUBLIC_WEB_ORIGIN: https://finhand.duckdns.org",
+    );
+    expect(workflow).toContain(
+      "NEXT_PUBLIC_API_URL=${{ env.PUBLIC_WEB_ORIGIN }}",
+    );
+    expect(workflow).not.toContain("NEXT_PUBLIC_API_URL=/api");
     expect(workflow).toContain(":${{ github.sha }}");
   });
 

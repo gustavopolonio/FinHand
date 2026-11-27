@@ -56,6 +56,7 @@ jobs:
     env:
       AWS_REGION: us-east-1
       API_REPOSITORY: finhand-prod-api-ecr
+      PUBLIC_WEB_ORIGIN: https://finhand.duckdns.org
       WEB_REPOSITORY: finhand-prod-web-ecr
     steps:
       - name: Check out the approved commit
@@ -111,7 +112,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           build-args: |
-            NEXT_PUBLIC_API_URL=/api
+            NEXT_PUBLIC_API_URL=${{ env.PUBLIC_WEB_ORIGIN }}
           cache-from: type=gha,scope=production-web
           cache-to: type=gha,mode=max,scope=production-web
           context: .
