@@ -100,7 +100,7 @@ describe("production Compose deployment", () => {
       'Referrer-Policy "strict-origin-when-cross-origin"',
     );
     expect(caddyConfiguration).toContain(
-      'Permissions-Policy "camera=(self), microphone=(self), geolocation=()"',
+      'Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"',
     );
     expect(caddyConfiguration).toContain("-Server");
     expect(caddyConfiguration).toContain("-X-Powered-By");

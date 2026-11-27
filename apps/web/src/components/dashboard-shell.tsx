@@ -23,6 +23,7 @@ import { ApiError, type CurrentUser, getCurrentUser } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/class-names";
 
+import { DashboardHeader } from "./dashboard-header";
 import { FinHandBrand } from "./finhand-brand";
 import { MoneyLoader } from "./money-loader";
 import { Button } from "./ui/button";
@@ -91,6 +92,57 @@ function UserAvatar({ user }: { user: CurrentUser }) {
   return (
     <span className="grid size-9 shrink-0 place-items-center rounded-full bg-finhand-primary text-xs font-bold text-white">
       {initialsFor(user)}
+    </span>
+  );
+}
+
+function NavigationLink({
+  compact = false,
+  item,
+  pathname,
+}: {
+  compact?: boolean;
+  item: NavigationItem;
+  pathname: string;
+}) {
+  const Icon = item.icon;
+  const isActive = pathname === item.href;
+  const content = (
+    <>
+      <Icon aria-hidden="true" className="size-5" />
+      <span>{item.label}</span>
+      {!compact && !item.available ? (
+        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-finhand-subtle">
+          Soon
+        </span>
+      ) : null}
+    </>
+  );
+  const className = cn(
+    compact
+      ? "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold transition"
+      : "flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition",
+    isActive
+      ? "bg-finhand-accent-soft text-finhand-primary-strong"
+      : "text-finhand-muted hover:bg-finhand-canvas-muted hover:text-finhand-ink",
+    !item.available && "cursor-not-allowed opacity-65",
+  );
+
+  return item.available ? (
+    <Link
+      aria-current={isActive ? "page" : undefined}
+      className={className}
+      href={item.href}
+    >
+      {content}
+    </Link>
+  ) : (
+    <span
+      aria-disabled="true"
+      className={className}
+      title="This page is not available yet."
+    >
+      {content}
     </span>
   );
 }
@@ -174,48 +226,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <DashboardUserContext.Provider value={user}>
-      <div className="min-h-screen min-w-[1120px] bg-finhand-canvas text-finhand-ink">
-        <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-finhand-border bg-white px-5 py-6">
+      <div className="min-h-screen bg-finhand-canvas text-finhand-ink">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-finhand-border bg-white px-5 py-6 lg:flex">
           <FinHandBrand className="px-2" />
 
           <nav aria-label="Primary navigation" className="mt-12 space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              const content = (
-                <>
-                  <Icon aria-hidden="true" className="size-5" />
-                  <span>{item.label}</span>
-                  {!item.available ? (
-                    <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-finhand-subtle">
-                      Soon
-                    </span>
-                  ) : null}
-                </>
-              );
-              const className = cn(
-                "flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition",
-                isActive
-                  ? "bg-finhand-accent-soft text-finhand-primary-strong"
-                  : "text-finhand-muted hover:bg-finhand-canvas-muted hover:text-finhand-ink",
-                !item.available && "cursor-not-allowed opacity-65",
-              );
-
-              return item.available ? (
-                <Link className={className} href={item.href} key={item.href}>
-                  {content}
-                </Link>
-              ) : (
-                <span
-                  aria-disabled="true"
-                  className={className}
-                  key={item.href}
-                  title="This page will be implemented in the next design steps."
-                >
-                  {content}
-                </span>
-              );
-            })}
+            {navigationItems.map((item) => (
+              <NavigationLink
+                item={item}
+                key={item.href}
+                pathname={pathname}
+              />
+            ))}
           </nav>
 
           <div className="mt-auto rounded-xl bg-finhand-accent-soft p-3">
@@ -242,24 +264,31 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </div>
         </aside>
 
-        <div className="ml-64 min-h-screen">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-finhand-border bg-finhand-canvas/95 px-10 backdrop-blur-sm">
-            <FinHandBrand compact />
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-finhand-ink">
-                  {user.displayName ?? user.email}
-                </p>
-                <p className="text-xs text-finhand-muted">
-                  {user.defaultCurrency} · {user.timeZone}
-                </p>
-              </div>
-              <UserAvatar user={user} />
-            </div>
-          </header>
+        <div className="min-h-screen lg:ml-64">
+          <DashboardHeader
+            isOverview={pathname === "/dashboard"}
+            onSignOut={() => void signOut()}
+            user={user}
+          />
 
-          <main className="mx-auto max-w-[1440px] px-10 py-8">{children}</main>
+          <main className="mx-auto max-w-[1440px] px-4 pt-5 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:py-8 xl:px-10">
+            {children}
+          </main>
         </div>
+
+        <nav
+          aria-label="Mobile primary navigation"
+          className="fixed inset-x-3 bottom-3 z-50 flex gap-1 rounded-2xl border border-finhand-border bg-white/95 p-1.5 shadow-[0_12px_36px_rgb(15_23_42/18%)] backdrop-blur-md lg:hidden"
+        >
+          {navigationItems.map((item) => (
+            <NavigationLink
+              compact
+              item={item}
+              key={item.href}
+              pathname={pathname}
+            />
+          ))}
+        </nav>
       </div>
     </DashboardUserContext.Provider>
   );
