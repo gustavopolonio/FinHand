@@ -121,8 +121,7 @@
     - [x] Harden public capture-token verification and submission against abuse
   - [x] Audit the complete hardening policy with automated security tests, safe rejection telemetry, and production smoke checks
 - [x] Define and verify safe same-host PostgreSQL migration and worker deployment procedures
-- [ ] Blur document previews by default and let users temporarily reveal or reapply the blur
-- [ ] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
+- [x] Review and polish responsive behavior, accessibility, UI styles, interaction details, and visual consistency across the application
 - [ ] Configure a manually approved production deployment pipeline that publishes immutable images and updates the EC2 Docker Compose application through AWS Systems Manager
 - [ ] Run pre-deployment restore drills, security checks, and representative performance/load tests; resolve release-blocking findings
 - [ ] Deploy the production application and verify health checks, workers, OAuth, uploads, AI processing, alerts, and rollback procedures
