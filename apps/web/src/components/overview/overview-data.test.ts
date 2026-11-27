@@ -5,8 +5,6 @@ import type { FinancialSummary, Transaction } from "@/lib/api";
 import {
   createCategoryGradient,
   createCategorySlices,
-  firstNameFromUser,
-  getGreeting,
   signedTransactionAmount,
 } from "./overview-data";
 
@@ -46,16 +44,6 @@ describe("overview data helpers", () => {
       { name: "Transport", percentage: 50 },
     ]);
     expect(createCategoryGradient(slices)).toContain("conic-gradient");
-  });
-
-  it("derives greetings and names for the workspace header", () => {
-    expect(firstNameFromUser(" Gustavo Polonio ", "user@example.com")).toBe(
-      "Gustavo",
-    );
-    expect(firstNameFromUser(null, "finhand@example.com")).toBe("finhand");
-    expect(
-      getGreeting(new Date("2026-11-04T13:00:00.000Z"), "America/Sao_Paulo"),
-    ).toBe("Good morning");
   });
 
   it("applies the transaction type sign without changing the amount", () => {

@@ -53,7 +53,7 @@ export function OverviewAccounts({
     .slice(0, 5);
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <div>
         <h2 className="text-lg font-bold tracking-[-0.015em] text-finhand-ink">
           Accounts
@@ -80,7 +80,7 @@ export function OverviewAccounts({
 
             return (
               <li
-                className="flex items-center gap-3 rounded-xl bg-finhand-canvas-muted p-3.5"
+                className="flex flex-wrap items-center gap-3 rounded-xl bg-finhand-canvas-muted p-3.5 sm:flex-nowrap"
                 key={account.accountId}
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-finhand-interactive shadow-finhand-card">
@@ -102,7 +102,7 @@ export function OverviewAccounts({
                   </p>
                 </div>
                 <CurrencyAmount
-                  className={`font-bold ${
+                  className={`ml-13 w-full text-right font-bold sm:ml-0 sm:w-auto ${
                     balance > 0n
                       ? "text-finhand-income"
                       : balance < 0n

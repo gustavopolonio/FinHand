@@ -35,7 +35,7 @@ function SummaryCard({
   value,
 }: SummaryCardProps) {
   return (
-    <Card className="flex min-h-52 flex-col justify-between p-6">
+    <Card className="flex min-h-44 flex-col justify-between p-5 sm:min-h-48 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-finhand-muted">
           {label}
@@ -57,7 +57,7 @@ function SummaryCard({
 
       <CurrencyAmount
         className={cn(
-          "mt-7 text-[1.75rem] font-bold tracking-[-0.03em] text-finhand-ink",
+          "mt-6 break-words text-[1.65rem] font-bold tracking-[-0.03em] text-finhand-ink sm:text-[1.75rem]",
           accent === "expense" && "text-finhand-expense",
           accent === "income" && "text-finhand-income",
         )}
@@ -65,7 +65,7 @@ function SummaryCard({
         value={value}
       />
 
-      <p className="mt-5 text-sm text-finhand-muted">{note}</p>
+      <p className="mt-4 text-sm text-finhand-muted">{note}</p>
     </Card>
   );
 }
@@ -95,9 +95,9 @@ export function OverviewSummaryCards({
   const netFlow = BigInt(currency.netFlowMinor);
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <section aria-label="Financial summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card
-        className="flex min-h-52 flex-col justify-between p-6"
+        className="flex min-h-44 flex-col justify-between p-5 sm:min-h-48 sm:p-6"
         variant="primary"
       >
         <div className="flex items-start justify-between gap-4">
@@ -109,7 +109,7 @@ export function OverviewSummaryCards({
           </span>
         </div>
         <CurrencyAmount
-          className="mt-7 text-[2rem] font-bold tracking-[-0.03em]"
+          className="mt-6 break-words text-[1.8rem] font-bold tracking-[-0.03em] sm:text-[2rem]"
           currencyCode={currency.currencyCode}
           value={currency.activeBalanceMinor}
         />
@@ -154,6 +154,6 @@ export function OverviewSummaryCards({
         }
         value={currency.netFlowMinor}
       />
-    </div>
+    </section>
   );
 }

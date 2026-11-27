@@ -1,8 +1,7 @@
 "use client";
 
-import { CalendarDays, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useDashboardUser } from "@/components/dashboard-shell";
 import { currencyOptions } from "@/components/financial-select-options";
@@ -17,13 +16,11 @@ import {
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import type { DateRangeValue } from "../ui/date-range-picker-data";
 import { Select } from "../ui/select";
 import { CategoryBreakdown } from "./category-breakdown";
-import {
-  firstNameFromUser,
-  getGreeting,
-} from "./overview-data";
 import { OverviewAccounts } from "./overview-accounts";
+import { OverviewPeriodCard } from "./overview-period-card";
 import { OverviewSummaryCards } from "./overview-summary-cards";
 import { RecentTransactions } from "./recent-transactions";
 
@@ -49,16 +46,19 @@ async function fetchOverviewData(
 function OverviewSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading overview" className="space-y-6">
-      <div className="h-32 animate-pulse rounded-2xl bg-finhand-accent-soft" />
-      <div className="grid grid-cols-4 gap-4">
+      <div className="flex items-center justify-between">
+        <div className="h-10 w-64 animate-pulse rounded-lg bg-finhand-accent-soft" />
+        <div className="h-9 w-24 animate-pulse rounded-lg bg-white" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
-            className="h-52 animate-pulse rounded-2xl bg-white"
+            className="h-44 animate-pulse rounded-2xl bg-white sm:h-48"
             key={index}
           />
         ))}
       </div>
-      <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] gap-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.9fr)]">
         <div className="h-96 animate-pulse rounded-2xl bg-white" />
         <div className="h-96 animate-pulse rounded-2xl bg-white" />
       </div>
@@ -71,8 +71,6 @@ export function OverviewDashboard() {
   const user = useDashboardUser();
   const [data, setData] = useState<OverviewData | null>(null);
   const [filters, setFilters] = useState<FinancialSummaryFilters>({});
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState(
     user.defaultCurrency,
   );
@@ -130,29 +128,10 @@ export function OverviewDashboard() {
     };
   }, [reportError]);
 
-  function applyPeriod(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!from || !to) {
-      setError("Choose both a start date and an end date.");
-      return;
-    }
-
-    if (from > to) {
-      setError("The end date must be on or after the start date.");
-      return;
-    }
-
-    const nextFilters = { from, to };
+  function applyPeriod(value: DateRangeValue) {
+    const nextFilters = value.from && value.to ? value : {};
     setFilters(nextFilters);
     void loadOverview(nextFilters);
-  }
-
-  function showAllTime() {
-    setFrom("");
-    setTo("");
-    setFilters({});
-    void loadOverview({});
   }
 
   if (isLoading && !data) {
@@ -184,69 +163,13 @@ export function OverviewDashboard() {
       (candidate) => candidate.currencyCode === user.defaultCurrency,
     ) ??
     availableCurrencies[0];
-  const greeting = getGreeting(new Date(), user.timeZone);
-  const firstName = firstNameFromUser(user.displayName, user.email);
-
   return (
-    <div className="space-y-6">
-      <Card className="flex min-h-32 items-center justify-between gap-8 p-7">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-finhand-interactive">
-            Financial overview
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-finhand-ink">
-            {greeting}, {firstName}
-          </h1>
-          <p className="mt-1.5 text-sm text-finhand-muted">
-            Here&apos;s how your finances are looking today.
-          </p>
-        </div>
-
-        <div className="flex items-end gap-3">
-          <form className="flex items-end gap-2" onSubmit={applyPeriod}>
-            <label className="text-xs font-semibold text-finhand-muted">
-              From
-              <input
-                className="mt-1 block h-10 rounded-lg border border-finhand-border bg-finhand-canvas-muted px-3 text-sm text-finhand-ink outline-none focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
-                onChange={(event) => setFrom(event.target.value)}
-                type="date"
-                value={from}
-              />
-            </label>
-            <label className="text-xs font-semibold text-finhand-muted">
-              To
-              <input
-                className="mt-1 block h-10 rounded-lg border border-finhand-border bg-finhand-canvas-muted px-3 text-sm text-finhand-ink outline-none focus:border-finhand-focus focus:ring-2 focus:ring-finhand-focus/20"
-                onChange={(event) => setTo(event.target.value)}
-                type="date"
-                value={to}
-              />
-            </label>
-            <Button disabled={isLoading} type="submit">
-              <CalendarDays aria-hidden="true" className="size-4" />
-              Apply
-            </Button>
-          </form>
-          <Button
-            disabled={isLoading}
-            onClick={showAllTime}
-            variant="secondary"
-          >
-            All time
-          </Button>
-          <Button
-            aria-label="Refresh overview"
-            disabled={isLoading}
-            onClick={() => void loadOverview(filters)}
-            variant="ghost"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 ${isLoading ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-      </Card>
+    <div aria-busy={isLoading} className="space-y-5 sm:space-y-6">
+      <OverviewPeriodCard
+        filters={filters}
+        isLoading={isLoading}
+        onApplyPeriod={applyPeriod}
+      />
 
       {error ? (
         <div
@@ -280,17 +203,16 @@ export function OverviewDashboard() {
         <>
           <OverviewSummaryCards currency={currency} summary={data.summary} />
 
-          <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(340px,0.85fr)] gap-6">
-            <div className="space-y-6">
-              <CategoryBreakdown
-                currencyCode={currency.currencyCode}
-                summary={data.summary}
-              />
-              <RecentTransactions
-                summary={data.summary}
-                transactions={data.transactions}
-              />
-            </div>
+          <RecentTransactions
+            summary={data.summary}
+            transactions={data.transactions}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
+            <CategoryBreakdown
+              currencyCode={currency.currencyCode}
+              summary={data.summary}
+            />
             <OverviewAccounts
               currencyCode={currency.currencyCode}
               summary={data.summary}

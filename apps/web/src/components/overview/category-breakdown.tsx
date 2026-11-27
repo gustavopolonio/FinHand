@@ -23,8 +23,8 @@ export function CategoryBreakdown({
   const topCategory = slices[0];
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-6">
+    <Card className="p-5 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div>
           <h2 className="text-lg font-bold tracking-[-0.015em] text-finhand-ink">
             Spending by category
@@ -50,8 +50,8 @@ export function CategoryBreakdown({
           </div>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-[220px_1fr] items-center gap-8">
-          <div className="relative mx-auto size-44">
+        <div className="mt-8 grid items-center gap-8 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)]">
+          <div className="relative mx-auto size-40 sm:size-44">
             <div
               aria-label="Expense distribution chart"
               className="size-full rounded-full"
@@ -71,10 +71,10 @@ export function CategoryBreakdown({
             </div>
           </div>
 
-          <ul className="space-y-4">
+          <ul className="min-w-0 space-y-5">
             {slices.slice(0, 6).map((slice) => (
               <li key={`${slice.categoryId ?? "uncategorized"}-${slice.name}`}>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto]">
                   <span
                     aria-hidden="true"
                     className="size-2.5 rounded-full"
@@ -83,16 +83,16 @@ export function CategoryBreakdown({
                   <span className="min-w-0 flex-1 truncate font-semibold text-finhand-ink">
                     {slice.name}
                   </span>
-                  <span className="text-xs text-finhand-muted">
+                  <span className="col-start-2 row-start-2 text-xs text-finhand-muted sm:col-start-auto sm:row-start-auto">
                     {slice.transactionCount}{" "}
                     {slice.transactionCount === 1 ? "transaction" : "transactions"}
                   </span>
                   <CurrencyAmount
-                    className="min-w-28 text-right font-semibold text-finhand-ink"
+                    className="col-start-3 row-start-1 text-right font-semibold text-finhand-ink sm:col-start-auto sm:row-start-auto sm:min-w-28"
                     currencyCode={currencyCode}
                     value={slice.totalMinor}
                   />
-                  <span className="w-10 text-right text-xs text-finhand-muted">
+                  <span className="col-start-3 row-start-2 text-right text-xs text-finhand-muted sm:col-start-auto sm:row-start-auto sm:w-10">
                     {slice.percentage}%
                   </span>
                 </div>

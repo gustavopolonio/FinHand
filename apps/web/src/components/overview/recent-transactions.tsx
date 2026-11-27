@@ -1,10 +1,12 @@
 import { ArrowDownLeft, ArrowUpRight, ReceiptText } from "lucide-react";
+import Link from "next/link";
 
 import type { FinancialSummary, Transaction } from "@/lib/api";
 
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { CurrencyAmount } from "../ui/currency-amount";
+import { TransactionDescription } from "../transactions/transaction-description";
 import { signedTransactionAmount } from "./overview-data";
 
 interface RecentTransactionsProps {
@@ -35,18 +37,16 @@ export function RecentTransactions({
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-start justify-between gap-6 px-6 pt-6 pb-5">
-        <div>
-          <h2 className="text-lg font-bold tracking-[-0.015em] text-finhand-ink">
-            Recent transactions
-          </h2>
-          <p className="mt-1 text-sm text-finhand-muted">
-            Latest activity in the selected period
-          </p>
-        </div>
-        <span className="text-xs font-semibold text-finhand-muted">
-          Full transaction management is coming next
-        </span>
+      <div className="flex gap-4 px-5 pt-5 pb-4 sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:pt-6 sm:pb-5">
+        <h2 className="text-lg font-bold tracking-[-0.015em] text-finhand-ink">
+          Recent transactions
+        </h2>
+        <Link
+          className="w-fit text-sm font-semibold text-finhand-interactive underline-offset-4 hover:text-finhand-interactive-strong hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-finhand-focus"
+          href="/dashboard/transactions"
+        >
+          View all
+        </Link>
       </div>
 
       {transactions.length === 0 ? (
@@ -59,8 +59,72 @@ export function RecentTransactions({
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden border-t border-finhand-divider">
-          <table className="w-full border-collapse text-left">
+        <div className="border-t border-finhand-divider">
+          <ul className="divide-y divide-finhand-divider md:hidden">
+            {transactions.map((transaction) => {
+              const Icon =
+                transaction.type === "income" ? ArrowDownLeft : ArrowUpRight;
+
+              return (
+                <li className="p-4" key={transaction.id}>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid size-9 shrink-0 place-items-center rounded-full ${
+                        transaction.type === "income"
+                          ? "bg-finhand-income-soft text-finhand-income"
+                          : "bg-finhand-expense-soft text-finhand-expense"
+                      }`}
+                    >
+                      <Icon aria-hidden="true" className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-finhand-ink">
+                            {transaction.description}
+                          </p>
+                          <p className="mt-0.5 text-xs text-finhand-muted">
+                            {formatDate(transaction.occurredOn)} · {accountNames.get(transaction.accountId) ?? "Account"}
+                          </p>
+                        </div>
+                        <CurrencyAmount
+                          className={`shrink-0 font-bold ${
+                            transaction.type === "income"
+                              ? "text-finhand-income"
+                              : "text-finhand-expense"
+                          }`}
+                          currencyCode={transaction.currencyCode}
+                          value={signedTransactionAmount(transaction)}
+                        />
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Badge>
+                          {transaction.categoryId
+                            ? categoryNames.get(transaction.categoryId) ??
+                              "Category"
+                            : "Uncategorized"}
+                        </Badge>
+                        {transaction.counterparty ? (
+                          <span className="truncate text-xs text-finhand-muted">
+                            {transaction.counterparty}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <table className="hidden w-full table-fixed border-collapse text-left md:table">
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[34%]" />
+              <col className="w-[18%]" />
+              <col className="w-[18%]" />
+              <col className="w-[16%]" />
+            </colgroup>
             <thead className="bg-finhand-canvas-muted">
               <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-finhand-muted">
                 <th className="px-6 py-3">Date</th>
@@ -72,8 +136,8 @@ export function RecentTransactions({
             </thead>
             <tbody>
               {transactions.map((transaction) => {
-                const Icon =
-                  transaction.type === "income" ? ArrowDownLeft : ArrowUpRight;
+                const accountName =
+                  accountNames.get(transaction.accountId) ?? "Account";
 
                 return (
                   <tr
@@ -83,39 +147,21 @@ export function RecentTransactions({
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-finhand-muted">
                       {formatDate(transaction.occurredOn)}
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`grid size-9 place-items-center rounded-full ${
-                            transaction.type === "income"
-                              ? "bg-finhand-income-soft text-finhand-income"
-                              : "bg-finhand-expense-soft text-finhand-expense"
-                          }`}
-                        >
-                          <Icon aria-hidden="true" className="size-4" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-finhand-ink">
-                            {transaction.description}
-                          </p>
-                          {transaction.counterparty ? (
-                            <p className="mt-0.5 text-xs text-finhand-muted">
-                              {transaction.counterparty}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
+                    <td className="min-w-0 overflow-hidden px-4 py-4">
+                      <TransactionDescription transaction={transaction} />
                     </td>
-                    <td className="px-4 py-4">
-                      <Badge>
+                    <td className="min-w-0 overflow-hidden px-4 py-4">
+                      <Badge className="max-w-full truncate">
                         {transaction.categoryId
                           ? categoryNames.get(transaction.categoryId) ??
                             "Category"
                           : "Uncategorized"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-4 text-sm text-finhand-muted">
-                      {accountNames.get(transaction.accountId) ?? "Account"}
+                    <td className="min-w-0 overflow-hidden px-4 py-4 text-sm text-finhand-muted">
+                      <span className="block truncate" title={accountName}>
+                        {accountName}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <CurrencyAmount
